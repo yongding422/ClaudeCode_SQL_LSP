@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SqlScriptDOM LSP M1 initialization options",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "sql": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dialect": { "const": "tsql" },
+        "mode": { "const": "offline" },
+        "parserVersion": { "enum": ["80", "90", "100", "110", "120", "130", "140", "150", "160", "170", "180"] },
+        "quotedIdentifier": { "type": "boolean" }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxFileSizeBytes": { "type": "integer", "minimum": 1, "maximum": 16777216 }
+      }
+    }
+  }
+}

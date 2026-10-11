@@ -11,5 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="../SqlLsp.Core/SqlLsp.Core.csproj" />
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" />
+    <PackageReference Include="JsonSchema.Net" />
+    <EmbeddedResource Include="../../docs/configuration.schema.json" LogicalName="SqlLsp.configuration.schema.json" />
   </ItemGroup>
 </Project>

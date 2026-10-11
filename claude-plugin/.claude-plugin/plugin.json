@@ -1,0 +1,6 @@
+{
+  "name": "sqlscriptdom-lsp",
+  "version": "0.1.0",
+  "description": "Offline T-SQL diagnostics and document symbols using SqlScriptDOM",
+  "author": { "name": "SqlScriptDOM LSP contributors" }
+}

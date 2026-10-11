@@ -1,0 +1,8 @@
+{
+  "sqlscriptdom": {
+    "command": "dotnet",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/server/sqlscriptdom-lsp.dll", "--stdio"],
+    "transport": "stdio",
+    "extensionToLanguage": { ".sql": "sql" }
+  }
+}

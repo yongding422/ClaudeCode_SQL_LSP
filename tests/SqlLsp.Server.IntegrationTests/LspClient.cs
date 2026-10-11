@@ -44,8 +44,8 @@ internal sealed class LspClient : IAsyncDisposable
             CreateNoWindow = true,
             WorkingDirectory = RepositoryRoot
         };
-        start.ArgumentList.Add(Path.Combine(RepositoryRoot, "src", "SqlLsp.Server", "bin", configuration,
-            "net10.0", "sqlscriptdom-lsp.dll"));
+        start.ArgumentList.Add(Environment.GetEnvironmentVariable("SQLLSP_TEST_SERVER_DLL") ?? Path.Combine(
+            RepositoryRoot, "src", "SqlLsp.Server", "bin", configuration, "net10.0", "sqlscriptdom-lsp.dll"));
         foreach (var argument in args.Length == 0 ? new[] { "--stdio" } : args) start.ArgumentList.Add(argument);
         process = Process.Start(start) ?? throw new InvalidOperationException("Server launch failed.");
         stderr = process.StandardError.ReadToEndAsync();
@@ -54,15 +54,37 @@ internal sealed class LspClient : IAsyncDisposable
 
     public async Task<JsonElement> RequestAsync(string method, object? parameters, bool fragmented = false)
     {
+        var request = await StartRequestAsync(method, parameters, fragmented);
+        try { return await request.Response.WaitAsync(TimeSpan.FromSeconds(15)); }
+        catch (TimeoutException)
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync();
+            throw new TimeoutException($"Timed out waiting for {method}. stderr: {await stderr}");
+        }
+    }
+
+    public async Task<(int Id, Task<JsonElement> Response)> StartRequestAsync(string method, object? parameters, bool fragmented = false)
+    {
         var id = Interlocked.Increment(ref nextId);
         var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         requests[id] = completion;
         await SendAsync(new { jsonrpc = "2.0", id, method, @params = parameters }, fragmented);
-        return await completion.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        return (id, completion.Task);
     }
 
     public Task NotifyAsync(string method, object? parameters) =>
         SendAsync(new { jsonrpc = "2.0", method, @params = parameters });
+
+    public async Task<JsonElement> NotificationAsync(string method)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        while (true)
+        {
+            var message = await notifications.Reader.ReadAsync(timeout.Token);
+            if (message.GetProperty("method").GetString() == method) return message.GetProperty("params");
+        }
+    }
 
     public async Task<JsonElement> DiagnosticsAsync(string uri, int? version = null)
     {
@@ -72,7 +94,7 @@ internal sealed class LspClient : IAsyncDisposable
             var notification = await notifications.Reader.ReadAsync(timeout.Token);
             if (notification.GetProperty("method").GetString() != "textDocument/publishDiagnostics") continue;
             var parameters = notification.GetProperty("params");
-            if (parameters.GetProperty("uri").GetString() == uri &&
+            if (new Uri(parameters.GetProperty("uri").GetString()!).Equals(new Uri(uri)) &&
                 (version == null || parameters.GetProperty("version").GetInt32() == version)) return parameters;
         }
     }
@@ -149,6 +171,8 @@ internal sealed class LspClient : IAsyncDisposable
                 using var document = JsonDocument.Parse(body);
                 var message = document.RootElement.Clone();
                 Assert.Equal("2.0", message.GetProperty("jsonrpc").GetString());
+                if (message.TryGetProperty("error", out _) && (!message.TryGetProperty("id", out var errorId) || errorId.ValueKind != JsonValueKind.Number || !requests.ContainsKey(errorId.GetInt32())))
+                    throw new InvalidDataException("Unmatched error response: " + message.ToString());
                 if (message.TryGetProperty("id", out var id) && id.TryGetInt32(out var number) &&
                     requests.TryRemove(number, out var completion)) completion.SetResult(message);
                 else await notifications.Writer.WriteAsync(message);
