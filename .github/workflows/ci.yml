@@ -1,0 +1,17 @@
+name: build-and-test
+on: [push, pull_request]
+jobs:
+  offline:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --no-restore --configuration Release
+      - run: dotnet format --no-restore --verify-no-changes
