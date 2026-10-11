@@ -100,14 +100,21 @@ internal sealed class LspClient : IAsyncDisposable
     }
 
     public async Task<JsonElement> InitializeAsync(string? rootUri = null, object? initializationOptions = null,
-        bool hierarchical = true) => await RequestAsync("initialize", new
+        bool hierarchical = true, string[]? workspaceFolderUris = null) => await RequestAsync("initialize", new
         {
             processId = (int?)null,
             rootUri,
+            workspaceFolders = workspaceFolderUris?.Select((uri, i) => new { uri, name = "workspace" + i }).ToArray(),
             capabilities = new
             {
                 general = new { positionEncodings = new[] { "utf-8", "utf-16" } },
-                textDocument = new { documentSymbol = new { hierarchicalDocumentSymbolSupport = hierarchical } }
+                textDocument = new
+                {
+                    documentSymbol = new { hierarchicalDocumentSymbolSupport = hierarchical },
+                    definition = new { dynamicRegistration = false, linkSupport = false },
+                    references = new { dynamicRegistration = false }
+                },
+                workspace = new { symbol = new { dynamicRegistration = false }, didChangeWatchedFiles = new { dynamicRegistration = false } }
             },
             initializationOptions
         }, fragmented: true);

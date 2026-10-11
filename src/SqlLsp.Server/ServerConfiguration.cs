@@ -6,7 +6,7 @@ using SqlLsp.Core;
 
 namespace SqlLsp.Server;
 
-public sealed record ServerConfiguration(ParserOptions Parser, WorkspaceOptions Workspace)
+public sealed record ServerConfiguration(ParserOptions Parser, WorkspaceOptions Workspace, ResolutionOptions Resolution)
 {
     private static readonly JsonSchema Schema = LoadSchema();
 
@@ -25,7 +25,9 @@ public sealed record ServerConfiguration(ParserOptions Parser, WorkspaceOptions 
         return new ServerConfiguration(
             new ParserOptions(config?["sql"]?["parserVersion"]?.Value<string>() ?? "170",
                 config?["sql"]?["quotedIdentifier"]?.Value<bool>() ?? true),
-            new WorkspaceOptions(config?["workspace"]?["maxFileSizeBytes"]?.Value<int>() ?? 2_097_152));
+            new WorkspaceOptions(config?["workspace"]?["maxFileSizeBytes"]?.Value<int>() ?? 2_097_152),
+            new ResolutionOptions(config?["resolution"]?["caseSensitive"]?.Value<bool>() ?? true,
+                config?["resolution"]?["defaultSchema"]?.Value<string>(), config?["resolution"]?["defaultDatabase"]?.Value<string>()));
     }
 
     private static JsonSchema LoadSchema()

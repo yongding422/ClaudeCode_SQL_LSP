@@ -3,13 +3,14 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SqlLsp.Core;
 
-public enum SqlObjectKind { Procedure, View, Function, Table }
+public enum SqlObjectKind { Procedure, View, Function, Table, Cte, TempTable, Alias, Variable, Parameter }
 public enum SqlSourceKind { Workspace, UnsavedBuffer }
-public sealed record SqlDeclaration(string Name, SqlObjectKind Kind, TextRange Range, TextRange SelectionRange);
+public sealed record SqlDeclaration(string Name, SqlObjectKind Kind, TextRange Range, TextRange SelectionRange,
+    QualifiedSqlName? QualifiedName = null, string? Database = null, bool IsDefinition = true);
 public sealed record SqlParseDiagnostic(int Code, string Message, TextRange Range);
 public sealed record SqlParseResult(SourceText Source, TSqlFragment Ast,
     ImmutableArray<TSqlParserToken> Tokens, ImmutableArray<SqlParseDiagnostic> Diagnostics,
-    ImmutableArray<SqlDeclaration> Declarations);
+    ImmutableArray<SqlDeclaration> Declarations, SqlSemanticDocument Semantics);
 
 public sealed record ParserOptions(string Version = "170", bool QuotedIdentifier = true)
 {
@@ -22,7 +23,7 @@ public interface ISqlParser
     Task<SqlParseResult> ParseAsync(SourceText source, CancellationToken cancellationToken);
 }
 
-public sealed class SqlParser(ParserOptions options) : ISqlParser
+public sealed class SqlParser(ParserOptions options, ResolutionOptions? resolution = null) : ISqlParser
 {
     private readonly SqlVersion dialect = options.Dialect;
 
@@ -45,13 +46,15 @@ public sealed class SqlParser(ParserOptions options) : ISqlParser
             var length = Math.Min(token?.Text?.Length ?? (offset < source.Text.Length ? 1 : 0), source.Text.Length - offset);
             return new SqlParseDiagnostic(error.Number, error.Message, source.Range(offset, length));
         }).ToImmutableArray();
+        var semantics = SqlSemanticExtractor.Extract(ast, source, errors, resolution ?? new(), cancellationToken);
         return new SqlParseResult(source, ast, tokens.ToImmutableArray(), diagnostics,
-            visitor.Declarations.ToImmutableArray());
+            visitor.Declarations.ToImmutableArray(), semantics);
     }, cancellationToken);
 
     private sealed class DeclarationVisitor(SourceText source, IList<ParseError> errors, CancellationToken token) : TSqlFragmentVisitor
     {
         public List<SqlDeclaration> Declarations { get; } = new();
+        private string? database;
 
         // Only batch-level declarations: a procedure's local CREATE TABLE is not a global definition.
         public override void ExplicitVisit(TSqlBatch node)
@@ -61,8 +64,10 @@ public sealed class SqlParser(ParserOptions options) : ISqlParser
                 token.ThrowIfCancellationRequested();
                 switch (statement)
                 {
+                    case UseStatement use:
+                        database = use.DatabaseName.Value; break;
                     case ProcedureStatementBody procedure:
-                        Add(procedure, procedure.ProcedureReference.Name, SqlObjectKind.Procedure); break;
+                        Add(procedure, procedure.ProcedureReference.Name, SqlObjectKind.Procedure, procedure.ProcedureReference.Number == null); break;
                     case ViewStatementBody view:
                         Add(view, view.SchemaObjectName, SqlObjectKind.View); break;
                     case FunctionStatementBody function:
@@ -70,17 +75,18 @@ public sealed class SqlParser(ParserOptions options) : ISqlParser
                     case CreateTableStatement table:
                         Add(table, table.SchemaObjectName, SqlObjectKind.Table); break;
                     case AlterTableStatement table:
-                        Add(table, table.SchemaObjectName, SqlObjectKind.Table); break;
+                        Add(table, table.SchemaObjectName, SqlObjectKind.Table, false); break;
                 }
             }
         }
 
-        private void Add(TSqlFragment node, SchemaObjectName? name, SqlObjectKind kind)
+        private void Add(TSqlFragment node, SchemaObjectName? name, SqlObjectKind kind, bool isDefinition = true)
         {
             if (name == null || name.Identifiers.Count == 0 || node.FragmentLength <= 0) return;
             if (errors.Any(e => e.Offset >= node.StartOffset && e.Offset <= node.StartOffset + node.FragmentLength)) return;
             Declarations.Add(new SqlDeclaration(string.Join('.', name.Identifiers.Select(i => i.Value)), kind,
-                source.Range(node.StartOffset, node.FragmentLength), source.Range(name.StartOffset, name.FragmentLength)));
+                source.Range(node.StartOffset, node.FragmentLength), source.Range(name.StartOffset, name.FragmentLength),
+                QualifiedSqlName.From(name), database, isDefinition));
         }
     }
 

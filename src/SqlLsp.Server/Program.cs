@@ -17,6 +17,10 @@ using var server = await LanguageServer.From(options => options
     .WithServices(services => services.AddSingleton(state))
     .WithHandler<SqlTextSyncHandler>()
     .WithHandler<SqlDocumentSymbolHandler>()
+    .WithHandler<SqlDefinitionHandler>()
+    .WithHandler<SqlReferencesHandler>()
+    .WithHandler<SqlWorkspaceSymbolsHandler>()
+    .WithHandler<SqlWatchedFilesHandler>()
     .OnInitialize(async (facade, request, token) =>
     {
         try { await state.InitializeAsync(facade, request, token); }
@@ -33,6 +37,9 @@ using var server = await LanguageServer.From(options => options
         {
             response.Capabilities.DocumentSymbolProvider = false;
             response.Capabilities.TextDocumentSync = null;
+            response.Capabilities.DefinitionProvider = false;
+            response.Capabilities.ReferencesProvider = false;
+            response.Capabilities.WorkspaceSymbolProvider = false;
         }
         return Task.CompletedTask;
     })

@@ -11,6 +11,9 @@ public sealed class ServerState : IAsyncDisposable
 {
     public DocumentStore? Documents { get; private set; }
     public string? ConfigurationError { get; private set; }
+    public WorkspaceFiles? Files { get; private set; }
+    public ResolutionOptions Resolution { get; private set; } = new();
+    private WorkspaceWatcher? watcher;
 
     public async Task InitializeAsync(ILanguageServerFacade server, InitializeParams request, CancellationToken token)
     {
@@ -25,7 +28,9 @@ public sealed class ServerState : IAsyncDisposable
         var parser = config.Parser;
         var workspace = config.Workspace;
         workspace.Validate();
-        Documents = new DocumentStore(new SqlParser(parser), new WorkspaceFiles(workspace), workspace);
+        Resolution = config.Resolution;
+        Files = new WorkspaceFiles(workspace);
+        Documents = new DocumentStore(new SqlParser(parser, Resolution), Files, workspace);
         Documents.Fault += message => Console.Error.WriteLine(message);
         Documents.Diagnostics += publication => server.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
         {
@@ -43,7 +48,12 @@ public sealed class ServerState : IAsyncDisposable
         var roots = request.WorkspaceFolders?.Select(folder => new Uri(folder.Uri.ToString())).ToArray();
         roots ??= request.RootUri is null ? [] : [new Uri(request.RootUri.ToString())];
         await Documents.InitializeAsync(roots, token);
+        watcher = new WorkspaceWatcher(Files, Documents, message => Console.Error.WriteLine(message));
     }
+
+    public async Task<SqlNavigationIndex> NavigationAsync(CancellationToken token) => new(
+        Documents == null ? [] : await Documents.GetIndexAsync(token),
+        uri => Files?.ContextId(uri) ?? uri.AbsoluteUri, Resolution);
 
     public static Range ToRange(TextRange range) => new(
         new Position(range.Start.Line, range.Start.Character), new Position(range.End.Line, range.End.Character));
@@ -58,6 +68,7 @@ public sealed class ServerState : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (watcher != null) { await watcher.DisposeAsync(); watcher = null; }
         if (Documents != null) await Documents.DisposeAsync();
     }
 }

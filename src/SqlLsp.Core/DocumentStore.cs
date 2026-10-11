@@ -13,6 +13,7 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     private readonly Dictionary<Uri, Overlay> overlays = new();
     private readonly Dictionary<Uri, DocumentSnapshot> disk = new();
     private readonly Dictionary<Uri, DocumentSnapshot> index = new();
+    private readonly Dictionary<Uri, DiskWork> diskWork = new();
     private readonly List<Task> work = new();
     private readonly CancellationTokenSource lifetime = new();
     private bool disposed;
@@ -29,13 +30,7 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
         foreach (var uri in files.Configure(roots))
         {
             token.ThrowIfCancellationRequested();
-            var snapshot = await LoadDiskAsync(uri, token);
-            if (snapshot == null) continue;
-            lock (gate)
-            {
-                disk[uri] = snapshot;
-                if (!overlays.ContainsKey(uri)) index[uri] = snapshot;
-            }
+            await RefreshAsync(uri, token);
         }
     }
 
@@ -69,10 +64,11 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     {
         while (true)
         {
+            token.ThrowIfCancellationRequested();
             Task? pending;
             lock (gate)
             {
-                pending = overlays.TryGetValue(uri, out var overlay) ? overlay.Pending : null;
+                pending = overlays.TryGetValue(uri, out var overlay) ? overlay.Pending : diskWork.GetValueOrDefault(uri)?.Pending;
                 if (pending == null || pending.IsCompleted) return index.GetValueOrDefault(uri);
             }
             await pending.WaitAsync(token);
@@ -87,11 +83,67 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             index.Remove(uri);
             Diagnostics?.Invoke(new DiagnosticPublication(uri, null, []));
         }
-        var snapshot = await LoadDiskAsync(uri, token);
+        await RefreshAsync(uri, token);
+    }
+
+    public async Task<ImmutableArray<DocumentSnapshot>> GetIndexAsync(CancellationToken token)
+    {
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            Task[] pending;
+            lock (gate)
+            {
+                pending = overlays.Values.Select(o => o.Pending).Concat(diskWork.Where(d => !overlays.ContainsKey(d.Key)).Select(d => d.Value.Pending))
+                    .OfType<Task>().Where(t => !t.IsCompleted).ToArray();
+                if (pending.Length == 0) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+            }
+            await Task.WhenAll(pending).WaitAsync(token);
+        }
+    }
+
+    public Task RefreshAsync(Uri uri, CancellationToken token)
+    {
         lock (gate)
         {
-            if (snapshot == null) disk.Remove(uri); else disk[uri] = snapshot;
-            if (!overlays.ContainsKey(uri) && snapshot != null) index[uri] = snapshot;
+            if (disposed) return Task.CompletedTask;
+            if (diskWork.TryGetValue(uri, out var previous) && !previous.Completed) previous.Cancellation.Cancel();
+            var job = new DiskWork(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, token));
+            diskWork[uri] = job;
+            if (!overlays.ContainsKey(uri)) index.Remove(uri);
+            job.Pending = Task.Run(async () =>
+            {
+                try
+                {
+                    var snapshot = await LoadDiskAsync(uri, job.Cancellation.Token);
+                    lock (gate)
+                    {
+                        if (!ReferenceEquals(diskWork.GetValueOrDefault(uri), job) || job.Cancellation.IsCancellationRequested) return;
+                        if (snapshot == null) disk.Remove(uri); else disk[uri] = snapshot;
+                        if (!overlays.ContainsKey(uri))
+                        {
+                            if (snapshot == null) index.Remove(uri); else index[uri] = snapshot;
+                        }
+                    }
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception) { Fault?.Invoke("Workspace parsing failed; source and details suppressed."); }
+                finally { lock (gate) { job.Completed = true; job.Cancellation.Dispose(); } }
+            });
+            work.RemoveAll(t => t.IsCompleted);
+            work.Add(job.Pending);
+            return job.Pending;
+        }
+    }
+
+    public async Task RescanAsync(CancellationToken token)
+    {
+        Uri[] known;
+        lock (gate) known = disk.Keys.Concat(diskWork.Keys).ToArray();
+        foreach (var uri in files.EnumerateUris().Concat(known).Distinct())
+        {
+            token.ThrowIfCancellationRequested();
+            await RefreshAsync(uri, token);
         }
     }
 
@@ -164,6 +216,13 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     {
         public int Version { get; } = version;
         public SourceText Source { get; } = source;
+        public CancellationTokenSource Cancellation { get; } = cancellation;
+        public Task? Pending { get; set; }
+        public bool Completed { get; set; }
+    }
+
+    private sealed class DiskWork(CancellationTokenSource cancellation)
+    {
         public CancellationTokenSource Cancellation { get; } = cancellation;
         public Task? Pending { get; set; }
         public bool Completed { get; set; }

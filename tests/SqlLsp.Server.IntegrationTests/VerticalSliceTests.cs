@@ -64,7 +64,7 @@ public class VerticalSliceTests
     }
 
     [Fact]
-    public async Task Sample_24_file_workspace_indexes_unopened_files_and_handles_parallel_symbol_requests()
+    public async Task Sample_workspace_indexes_unopened_files_and_handles_parallel_symbol_requests()
     {
         var root = Path.Combine(LspClient.RepositoryRoot, "samples", "sql-workspace");
         var files = Directory.GetFiles(root, "*.sql");
@@ -74,7 +74,7 @@ public class VerticalSliceTests
         var capabilities = initialize.GetProperty("result").GetProperty("capabilities");
         Assert.Equal(2, capabilities.GetProperty("textDocumentSync").GetProperty("change").GetInt32());
         Assert.True(capabilities.GetProperty("documentSymbolProvider").ValueKind is JsonValueKind.True or JsonValueKind.Object);
-        foreach (var name in new[] { "definitionProvider", "referencesProvider", "renameProvider", "workspaceSymbolProvider", "completionProvider" })
+        foreach (var name in new[] { "renameProvider", "completionProvider" })
             Assert.True(!capabilities.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.False or JsonValueKind.Null);
         if (capabilities.TryGetProperty("positionEncoding", out var encoding)) Assert.Equal("utf-16", encoding.GetString());
         await client.NotifyAsync("initialized", new { });

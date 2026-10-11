@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "SqlScriptDOM LSP M1 initialization options",
+  "title": "SqlScriptDOM LSP offline initialization options",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -12,6 +12,15 @@
         "mode": { "const": "offline" },
         "parserVersion": { "enum": ["80", "90", "100", "110", "120", "130", "140", "150", "160", "170", "180"] },
         "quotedIdentifier": { "type": "boolean" }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "caseSensitive": { "type": "boolean" },
+        "defaultSchema": { "type": "string", "minLength": 1 },
+        "defaultDatabase": { "type": "string", "minLength": 1 }
       }
     },
     "workspace": {

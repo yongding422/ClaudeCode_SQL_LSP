@@ -14,6 +14,24 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.OrdinalIgnoreCase)
         { "bin", "obj", "node_modules", ".git" };
     private readonly List<string> roots = new();
+    public IReadOnlyList<string> Roots => roots;
+    public string ContextId(Uri uri)
+    {
+        if (!uri.IsFile) return uri.AbsoluteUri;
+        var root = uri.IsFile ? roots.Where(r => IsContained(r, uri.LocalPath)).OrderByDescending(r => r.Length).FirstOrDefault() : null;
+        return root == null ? new Uri(uri, ".").AbsoluteUri : new Uri(root).AbsoluteUri;
+    }
+
+    public IEnumerable<Uri> EnumerateUris() => roots.Where(Directory.Exists).SelectMany(Enumerate).Distinct().ToArray();
+
+    public bool CanTraverse(Uri uri) => uri.IsFile && roots.Any(root => IsContained(root, uri.LocalPath) &&
+        !Path.GetRelativePath(root, uri.LocalPath).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(ExcludedDirectories.Contains));
+
+    private static bool IsContained(string root, string path)
+    {
+        var relative = Path.GetRelativePath(root, path);
+        return !Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+    }
 
     public IEnumerable<Uri> Configure(IEnumerable<Uri> folders)
     {
