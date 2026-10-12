@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.2.0",
-  "description": "Offline T-SQL diagnostics, symbols and navigation using SqlScriptDOM",
+  "version": "0.3.0",
+  "description": "T-SQL diagnostics and navigation with offline and opt-in SQL Server sources",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

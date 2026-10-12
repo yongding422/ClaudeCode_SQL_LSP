@@ -10,12 +10,13 @@ public sealed class SqlNavigationIndex
     private readonly ResolutionOptions options;
     public ImmutableArray<IndexedSqlSymbol> Symbols { get; }
 
-    public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options)
+    public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options,
+        ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true)
     {
         this.documents = documents;
         this.context = context;
         this.options = options;
-        Symbols = documents.SelectMany(document => document.Parse.Declarations
+        Symbols = (indexDeclarations ? documents.Where(d => d.SourceKind != SqlSourceKind.Database).SelectMany(document => document.Parse.Declarations
             .Where(d => d.IsDefinition && d.QualifiedName != null && !d.QualifiedName.Name.StartsWith('#'))
             .Select(d =>
             {
@@ -25,7 +26,7 @@ public sealed class SqlNavigationIndex
                 var target = new SqlNavigationTarget(document.Uri, d.SelectionRange, identity, document.SourceKind,
                     document.SourceKind == SqlSourceKind.UnsavedBuffer ? "Unsaved buffer" : "Workspace AST");
                 return new IndexedSqlSymbol(identity, d, target);
-            })).ToImmutableArray();
+            })) : []).Concat(sourceSymbols.IsDefault ? [] : sourceSymbols).ToImmutableArray();
     }
 
     public ResolutionResult Resolve(DocumentSnapshot document, SqlStaticReference reference)
@@ -37,16 +38,19 @@ public sealed class SqlNavigationIndex
         if (name.Server != null) return new(ResolutionStatus.Unsupported, [], "Cross-server targets require explicit source mapping.");
         var database = name.Database ?? reference.Database ?? options.DefaultDatabase;
         var schema = name.Schema ?? options.DefaultSchema;
-        var candidates = Symbols.Where(symbol =>
+        IEnumerable<SqlNavigationTarget> Match(string? candidateSchema) => Symbols.Where(symbol =>
             symbol.Identity.SourceContextId == context(document.Uri) &&
             options.Comparer.Equals(symbol.Identity.Server, name.Server) &&
             options.Comparer.Equals(symbol.Identity.Database, database) &&
             options.Comparer.Equals(symbol.Identity.Name, name.Name) &&
-            (schema == null || options.Comparer.Equals(symbol.Identity.Schema, schema)) &&
-            KindMatches(symbol.Identity.Kind, reference.Kind)).Select(symbol => symbol.Target).Distinct().ToImmutableArray();
+            (candidateSchema == null || options.Comparer.Equals(symbol.Identity.Schema, candidateSchema)) &&
+            KindMatches(symbol.Identity.Kind, reference.Kind)).Select(symbol => symbol.Target);
+        var candidates = Match(schema).Distinct().ToImmutableArray();
+        if (candidates.Length == 0 && name.Schema == null && options.FallbackSchema is { } fallback)
+            candidates = Match(fallback).Distinct().ToImmutableArray();
         return candidates.Length switch
         {
-            1 => new(ResolutionStatus.Resolved, candidates, "Unique qualified workspace target."),
+            1 => new(ResolutionStatus.Resolved, candidates, "Unique qualified source target."),
             > 1 => new(ResolutionStatus.Ambiguous, candidates, "Multiple declarations match; no target was selected."),
             _ => new(ResolutionStatus.Unresolved, [], "No verified declaration in this source context/database.")
         };
@@ -95,9 +99,18 @@ public sealed class SqlNavigationIndex
         foreach (var symbol in Symbols)
         {
             token.ThrowIfCancellationRequested();
-            if (symbol.Declaration.Name.Contains(query, options.Comparison)) result.Add(symbol);
+            if (MatchesQuery(symbol.Declaration.Name, query)) result.Add(symbol);
         }
         return result.ToImmutable();
+    }
+
+    private bool MatchesQuery(string name, string query)
+    {
+        if (options.IdentifierComparer == null) return name.Contains(query, options.Comparison);
+        if (query.Length == 0) return true;
+        for (var i = 0; i <= name.Length - query.Length; i++)
+            if (options.Comparer.Equals(name.Substring(i, query.Length), query)) return true;
+        return false;
     }
 
     private static bool SameAnchor(SqlNavigationTarget a, SqlNavigationTarget b) => a.Uri == b.Uri && a.Range == b.Range;

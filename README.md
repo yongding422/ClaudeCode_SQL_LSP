@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working offline T-SQL language server in C#/.NET. **M0–M2** implement stdio LSP lifecycle, incremental synchronization, SqlScriptDOM syntax diagnostics, document and workspace symbols, definition/references navigation, and workspace snapshots with unsaved-buffer overlays. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
+A working T-SQL language server in C#/.NET. **M0–M3** implement stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, workspace overlays, and opt-in SQL Server metadata with read-only source snapshots. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
 
 ## Build and test
 
@@ -13,7 +13,17 @@ dotnet test --no-build --no-restore
 dotnet format --no-restore --verify-no-changes
 ```
 
-No database is required or accessed. Direct dependency versions are in `Directory.Packages.props`; lock files pin transitive dependencies. CI runs the offline suite on Windows, Linux and macOS; local verification has been performed on Windows.
+No database is required for the default suite or offline mode. Direct dependency versions are in `Directory.Packages.props`; lock files pin transitive dependencies. CI runs the default suite on Windows, Linux and macOS, with a separate disposable SQL Server job. Local verification has been performed on Windows.
+
+With Docker running Linux containers, run the opt-in live suite in PowerShell:
+
+```powershell
+$env:SQLLSP_RUN_SQLSERVER_TESTS = '1'
+dotnet test -c Release
+Remove-Item Env:SQLLSP_RUN_SQLSERVER_TESTS
+```
+
+The fixture creates and removes its own SQL Server Developer container, binds a random port to loopback, seeds only that database, and tests dedicated restricted accounts. It never connects to an existing database. See [online setup](docs/online.md) for configuration, permissions and test details.
 
 ## Launch
 
@@ -65,6 +75,8 @@ Manifest validation is recorded separately from a real Claude session. **Claude 
 
 M2 implements qualified workspace resolution for procedures, tables/views and selected function calls. CTEs, nested query aliases, module parameters, local variables and temporary/table-variable names use local bindings before global lookup. Quoted identifiers retain their AST components, including embedded dots and escaped delimiters. Ambiguous names never select an arbitrary declaration. Dynamic SQL, remote and numbered procedure targets remain unsupported.
 
-Next is M3: opt-in SQL Server metadata discovery and read-only definitions with permission/cancellation tests. Online/hybrid metadata, semantic diagnostics, completion, rename and MCP are not implemented or advertised. No analyzed SQL is executed.
+M3 adds `sql.mode=online` with explicitly enabled profiles and environment-variable secrets. Online mode indexes catalog objects and visible module AST references without scanning the repository by default. Navigation opens ordinary `file:` URIs in a private, read-only snapshot directory; hidden/encrypted source is represented only by clearly labeled metadata descriptions. [Online setup](docs/online.md) explains the validated options and limitations.
+
+Next is M4: hybrid mappings, source precedence and drift. Hybrid mode, semantic diagnostics, completion, rename and MCP are not implemented or advertised. No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

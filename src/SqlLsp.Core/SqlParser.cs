@@ -4,10 +4,10 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 namespace SqlLsp.Core;
 
 public enum SqlObjectKind { Procedure, View, Function, Table, Cte, TempTable, Alias, Variable, Parameter }
-public enum SqlSourceKind { Workspace, UnsavedBuffer }
+public enum SqlSourceKind { Workspace, UnsavedBuffer, Database }
 public sealed record SqlDeclaration(string Name, SqlObjectKind Kind, TextRange Range, TextRange SelectionRange,
     QualifiedSqlName? QualifiedName = null, string? Database = null, bool IsDefinition = true);
-public sealed record SqlParseDiagnostic(int Code, string Message, TextRange Range);
+public sealed record SqlParseDiagnostic(int Code, string Message, TextRange Range, int Offset = -1);
 public sealed record SqlParseResult(SourceText Source, TSqlFragment Ast,
     ImmutableArray<TSqlParserToken> Tokens, ImmutableArray<SqlParseDiagnostic> Diagnostics,
     ImmutableArray<SqlDeclaration> Declarations, SqlSemanticDocument Semantics);
@@ -44,12 +44,19 @@ public sealed class SqlParser(ParserOptions options, ResolutionOptions? resoluti
             var offset = Math.Clamp(error.Offset, 0, source.Text.Length);
             var token = tokens.FirstOrDefault(t => t.Offset == offset);
             var length = Math.Min(token?.Text?.Length ?? (offset < source.Text.Length ? 1 : 0), source.Text.Length - offset);
-            return new SqlParseDiagnostic(error.Number, error.Message, source.Range(offset, length));
+            return new SqlParseDiagnostic(error.Number, error.Message, source.Range(offset, length), offset);
         }).ToImmutableArray();
-        var semantics = SqlSemanticExtractor.Extract(ast, source, errors, resolution ?? new(), cancellationToken);
+        var semantics = SqlSemanticExtractor.Extract(ast, source, errors.Select(e => e.Offset), resolution ?? new(), cancellationToken);
         return new SqlParseResult(source, ast, tokens.ToImmutableArray(), diagnostics,
             visitor.Declarations.ToImmutableArray(), semantics);
     }, cancellationToken);
+
+    // Reuse the immutable syntax tree when catalog comparison rules become known after parsing a buffer.
+    public static SqlParseResult Rebind(SqlParseResult parse, ResolutionOptions resolution, CancellationToken token) => parse with
+    {
+        Semantics = SqlSemanticExtractor.Extract(parse.Ast, parse.Source,
+            parse.Diagnostics.Select(d => d.Offset >= 0 ? d.Offset : parse.Source.OffsetAt(d.Range.Start)), resolution, token)
+    };
 
     private sealed class DeclarationVisitor(SourceText source, IList<ParseError> errors, CancellationToken token) : TSqlFragmentVisitor
     {

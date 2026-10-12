@@ -16,9 +16,10 @@ public sealed record QualifiedSqlName(string? Server, string? Database, string? 
     }
 }
 
-public sealed record ResolutionOptions(bool CaseSensitive = true, string? DefaultSchema = null, string? DefaultDatabase = null)
+public sealed record ResolutionOptions(bool CaseSensitive = true, string? DefaultSchema = null, string? DefaultDatabase = null,
+    StringComparer? IdentifierComparer = null, string? FallbackSchema = null)
 {
-    public StringComparer Comparer => CaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+    public StringComparer Comparer => IdentifierComparer ?? (CaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
     public StringComparison Comparison => CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 }
 

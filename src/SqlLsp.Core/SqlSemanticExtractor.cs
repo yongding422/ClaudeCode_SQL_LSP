@@ -13,7 +13,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
     private readonly Dictionary<int, List<Binding>> dmlTargets = new();
     private string? database;
 
-    public static SqlSemanticDocument Extract(TSqlFragment ast, SourceText source, IList<ParseError> errors,
+    public static SqlSemanticDocument Extract(TSqlFragment ast, SourceText source, IEnumerable<int> errors,
         ResolutionOptions options, CancellationToken token)
     {
         var visitor = new SqlSemanticExtractor(source, options, token);
@@ -24,7 +24,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
                 foreach (var statement in batch.Statements)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (errors.Any(e => e.Offset >= statement.StartOffset && e.Offset <= statement.StartOffset + statement.FragmentLength)) continue;
+                    if (errors.Any(offset => offset >= statement.StartOffset && offset <= statement.StartOffset + statement.FragmentLength)) continue;
                     if (statement is UseStatement use) visitor.database = use.DatabaseName.Value;
                     else
                     {

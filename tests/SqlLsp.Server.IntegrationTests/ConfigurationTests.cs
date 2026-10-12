@@ -12,7 +12,7 @@ public class ConfigurationTests
     {
         object options = scenario switch
         {
-            "unsupported-mode" => new { sql = new { mode = "online" } },
+            "unsupported-mode" => new { sql = new { mode = "hybrid" } },
             "unsupported-parser" => new { sql = new { parserVersion = "999" } },
             "invalid-size" => new { workspace = new { maxFileSizeBytes = 0 } },
             "wrong-type" => new { sql = new { quotedIdentifier = "yes" } },

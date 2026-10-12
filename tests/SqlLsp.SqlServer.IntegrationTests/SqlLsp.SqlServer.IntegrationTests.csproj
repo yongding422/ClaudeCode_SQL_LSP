@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <Using Include="Xunit" />
+    <ProjectReference Include="../../src/SqlLsp.Providers.SqlServer/SqlLsp.Providers.SqlServer.csproj" />
+    <ProjectReference Include="../../src/SqlLsp.Server/SqlLsp.Server.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="../SqlLsp.Server.IntegrationTests/LspClient.cs" Link="LspClient.cs" />
+  </ItemGroup>
+</Project>

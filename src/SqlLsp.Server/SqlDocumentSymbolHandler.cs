@@ -10,10 +10,9 @@ public sealed class SqlDocumentSymbolHandler(ServerState state) : IDocumentSymbo
 
     public async Task<SymbolInformationOrDocumentSymbolContainer?> Handle(DocumentSymbolParams request, CancellationToken token)
     {
-        var snapshot = state.Documents is { } documents ? await documents.GetAsync(new Uri(request.TextDocument.Uri.ToString()), token) : null;
-        if (snapshot == null) return new SymbolInformationOrDocumentSymbolContainer();
+        var declarations = await state.DeclarationsAsync(new Uri(request.TextDocument.Uri.ToString()), token);
         var symbols = new List<SymbolInformationOrDocumentSymbol>();
-        foreach (var declaration in snapshot.Parse.Declarations)
+        foreach (var declaration in declarations)
         {
             token.ThrowIfCancellationRequested();
             if (hierarchical)

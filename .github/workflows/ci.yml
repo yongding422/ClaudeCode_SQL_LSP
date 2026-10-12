@@ -15,3 +15,17 @@ jobs:
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --no-restore --configuration Release
       - run: dotnet format --no-restore --verify-no-changes
+  sqlserver:
+    # Owns an ephemeral SQL Server Developer container; no external credentials or database.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SQLLSP_RUN_SQLSERVER_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test tests/SqlLsp.SqlServer.IntegrationTests --no-build --no-restore --configuration Release

@@ -8,6 +8,8 @@
 
 PowerShell 7+ launch: `./scripts/start-server.ps1`. Unix launch: `sh ./scripts/start-server.sh`. These wrappers launch published code without build output on stdout. No database profile or credentials are needed in M1.
 
+M3 online configuration and opt-in disposable SQL Server tests are documented in [online.md](online.md). Ordinary build/test does not need Docker; five live cases are skipped unless explicitly enabled.
+
 To run the process integration suite against the published DLL in PowerShell:
 
 ```powershell

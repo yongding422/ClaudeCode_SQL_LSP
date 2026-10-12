@@ -10,6 +10,7 @@
   <PropertyGroup><AssemblyName>sqlscriptdom-lsp</AssemblyName></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SqlLsp.Core/SqlLsp.Core.csproj" />
+    <ProjectReference Include="../SqlLsp.Providers.SqlServer/SqlLsp.Providers.SqlServer.csproj" />
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" />
     <PackageReference Include="JsonSchema.Net" />
     <EmbeddedResource Include="../../docs/configuration.schema.json" LogicalName="SqlLsp.configuration.schema.json" />
