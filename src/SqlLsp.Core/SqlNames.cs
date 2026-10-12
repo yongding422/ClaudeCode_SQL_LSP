@@ -33,5 +33,10 @@ public sealed record SqlObjectIdentity(string SourceContextId, string? Server, s
     string Name, SqlObjectKind Kind);
 public sealed record SqlNavigationTarget(Uri Uri, TextRange Range, SqlObjectIdentity? Identity, SqlSourceKind SourceKind,
     string Provenance);
-public sealed record IndexedSqlSymbol(SqlObjectIdentity Identity, SqlDeclaration Declaration, SqlNavigationTarget Target);
-public sealed record ResolutionResult(ResolutionStatus Status, ImmutableArray<SqlNavigationTarget> Candidates, string Explanation);
+public sealed record IndexedSqlSymbol(SqlObjectIdentity Identity, SqlDeclaration Declaration, SqlNavigationTarget Target,
+    string? DefinitionHash = null, DateTimeOffset? CapturedAt = null);
+public sealed record ResolutionResult(ResolutionStatus Status, ImmutableArray<SqlNavigationTarget> Candidates, string Explanation,
+    SqlNavigationTarget? Selected = null)
+{
+    public SqlNavigationTarget? Target => Status == ResolutionStatus.Resolved ? Selected ?? Candidates.FirstOrDefault() : null;
+}

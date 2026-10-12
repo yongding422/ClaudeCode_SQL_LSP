@@ -102,3 +102,34 @@ The live image is pinned to `sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6b
 Known limits: one selected online profile; hybrid precedence/multi-target mapping and drift remain M4. Metadata collection is not transactionally atomic, cached permissions can last until TTL, and force termination can leave private files. SQL authentication is verified; Entra extensions and other deployment authentication setups are not. Full SQL collation/version binding, dynamic SQL and missing source coverage are not claimed. CI is configured, but Linux/macOS host results and real Claude Code LSP behavior are not local evidence.
 
 Next milestone: M4 explicit hybrid mappings, buffer/workspace/database precedence with preserved candidates and provenance, definition drift, and offline degradation under database failure.
+
+## M4 — complete (2026-10-11)
+
+- [x] Validate explicit initialized-root mappings to enabled profiles, canonicalize directory URIs, reject unsafe/missing/duplicate mappings and keep unmapped projects offline. Only mapped hybrid profiles are contacted; online retains its one selected profile behavior.
+- [x] Filter shared symbols by context/database/schema/name/kind and appropriate comparison rules before source selection. Preserve all candidates with a separate selected target; local/unsaved declarations win by default for one mapped identity. Configured database preference works, while duplicate declarations, schema/kind collisions and competing profile identities stay ambiguous.
+- [x] Supply permitted catalog schema descriptions when local DDL is missing, retain source/capture provenance, and collect verified local/deployed AST references from equivalent declaration anchors. Never invent spans for catalog dependency records.
+- [x] Compare safely parsed module token hashes with Match/Different/Unavailable/Ambiguous states. Ignore formatting/comments/acquisition headers; preserve body values. Expose comparison/provenance/timestamps in workspace symbol data and bounded log notifications. Hidden/encrypted/table-only/malformed source remains unknown; no behavioral equivalence/change is claimed.
+- [x] Isolate per-profile caches/files/status and limit acquisition to two concurrent sources under a shared 30-second budget. Failed/expired catalogs are excluded while local analysis and healthy mapped profiles remain available. Last verified comparison rules can support local fallback. Stale definition fallback remains explicitly disabled.
+- [x] Add deterministic core/wire fixtures plus real SQL Server hybrid cases for precedence, edited buffer comparison, close restoration, encrypted source, schema fallback, duplicate guards, independent mappings/profile failures and continued local navigation after a stopped-server outage and cache expiry. Only the owned disposable fixture is stopped/restarted; no existing database is used.
+
+Final verification on Windows with Docker's Linux engine:
+
+| Check | Result |
+| --- | --- |
+| `dotnet restore --locked-mode` | Passed; existing dependency pins/locks unchanged |
+| Release build | Passed; 0 warnings, 0 errors |
+| Full Release suite, live opt-in enabled | **145 passed: 76 core, 43 wire/process, 26 provider/catalog; 0 failed, 0 skipped** |
+| Live SQL Server cases | **9 passed**: M3's five plus four hybrid cases |
+| Default suite without live opt-in | **136 passed, 9 explicitly skipped**; no database needed |
+| Publish and full suite with `SQLLSP_TEST_SERVER_DLL` pointing at published DLL | **145 passed**, including live hybrid/outage wire behavior |
+| `dotnet format --no-restore --verify-no-changes` | Passed |
+| `git diff --check` | Passed |
+| NuGet vulnerability audit with transitive packages | No vulnerable packages reported by configured source |
+| Strict Claude development manifest validation | Passed for plugin 0.4.0; actual Claude interaction remains M5 |
+| Disposable fixture cleanup | No labeled SQL LSP containers remain after completion |
+
+Dependencies remain .NET SDK 10.0.401, ScriptDOM 180.117.0, OmniSharp 1.0.0, JsonSchema.Net 9.4.0 and SqlClient 7.1.1 with existing test pins. Process-test class parallelism is bounded to two; actual request concurrency/cancellation fixtures remain active. No database execution/deployment capabilities were added. Configuration and implementation decisions are documented in [hybrid setup](hybrid.md) and ADR 0005.
+
+Known limits: normalized token comparison is not semantic drift analysis; original table DDL and inaccessible source cannot be compared. Cross-server names, full collation/USE rebinding, runtime mappings/reconfiguration, large-index performance and stale-cache opt-in are not implemented. Cache freshness and private file lifetime retain M3 limits. Local evidence is Windows plus Docker's Linux SQL Server engine; Linux/macOS host CI and actual Claude Code LSP behavior are separate gates.
+
+Next milestone: M5 real Claude Code LSP/plugin verification, reproducible distribution/installation, performance/security/stress hardening and documented client/platform results.

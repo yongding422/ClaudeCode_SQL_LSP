@@ -8,25 +8,31 @@ public sealed class SqlNavigationIndex
     private readonly ImmutableArray<DocumentSnapshot> documents;
     private readonly Func<Uri, string> context;
     private readonly ResolutionOptions options;
+    private readonly SqlHybridPolicy? hybrid;
     public ImmutableArray<IndexedSqlSymbol> Symbols { get; }
+    public ImmutableArray<SqlDefinitionDrift> Drifts { get; }
 
     public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options,
-        ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true)
+        ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true, SqlHybridPolicy? hybrid = null,
+        bool reportDrift = true, CancellationToken token = default)
     {
         this.documents = documents;
         this.context = context;
         this.options = options;
+        this.hybrid = hybrid;
         Symbols = (indexDeclarations ? documents.Where(d => d.SourceKind != SqlSourceKind.Database).SelectMany(document => document.Parse.Declarations
             .Where(d => d.IsDefinition && d.QualifiedName != null && !d.QualifiedName.Name.StartsWith('#'))
             .Select(d =>
             {
                 var name = d.QualifiedName!;
+                var rules = hybrid?.RulesFor(context(document.Uri), options) ?? options;
                 var identity = new SqlObjectIdentity(context(document.Uri), name.Server,
-                    name.Database ?? d.Database ?? options.DefaultDatabase, name.Schema ?? options.DefaultSchema, name.Name, d.Kind);
+                    name.Database ?? d.Database ?? rules.DefaultDatabase, name.Schema ?? rules.DefaultSchema, name.Name, d.Kind);
                 var target = new SqlNavigationTarget(document.Uri, d.SelectionRange, identity, document.SourceKind,
                     document.SourceKind == SqlSourceKind.UnsavedBuffer ? "Unsaved buffer" : "Workspace AST");
-                return new IndexedSqlSymbol(identity, d, target);
+                return new IndexedSqlSymbol(identity, d, target, hybrid == null ? null : SqlDefinitionFingerprint.Compute(document.Parse, d, token));
             })) : []).Concat(sourceSymbols.IsDefault ? [] : sourceSymbols).ToImmutableArray();
+        Drifts = hybrid != null && reportDrift ? SqlDefinitionDriftAnalysis.Compare(this, hybrid, options, token) : [];
     }
 
     public ResolutionResult Resolve(DocumentSnapshot document, SqlStaticReference reference)
@@ -36,6 +42,7 @@ public sealed class SqlNavigationIndex
             return new(ResolutionStatus.Resolved, [new(document.Uri, local.Range, null, document.SourceKind, "Lexical scope")], "Verified local binding.");
         if (reference.Name is not { } name) return new(ResolutionStatus.Unsupported, [], "This syntax has no supported static object target.");
         if (name.Server != null) return new(ResolutionStatus.Unsupported, [], "Cross-server targets require explicit source mapping.");
+        if (hybrid != null) return hybrid.Resolve(Symbols, context(document.Uri), name, reference.Database, reference.Kind, options);
         var database = name.Database ?? reference.Database ?? options.DefaultDatabase;
         var schema = name.Schema ?? options.DefaultSchema;
         IEnumerable<SqlNavigationTarget> Match(string? candidateSchema) => Symbols.Where(symbol =>
@@ -77,7 +84,20 @@ public sealed class SqlNavigationIndex
     {
         var selected = Definition(uri, position, token);
         if (selected.Status != ResolutionStatus.Resolved) return [];
-        var target = selected.Candidates[0];
+        var target = selected.Target!;
+        if (hybrid != null && target.Identity is { } identity && target.SourceKind != SqlSourceKind.Database)
+        {
+            var kind = identity.Kind switch
+            {
+                SqlObjectKind.Procedure => SqlReferenceKind.Procedure,
+                SqlObjectKind.Function => SqlReferenceKind.Function,
+                SqlObjectKind.Table => SqlReferenceKind.Table,
+                _ => SqlReferenceKind.Relation
+            };
+            var equivalent = hybrid.Resolve(Symbols, identity.SourceContextId, new(identity.Server, identity.Database, identity.Schema, identity.Name), null, kind, options);
+            if (equivalent.Status == ResolutionStatus.Resolved && equivalent.Candidates.Any(c => SameAnchor(c, target)))
+                selected = selected with { Candidates = equivalent.Candidates };
+        }
         var results = new List<SqlNavigationTarget>();
         if (includeDeclaration) results.Add(target);
         foreach (var document in documents)
@@ -85,7 +105,7 @@ public sealed class SqlNavigationIndex
             {
                 token.ThrowIfCancellationRequested();
                 var resolution = Resolve(document, reference);
-                if (resolution.Status == ResolutionStatus.Resolved && SameAnchor(resolution.Candidates[0], target))
+                if (resolution.Status == ResolutionStatus.Resolved && resolution.Candidates.Any(c => selected.Candidates.Any(s => SameAnchor(c, s))))
                     results.Add(new(document.Uri, reference.Range, target.Identity, document.SourceKind, "Static AST reference"));
             }
         return results.DistinctBy(r => (r.Uri, r.Range)).OrderBy(r => r.Uri.AbsoluteUri, StringComparer.Ordinal)
@@ -99,12 +119,12 @@ public sealed class SqlNavigationIndex
         foreach (var symbol in Symbols)
         {
             token.ThrowIfCancellationRequested();
-            if (MatchesQuery(symbol.Declaration.Name, query)) result.Add(symbol);
+            if (MatchesQuery(symbol.Declaration.Name, query, hybrid?.RulesFor(symbol.Identity.SourceContextId, options) ?? options)) result.Add(symbol);
         }
         return result.ToImmutable();
     }
 
-    private bool MatchesQuery(string name, string query)
+    private static bool MatchesQuery(string name, string query, ResolutionOptions options)
     {
         if (options.IdentifierComparer == null) return name.Contains(query, options.Comparison);
         if (query.Length == 0) return true;
@@ -115,7 +135,7 @@ public sealed class SqlNavigationIndex
 
     private static bool SameAnchor(SqlNavigationTarget a, SqlNavigationTarget b) => a.Uri == b.Uri && a.Range == b.Range;
     private static int SpanLength(DocumentSnapshot d, TextRange range) => d.Parse.Source.OffsetAt(range.End) - d.Parse.Source.OffsetAt(range.Start);
-    private static bool KindMatches(SqlObjectKind kind, SqlReferenceKind reference) => reference switch
+    internal static bool KindMatches(SqlObjectKind kind, SqlReferenceKind reference) => reference switch
     {
         SqlReferenceKind.Procedure => kind == SqlObjectKind.Procedure,
         SqlReferenceKind.Function => kind == SqlObjectKind.Function,

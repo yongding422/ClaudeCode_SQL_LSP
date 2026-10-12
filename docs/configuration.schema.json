@@ -9,7 +9,7 @@
       "additionalProperties": false,
       "properties": {
         "dialect": { "const": "tsql" },
-        "mode": { "enum": ["offline", "online"] },
+        "mode": { "enum": ["offline", "online", "hybrid"] },
         "parserVersion": { "enum": ["80", "90", "100", "110", "120", "130", "140", "150", "160", "170", "180"] },
         "quotedIdentifier": { "type": "boolean" }
       }
@@ -21,7 +21,23 @@
         "caseSensitive": { "type": "boolean" },
         "defaultSchema": { "type": "string", "minLength": 1 },
         "defaultDatabase": { "type": "string", "minLength": 1 },
-        "defaultDatabaseProfile": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" }
+        "defaultDatabaseProfile": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+        "preferWorkspaceDefinitions": { "type": "boolean", "default": true },
+        "reportDefinitionDrift": { "type": "boolean", "default": true },
+        "allowStaleDatabaseCache": { "const": false },
+        "workspaceMappings": {
+          "type": "array", "maxItems": 64,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["workspaceRoot", "databaseProfiles"],
+            "properties": {
+              "workspaceRoot": { "type": "string", "minLength": 1 },
+              "databaseProfiles": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true,
+                "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" } },
+              "defaultDatabaseProfile": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" }
+            }
+          }
+        }
       }
     },
     "workspace": {

@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET. **M0–M3** implement stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, workspace overlays, and opt-in SQL Server metadata with read-only source snapshots. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
+A working T-SQL language server in C#/.NET. **M0–M4** implement stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, workspace overlays, opt-in SQL Server metadata, and mapped hybrid resolution with definition comparison. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
 
 ## Build and test
 
@@ -77,6 +77,8 @@ M2 implements qualified workspace resolution for procedures, tables/views and se
 
 M3 adds `sql.mode=online` with explicitly enabled profiles and environment-variable secrets. Online mode indexes catalog objects and visible module AST references without scanning the repository by default. Navigation opens ordinary `file:` URIs in a private, read-only snapshot directory; hidden/encrypted source is represented only by clearly labeled metadata descriptions. [Online setup](docs/online.md) explains the validated options and limitations.
 
-Next is M4: hybrid mappings, source precedence and drift. Hybrid mode, semantic diagnostics, completion, rename and MCP are not implemented or advertised. No analyzed SQL is executed.
+M4 adds `sql.mode=hybrid` with explicit workspace/profile mappings, local and unsaved navigation preference, catalog fallback, source provenance and conservative module drift reporting. Duplicate declarations and competing identities remain ambiguous. Failed profiles remove expired catalog targets while local analysis stays available. See [hybrid setup](docs/hybrid.md).
+
+Next is M5: real Claude Code verification, distribution and hardening. Semantic diagnostics, completion, rename and MCP are not implemented or advertised. No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

@@ -5,7 +5,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using SqlLsp.Core;
-using SqlLsp.Providers.SqlServer;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace SqlLsp.Server;
@@ -18,20 +17,21 @@ public sealed class ServerState : IAsyncDisposable
     public ResolutionOptions Resolution { get; private set; } = new();
     private WorkspaceWatcher? watcher;
     private ServerConfiguration? configuration;
-    private CatalogCache? catalog;
-    private CatalogDocuments? catalogFiles;
-    private CatalogNavigationSnapshot? database;
+    private readonly Dictionary<string, SqlDatabaseSourceSession> databases = new(StringComparer.Ordinal);
+    private ImmutableArray<SqlWorkspaceMapping> mappings = [];
     private readonly SemaphoreSlim databaseGate = new(1);
     private ILanguageServerFacade? facade;
-    private string? lastStatus;
-    private readonly Dictionary<Uri, (DocumentSnapshot Original, DocumentSnapshot Bound)> boundDocuments = new();
+    private string? lastDriftStatus;
+    private readonly Dictionary<Uri, (DocumentSnapshot Original, DocumentSnapshot Bound, ResolutionOptions Rules)> boundDocuments = new();
     private readonly CancellationTokenSource lifetime = new();
-    public bool IsReadOnlySnapshot(Uri uri) => catalogFiles?.Owns(uri) == true;
+    public bool IsReadOnlySnapshot(Uri uri) => databases.Values.Any(d => d.Files?.Owns(uri) == true);
 
     public async Task InitializeAsync(ILanguageServerFacade server, InitializeParams request, CancellationToken token)
     {
         ServerConfiguration config;
-        try { config = ServerConfiguration.Parse(request.InitializationOptions); }
+        var roots = request.WorkspaceFolders?.Select(folder => new Uri(folder.Uri.ToString())).ToArray();
+        roots ??= request.RootUri is null ? [] : [new Uri(request.RootUri.ToString())];
+        try { config = ServerConfiguration.Parse(request.InitializationOptions); config.ValidateMappings(roots); }
         catch (RpcErrorException error)
         {
             ConfigurationError = error.Message + ". Restart the server with valid options.";
@@ -60,16 +60,20 @@ public sealed class ServerState : IAsyncDisposable
                 Range = ToRange(diagnostic.Range)
             }))
         });
-        var roots = request.WorkspaceFolders?.Select(folder => new Uri(folder.Uri.ToString())).ToArray();
-        roots ??= request.RootUri is null ? [] : [new Uri(request.RootUri.ToString())];
-        var scan = config.Mode == "offline" || config.ScanInOnline;
+        var scan = config.Mode != "online" || config.ScanInOnline;
         await Documents.InitializeAsync(scan ? roots : [], token);
         if (scan) watcher = new WorkspaceWatcher(Files, Documents, message => Console.Error.WriteLine(message));
-        if (config.DatabaseProfile is { } profile)
+        if (config.Mode == "hybrid")
         {
-            catalog = new CatalogCache(profile, new SqlServerCatalogReader());
-            catalogFiles = new CatalogDocuments();
+            mappings = config.WorkspaceMappings.Select(m => m with
+            {
+                WorkspaceContextId = Files.Roots.Select(r =>
+                ServerConfiguration.NormalizeRoot(new Uri(r))).First(r => new Uri(r).Equals(new Uri(m.WorkspaceContextId)))
+            }).ToImmutableArray();
+            foreach (var profile in config.Profiles.Where(p => mappings.Any(m => m.ProfileIds.Contains(p.Id))))
+                databases.Add(profile.Id, new SqlDatabaseSourceSession(profile, Resolution));
         }
+        else if (config.DatabaseProfile is { } profile) databases.Add(profile.Id, new SqlDatabaseSourceSession(profile, Resolution));
     }
 
     public async Task<SqlNavigationIndex> NavigationAsync(CancellationToken token)
@@ -77,56 +81,59 @@ public sealed class ServerState : IAsyncDisposable
         using var request = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.Token);
         token = request.Token;
         var documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
-        if (catalog == null || configuration?.DatabaseProfile is not { } profile)
+        if (databases.Count == 0 || configuration == null)
             return new(documents, uri => Files?.ContextId(uri) ?? uri.AbsoluteUri, Resolution);
         await databaseGate.WaitAsync(token);
         try
         {
-            try
+            using var refresh = CancellationTokenSource.CreateLinkedTokenSource(token);
+            refresh.CancelAfter(TimeSpan.FromSeconds(30));
+            using var concurrency = new SemaphoreSlim(2);
+            // Consume fresh cache entries before a slow refresh can exhaust the shared budget.
+            await Task.WhenAll(databases.Values.OrderByDescending(source => source.Current != null &&
+                DateTimeOffset.UtcNow < source.Current.Catalog.CapturedAt.AddSeconds(source.Profile.CacheTtlSeconds)).Select(async source =>
             {
-                var snapshot = await catalog.GetAsync(token);
-                if (!ReferenceEquals(snapshot, database?.Catalog))
-                {
-                    database = await catalogFiles!.BuildAsync(snapshot, configuration.Parser, token);
-                    boundDocuments.Clear();
-                }
-                var status = $"Database profile {profile.Id}: {snapshot.Status}; captured {snapshot.CapturedAt:O}; visible objects={snapshot.Objects.Length}; " +
-                    $"collation={snapshot.Collation}; server version={snapshot.ServerVersion}; coverage={string.Join(',', snapshot.Coverage)}. Catalog dependencies are incomplete; reference locations use parsed ASTs.";
-                ReportStatus(status);
-                var resolution = Resolution with
-                {
-                    DefaultDatabase = snapshot.Database,
-                    IdentifierComparer = snapshot.Comparer,
-                    DefaultSchema = Resolution.DefaultSchema ?? snapshot.DefaultSchema,
-                    FallbackSchema = "dbo"
-                };
-                // Buffers may have changed while metadata was loading. Bind the completed current snapshots.
-                documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
-                foreach (var removed in boundDocuments.Keys.Except(documents.Select(d => d.Uri)).ToArray()) boundDocuments.Remove(removed);
-                var bound = ImmutableArray.CreateBuilder<DocumentSnapshot>();
-                foreach (var document in documents)
-                {
-                    if (!boundDocuments.TryGetValue(document.Uri, out var entry) || !ReferenceEquals(document, entry.Original))
-                    {
-                        entry = (document, document with { Parse = SqlParser.Rebind(document.Parse, resolution, token) });
-                        boundDocuments[document.Uri] = entry;
-                    }
-                    bound.Add(entry.Bound);
-                }
-                documents = bound.ToImmutable();
-                return new(documents.AddRange(database.Documents), _ => profile.Id, resolution,
-                    database.Symbols, configuration.ScanInOnline);
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
-            catch (Exception error) when (error is CatalogReadException or OperationCanceledException or IOException or UnauthorizedAccessException)
+                await concurrency.WaitAsync(token);
+                try { await source.LoadAsync(configuration.Parser, Resolution, refresh.Token, token, ReportStatus); }
+                finally { concurrency.Release(); }
+            }));
+            var snapshots = databases.Values.Where(d => d.Current != null).Select(d => d.Current!).ToArray();
+            var catalogDocuments = snapshots.SelectMany(s => s.Documents).ToImmutableArray();
+            var symbols = snapshots.SelectMany(s => s.Symbols).ToImmutableArray();
+            var databaseContexts = symbols.ToDictionary(s => s.Target.Uri, s => s.Identity.SourceContextId);
+            var hybrid = configuration.Mode == "hybrid" ? new SqlHybridPolicy(databases.Values.Select(d =>
+                new SqlProfileContext(d.Profile.Id, d.Profile.Database, d.Rules)).ToImmutableArray(), mappings, configuration.PreferWorkspaceDefinitions) : null;
+            var online = configuration.Mode == "online" ? databases.Values.Single() : null;
+            string Context(Uri uri) => databaseContexts.GetValueOrDefault(uri) ?? (online?.Profile.Id ?? WorkspaceContext(uri));
+            // Buffers may have changed while metadata was loading. Bind the completed current snapshots.
+            documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
+            foreach (var removed in boundDocuments.Keys.Except(documents.Select(d => d.Uri)).ToArray()) boundDocuments.Remove(removed);
+            var bound = ImmutableArray.CreateBuilder<DocumentSnapshot>();
+            foreach (var document in documents)
             {
-                // Never log provider exception text; arbitrary connection errors may contain credentials.
-                database = null;
-                boundDocuments.Clear();
-                var code = error is CatalogReadException known ? known.Code : error is OperationCanceledException ? "timeout" : "snapshot-storage-unavailable";
-                ReportStatus($"Database profile {profile.Id}: Unavailable ({code}); stale catalog results are disabled.");
-                return new(documents, _ => profile.Id, Resolution, indexDeclarations: configuration.ScanInOnline);
+                var rules = hybrid?.RulesFor(Context(document.Uri), Resolution) ?? online?.Rules ?? Resolution;
+                if (!boundDocuments.TryGetValue(document.Uri, out var entry) || !ReferenceEquals(document, entry.Original) || entry.Rules != rules)
+                {
+                    entry = (document, document with { Parse = SqlParser.Rebind(document.Parse, rules, token) }, rules);
+                    boundDocuments[document.Uri] = entry;
+                }
+                bound.Add(entry.Bound);
             }
+            var index = new SqlNavigationIndex(bound.ToImmutable().AddRange(catalogDocuments), Context, online?.Rules ?? Resolution,
+                symbols, configuration.Mode == "hybrid" || configuration.ScanInOnline, hybrid, configuration.ReportDefinitionDrift, token);
+            if (hybrid != null && configuration.ReportDefinitionDrift)
+            {
+                var driftStatus = string.Join(';', index.Drifts.OrderBy(d => d.Local.Uri.AbsoluteUri, StringComparer.Ordinal)
+                    .ThenBy(d => d.Local.Range.Start.Line).Take(100).Select(d => $"{d.Local.Identity!.Schema}.{d.Local.Identity.Name}: {d.Status}; captured {d.CapturedAt:O}")) +
+                    $"; total compared={index.Drifts.Length}";
+                if (lastDriftStatus != driftStatus)
+                {
+                    lastDriftStatus = driftStatus;
+                    ReportStatus("Hybrid definition comparison: " + driftStatus.Replace('\r', ' ').Replace('\n', ' ') +
+                        ". Token differences do not prove behavioral drift.");
+                }
+            }
+            return index;
         }
         finally { databaseGate.Release(); }
     }
@@ -139,12 +146,13 @@ public sealed class ServerState : IAsyncDisposable
         return document?.Parse.Declarations ?? [];
     }
 
-    private void ReportStatus(string status)
+    private string WorkspaceContext(Uri uri)
     {
-        if (lastStatus == status) return;
-        lastStatus = status;
-        facade?.Window.LogMessage(new LogMessageParams { Type = MessageType.Info, Message = status });
+        var context = Files?.ContextId(uri) ?? uri.AbsoluteUri;
+        return Uri.TryCreate(context, UriKind.Absolute, out var root) && root.IsFile ? ServerConfiguration.NormalizeRoot(root) : context;
     }
+
+    private void ReportStatus(string status) => facade?.Window.LogMessage(new LogMessageParams { Type = MessageType.Info, Message = status });
 
     public static Range ToRange(TextRange range) => new(
         new Position(range.Start.Line, range.Start.Character), new Position(range.End.Line, range.End.Character));
@@ -163,10 +171,7 @@ public sealed class ServerState : IAsyncDisposable
         if (watcher != null) { await watcher.DisposeAsync(); watcher = null; }
         if (Documents != null) await Documents.DisposeAsync();
         await databaseGate.WaitAsync();
-        if (catalog != null) await catalog.DisposeAsync();
-        try { catalogFiles?.Dispose(); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        { Console.Error.WriteLine("Private catalog snapshot cleanup could not complete."); }
+        foreach (var source in databases.Values) await source.DisposeAsync();
         databaseGate.Dispose();
         lifetime.Dispose();
     }

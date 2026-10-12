@@ -65,7 +65,9 @@ public sealed class CatalogDocuments : IDisposable
                 var declaration = new SqlDeclaration(obj.Schema + "." + obj.Name, obj.Kind,
                     parsedDeclaration?.Range ?? range, range, new(null, catalog.Database, obj.Schema, obj.Name), catalog.Database);
                 var provenance = obj.Definition == null ? "Catalog metadata only; original source unavailable" : "Database module AST";
-                symbols.Add(new(identity, declaration, new(uri, range, identity, SqlSourceKind.Database, provenance)));
+                symbols.Add(new(identity, declaration, new(uri, range, identity, SqlSourceKind.Database, provenance),
+                    obj.Definition != null && parsedDeclaration != null ? SqlDefinitionFingerprint.Compute(parse, parsedDeclaration) : null,
+                    catalog.CapturedAt));
                 documents.Add(new(uri, null, SqlSourceKind.Database, parse));
             }
             generations.Enqueue(directory);

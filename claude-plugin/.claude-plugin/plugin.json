@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.3.0",
-  "description": "T-SQL diagnostics and navigation with offline and opt-in SQL Server sources",
+  "version": "0.4.0",
+  "description": "T-SQL diagnostics and navigation with offline, online and mapped hybrid sources",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

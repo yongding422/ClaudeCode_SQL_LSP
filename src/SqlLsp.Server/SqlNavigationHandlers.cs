@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -13,8 +14,8 @@ public sealed class SqlDefinitionHandler(ServerState state) : IDefinitionHandler
         var navigation = await state.NavigationAsync(token);
         var result = navigation.Definition(new Uri(request.TextDocument.Uri.ToString()),
             new TextPosition(request.Position.Line, request.Position.Character), token);
-        return new LocationOrLocationLinks(result.Status == ResolutionStatus.Resolved
-            ? result.Candidates.Select(t => new LocationOrLocationLink(SqlLocations.From(t))) : []);
+        return new LocationOrLocationLinks(result.Target is { } target
+            ? new[] { new LocationOrLocationLink(SqlLocations.From(target)) } : []);
     }
 
     public DefinitionRegistrationOptions GetRegistrationOptions(DefinitionCapability capability, ClientCapabilities clientCapabilities) =>
@@ -39,12 +40,25 @@ public sealed class SqlWorkspaceSymbolsHandler(ServerState state) : IWorkspaceSy
     public async Task<Container<WorkspaceSymbol>?> Handle(WorkspaceSymbolParams request, CancellationToken token)
     {
         var navigation = await state.NavigationAsync(token);
-        return new Container<WorkspaceSymbol>(navigation.Search(request.Query, token).Select(symbol => new WorkspaceSymbol
+        return new Container<WorkspaceSymbol>(navigation.Search(request.Query, token).Select(symbol =>
         {
-            Name = symbol.Declaration.Name,
-            Kind = ServerState.ToKind(symbol.Identity.Kind),
-            ContainerName = symbol.Identity.SourceContextId + (symbol.Identity.Database == null ? "" : " | " + symbol.Identity.Database),
-            Location = SqlLocations.From(symbol.Target)
+            var drift = navigation.Drifts.FirstOrDefault(d => d.Local.Uri == symbol.Target.Uri && d.Local.Range == symbol.Target.Range);
+            return new WorkspaceSymbol
+            {
+                Name = symbol.Declaration.Name,
+                Kind = ServerState.ToKind(symbol.Identity.Kind),
+                ContainerName = symbol.Identity.SourceContextId + (symbol.Identity.Database == null ? "" : " | " + symbol.Identity.Database) + " | " + symbol.Target.SourceKind,
+                Location = SqlLocations.From(symbol.Target),
+                Data = JObject.FromObject(new
+                {
+                    source = symbol.Target.SourceKind.ToString(),
+                    provenance = symbol.Target.Provenance,
+                    capturedAt = symbol.CapturedAt,
+                    drift = drift?.Status.ToString(),
+                    driftCapturedAt = drift?.CapturedAt,
+                    driftDatabaseProfiles = drift?.DatabaseCandidates.Select(d => d.Identity!.SourceContextId).Distinct().ToArray()
+                })
+            };
         }));
     }
 

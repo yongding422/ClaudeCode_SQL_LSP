@@ -103,6 +103,31 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    public Task<string> StopServerAsync() => DockerAsync(["stop", "--time", "2", container]);
+    public async Task StartServerAsync()
+    {
+        SqlConnection.ClearAllPools();
+        await DockerAsync(["start", container]);
+        var binding = (await DockerAsync(["port", container, "1433/tcp"])).Trim();
+        Endpoint = "127.0.0.1," + binding.Split(':')[^1];
+        var catalog = new SqlConnectionStringBuilder(CatalogConnection) { DataSource = Endpoint };
+        CatalogConnection = catalog.ConnectionString;
+        var limited = new SqlConnectionStringBuilder(LimitedConnection) { DataSource = Endpoint };
+        LimitedConnection = limited.ConnectionString;
+        Environment.SetEnvironmentVariable(Profile.ConnectionStringEnv, CatalogConnection);
+        using var readiness = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        while (true)
+        {
+            try
+            {
+                await using var connection = new SqlConnection(CatalogConnection);
+                await connection.OpenAsync(readiness.Token);
+                break;
+            }
+            catch (SqlException) { await Task.Delay(500, readiness.Token); }
+        }
+    }
+
     private static async Task<string> DockerAsync(string[] arguments, string? password = null)
     {
         var start = new ProcessStartInfo("docker")
