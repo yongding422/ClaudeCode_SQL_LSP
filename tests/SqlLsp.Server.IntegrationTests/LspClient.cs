@@ -28,34 +28,44 @@ internal sealed class LspClient : IAsyncDisposable
         }
     }
 
-    public LspClient(params string[] args)
+    public LspClient(params string[] args) : this(null, null, args) { }
+
+    public LspClient(IReadOnlyDictionary<string, string?>? environment, string? workingDirectory = null, params string[] args)
     {
 #if DEBUG
         const string configuration = "Debug";
 #else
         const string configuration = "Release";
 #endif
-        var start = new ProcessStartInfo("dotnet")
+        var executable = Environment.GetEnvironmentVariable("SQLLSP_TEST_SERVER_EXE");
+        var start = new ProcessStartInfo(executable ?? "dotnet")
         {
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WorkingDirectory = RepositoryRoot
+            WorkingDirectory = workingDirectory ?? RepositoryRoot
         };
-        start.ArgumentList.Add(Environment.GetEnvironmentVariable("SQLLSP_TEST_SERVER_DLL") ?? Path.Combine(
-            RepositoryRoot, "src", "SqlLsp.Server", "bin", configuration, "net10.0", "sqlscriptdom-lsp.dll"));
+        if (executable == null)
+            start.ArgumentList.Add(Environment.GetEnvironmentVariable("SQLLSP_TEST_SERVER_DLL") ?? Path.Combine(
+                RepositoryRoot, "src", "SqlLsp.Server", "bin", configuration, "net10.0", "sqlscriptdom-lsp.dll"));
+        if (environment != null)
+            foreach (var entry in environment) start.Environment[entry.Key] = entry.Value;
         foreach (var argument in args.Length == 0 ? new[] { "--stdio" } : args) start.ArgumentList.Add(argument);
         process = Process.Start(start) ?? throw new InvalidOperationException("Server launch failed.");
         stderr = process.StandardError.ReadToEndAsync();
         reader = ReadLoopAsync();
     }
 
+    public long WorkingSetBytes { get { process.Refresh(); return process.WorkingSet64; } }
+    public Task<string> StderrAsync() => stderr;
+    public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
     public async Task<JsonElement> RequestAsync(string method, object? parameters, bool fragmented = false)
     {
         var request = await StartRequestAsync(method, parameters, fragmented);
-        try { return await request.Response.WaitAsync(TimeSpan.FromSeconds(15)); }
+        try { return await request.Response.WaitAsync(RequestTimeout); }
         catch (TimeoutException)
         {
             if (!process.HasExited) process.Kill(entireProcessTree: true);

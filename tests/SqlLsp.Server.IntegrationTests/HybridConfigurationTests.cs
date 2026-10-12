@@ -14,7 +14,7 @@ public class HybridConfigurationTests
     [InlineData("invalid-path")]
     public async Task Unsafe_or_incomplete_hybrid_mappings_fail_closed(string scenario)
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-config-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-config-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -27,7 +27,7 @@ public class HybridConfigurationTests
                 case "no-mapping": resolution.Clear(); break;
                 case "unknown-profile": map["databaseProfiles"] = new[] { "unapproved" }; break;
                 case "disabled-profile": profile["enabled"] = false; break;
-                case "unregistered-root": map["workspaceRoot"] = new Uri(Path.GetTempPath()).AbsoluteUri; break;
+                case "unregistered-root": map["workspaceRoot"] = new Uri(TestPaths.TempRoot).AbsoluteUri; break;
                 case "nonfile-root": map["workspaceRoot"] = "https://example.invalid/root"; break;
                 case "duplicate-root": resolution["workspaceMappings"] = new[] { map, map }; break;
                 case "invalid-default": map["defaultDatabaseProfile"] = "unapproved"; break;
@@ -61,7 +61,7 @@ public class HybridConfigurationTests
     [Fact]
     public async Task Hybrid_missing_secret_degrades_to_local_navigation_and_unmapped_roots_remain_isolated()
     {
-        var parent = Path.Combine(Path.GetTempPath(), "hybrid-roots-" + Guid.NewGuid().ToString("N"));
+        var parent = Path.Combine(TestPaths.TempRoot, "hybrid-roots-" + Guid.NewGuid().ToString("N"));
         var mapped = Path.Combine(parent, "mapped");
         var unmapped = Path.Combine(parent, "unmapped");
         Directory.CreateDirectory(mapped); Directory.CreateDirectory(unmapped);
@@ -106,7 +106,7 @@ public class HybridConfigurationTests
     [Fact]
     public async Task Offline_mode_accepts_saved_mappings_with_disabled_profiles_and_never_loads_them()
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-offline-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-offline-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -133,7 +133,7 @@ public class HybridConfigurationTests
     [Fact]
     public async Task Drift_reporting_can_be_disabled_without_disabling_local_analysis()
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-drift-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-drift-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {

@@ -1,0 +1,36 @@
+# Claude Code verification
+
+Tested: **Claude Code 2.1.201**, Windows x64, local plugin **0.5.0**, bundled .NET 10.0.12 apphost. Official [plugin configuration](https://code.claude.com/docs/en/plugins-reference) and [code intelligence behavior](https://code.claude.com/docs/en/plugins/code-intelligence) were checked separately from execution. Strict validation passed for the development and self-contained manifests.
+
+## Demonstrated client behavior
+
+A new signed-in CLI session loaded `sqlscriptdom-lsp` via `--plugin-dir`. The final diagnostics smoke used default client behavior, without ENABLE_LSP_TOOL. Its working directory was a fresh public payroll fixture outside the Git repository; other settings/hooks/MCP servers were excluded. Only Read/Edit/LSP were allowed. Claude actually edited the caller's EXEC statement to `SELECT FROM;`.
+
+The client's debug log recorded the real transport sequence: server registration, bundled executable start, initialize request/response, initialized, didOpen for `languageId=sql`, a received publishDiagnostics notification containing **one diagnostic**, and shutdown response/exit. The source-free server trace also confirmed initialization received/completed. This proves Claude received SqlScriptDOM diagnostics. It does not prove every future client UI/model will display them, nor imply all exposed server capabilities are callable through Claude's tool surface.
+
+The successful fixture using a ZIP extracted into a path containing spaces and Chinese characters exited 0 and cost $0.050841. It is summarized in [sanitized evidence](evidence/claude-windows.json); raw local evidence is ignored under `artifacts/claude-smoke-9c498785124a4d29b6c9845ec469a125`. Paths, session identifiers, authentication details, reasoning and raw SQL/client logs are omitted from committed evidence. No existing SQL Server was contacted and no global plugin/settings changes were made.
+
+Reproduce with an extracted plugin:
+
+```powershell
+./scripts/test-claude.ps1 -PluginPath 'C:/Tools/SQL LSP' -Diagnostics
+```
+
+The smoke checks actual client protocol messages and the fixture edit; model prose alone cannot pass. Client debug format changes may require updating the evidence parser. The fixture is public, so its local logs may be inspected; do not reuse raw log publication practices with private SQL or connection secrets.
+
+## Capabilities and limits
+
+| Operation | Independent stdio tests | Claude 2.1.201 isolated session |
+| --- | --- | --- |
+| Initialize/shutdown/exit | Passed | Observed on actual bundled executable |
+| Incremental synchronization / ScriptDOM diagnostics | Passed | Edit-triggered didOpen and one diagnostic received |
+| Definition / references | Passed with verified SQL locations | Tool unavailable; no successful LSP navigation call claimed |
+| Document/workspace symbols | Passed | Not exercised through Claude |
+| Online/hybrid catalog navigation | Passed with an owned disposable SQL Server | Not exercised through Claude; default smoke stays offline |
+| Hover, completion, rename, semantic tokens | Not advertised | Not claimed |
+
+In navigation attempts, the session initialization tool list contained Read (or Read/Edit), with no LSP tool, even though its manager registered the SQL server. A child-only `ENABLE_LSP_TOOL=1` probe did not change that outcome. This is a concrete limitation of the tested constrained sessions, not a conclusion that all Claude 2.1.201 interactive sessions lack navigation. The flag is not a required plugin setting. No client binary was patched or globally updated. The script's navigation mode fails if real LSP calls/results are absent.
+
+The development DLL plugin intermittently failed launch with `Command 'dotnet' not found or is in an unsafe location (current directory)`. The absolute bundled executable resolved that launch failure and demonstrated real diagnostics. Use the package when reproducing; manifest validation alone did not catch this environment-dependent launch issue.
+
+Further client versions, interactive sessions, Linux/macOS Claude behavior and online/hybrid client exposure need their own evidence. Generic clients can exercise all implemented capabilities today; see `installation.md` and the process integration tests. M5's acceptance permits documenting a client limitation while proving generic interoperability, and the diagnostics portion is additionally demonstrated in Claude itself.

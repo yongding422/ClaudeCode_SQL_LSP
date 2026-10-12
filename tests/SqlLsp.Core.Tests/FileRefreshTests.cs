@@ -105,7 +105,7 @@ public class FileRefreshTests
 
 internal sealed class SqlWorkspaceFixture : IDisposable
 {
-    public string Root { get; } = Path.Combine(Path.GetTempPath(), "sql-lsp-m2-" + Guid.NewGuid().ToString("N"));
+    public string Root { get; } = Path.Combine(TestPaths.TempRoot, "sql-lsp-m2-" + Guid.NewGuid().ToString("N"));
     public SqlWorkspaceFixture() => Directory.CreateDirectory(Root);
     public string Write(string name, string sql)
     {

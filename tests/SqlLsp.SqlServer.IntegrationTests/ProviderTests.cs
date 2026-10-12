@@ -157,6 +157,9 @@ public class ProviderTests
     [InlineData(true, "Password=SECRET;Bogus=SECRET", "invalid-connection-settings")]
     [InlineData(true, "Server=elsewhere;Database=Fixture;Password=SECRET", "profile-endpoint-mismatch")]
     [InlineData(true, "Server=localhost;Database=Fixture;Encrypt=False;Password=SECRET", "tls-required")]
+    [InlineData(true, "Server=localhost;Database=Fixture;AttachDBFilename=SECRET", "unsafe-connection-option")]
+    [InlineData(true, "Server=localhost;Database=Fixture;User Instance=true;Password=SECRET", "unsafe-connection-option")]
+    [InlineData(true, "Server=localhost;Database=Fixture;Failover Partner=SECRET", "unsafe-connection-option")]
     public async Task Unsafe_or_invalid_settings_fail_before_connect_and_redact_secrets(bool enabled, string? value, string code)
     {
         var reads = 0;

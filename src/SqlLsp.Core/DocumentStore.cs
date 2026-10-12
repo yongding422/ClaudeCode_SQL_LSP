@@ -20,6 +20,8 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     public event Action<DiagnosticPublication>? Diagnostics;
     public event Action<string>? Fault;
 
+    public int PendingDiskReadCount { get { lock (gate) return diskWork.Count; } }
+
     public ImmutableArray<DocumentSnapshot> Index
     {
         get { lock (gate) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray(); }
@@ -128,7 +130,15 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception) { Fault?.Invoke("Workspace parsing failed; source and details suppressed."); }
-                finally { lock (gate) { job.Completed = true; job.Cancellation.Dispose(); } }
+                finally
+                {
+                    lock (gate)
+                    {
+                        job.Completed = true;
+                        job.Cancellation.Dispose();
+                        if (ReferenceEquals(diskWork.GetValueOrDefault(uri), job)) diskWork.Remove(uri);
+                    }
+                }
             });
             work.RemoveAll(t => t.IsCompleted);
             work.Add(job.Pending);

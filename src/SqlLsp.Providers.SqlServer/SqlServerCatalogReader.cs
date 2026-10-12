@@ -20,6 +20,9 @@ public sealed class SqlServerCatalogReader(Func<string, string?>? secrets = null
             var secret = secrets(profile.ConnectionStringEnv);
             if (string.IsNullOrWhiteSpace(secret)) throw new CatalogReadException("missing-secret");
             var settings = new SqlConnectionStringBuilder(secret);
+            // Metadata discovery must not attach files or silently route to an unapproved endpoint.
+            if (!string.IsNullOrEmpty(settings.AttachDBFilename) || settings.UserInstance ||
+                !string.IsNullOrEmpty(settings.FailoverPartner)) throw new CatalogReadException("unsafe-connection-option");
             if (!StringComparer.OrdinalIgnoreCase.Equals(settings.DataSource, profile.Server) ||
                 !StringComparer.Ordinal.Equals(settings.InitialCatalog, profile.Database))
                 throw new CatalogReadException("profile-endpoint-mismatch");

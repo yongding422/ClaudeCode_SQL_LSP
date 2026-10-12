@@ -23,12 +23,15 @@ using var server = await LanguageServer.From(options => options
     .WithHandler<SqlWatchedFilesHandler>()
     .OnInitialize(async (facade, request, token) =>
     {
-        try { await state.InitializeAsync(facade, request, token); }
-        catch (Exception error)
+        var trace = Environment.GetEnvironmentVariable("SQLLSP_TRACE_STARTUP") == "1";
+        if (trace) Console.Error.WriteLine("LSP initialize received.");
+        try
         {
-            Console.Error.WriteLine($"Initialization failed: {error.GetType().Name}: {error.InnerException?.Message ?? error.Message}");
-            throw;
+            await state.InitializeAsync(facade, request, token);
+            if (trace) Console.Error.WriteLine("LSP initialize completed.");
         }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception) { state.FailInitialization(); }
     })
     .OnInitialized((facade, request, response, token) =>
     {

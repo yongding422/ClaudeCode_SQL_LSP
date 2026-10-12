@@ -5,7 +5,7 @@ public class WorkspaceTests
     [Fact]
     public async Task Disk_index_preserves_distinct_files_overlay_and_restores_saved_file_on_close()
     {
-        var root = Path.Combine(Path.GetTempPath(), "sql-lsp-tests-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "sql-lsp-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {

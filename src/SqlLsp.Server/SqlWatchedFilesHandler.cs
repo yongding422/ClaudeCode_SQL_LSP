@@ -9,6 +9,7 @@ public sealed class SqlWatchedFilesHandler(ServerState state) : IDidChangeWatche
 {
     public async Task<Unit> Handle(DidChangeWatchedFilesParams notification, CancellationToken token)
     {
+        if (state.ConfigurationError != null) return Unit.Value;
         if (state.Documents is not { } documents || state.Files is not { } files) return Unit.Value;
         foreach (var change in notification.Changes)
         {

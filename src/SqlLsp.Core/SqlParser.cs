@@ -26,8 +26,16 @@ public interface ISqlParser
 public sealed class SqlParser(ParserOptions options, ResolutionOptions? resolution = null) : ISqlParser
 {
     private readonly SqlVersion dialect = options.Dialect;
+    private static readonly SemaphoreSlim ParseSlots = new(Math.Clamp(Environment.ProcessorCount, 1, 4));
 
-    public Task<SqlParseResult> ParseAsync(SourceText source, CancellationToken cancellationToken) => Task.Run(() =>
+    public async Task<SqlParseResult> ParseAsync(SourceText source, CancellationToken cancellationToken)
+    {
+        await ParseSlots.WaitAsync(cancellationToken);
+        try { return await ParseWithinLimitAsync(source, cancellationToken); }
+        finally { ParseSlots.Release(); }
+    }
+
+    private Task<SqlParseResult> ParseWithinLimitAsync(SourceText source, CancellationToken cancellationToken) => Task.Run(() =>
     {
         cancellationToken.ThrowIfCancellationRequested();
         var parser = TSqlParser.CreateParser(dialect, options.QuotedIdentifier);

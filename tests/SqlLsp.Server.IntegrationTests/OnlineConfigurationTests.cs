@@ -52,7 +52,7 @@ public class OnlineConfigurationTests
     [Fact]
     public async Task Offline_ignores_enabled_profiles_and_online_missing_secret_reports_status_without_scanning()
     {
-        var root = Path.Combine(Path.GetTempPath(), "online-config-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "online-config-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -83,7 +83,7 @@ public class OnlineConfigurationTests
     [Fact]
     public async Task Explicit_mapping_connects_only_the_selected_profile_and_scan_is_opt_in()
     {
-        var root = Path.Combine(Path.GetTempPath(), "online-scan-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "online-scan-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {

@@ -5,6 +5,8 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <Using Include="Xunit" />
+    <Using Include="SqlLsp.Tests" />
+    <Compile Include="../TestPaths.cs" Link="TestPaths.cs" />
     <ProjectReference Include="../../src/SqlLsp.Providers.SqlServer/SqlLsp.Providers.SqlServer.csproj" />
     <ProjectReference Include="../../src/SqlLsp.Server/SqlLsp.Server.csproj" ReferenceOutputAssembly="false" />
     <Compile Include="../SqlLsp.Server.IntegrationTests/LspClient.cs" Link="LspClient.cs" />

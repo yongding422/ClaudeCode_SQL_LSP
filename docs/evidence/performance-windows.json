@@ -1,0 +1,43 @@
+{
+  "timestampUtc": "2026-10-12T02:29:50.144987+00:00",
+  "os": "Microsoft Windows 10.0.26200",
+  "architecture": "X64",
+  "processorCount": 8,
+  "runtime": "10.0.12",
+  "measurements": [
+    {
+      "operation": "27-file startup including process launch",
+      "elapsedMs": 1133.4892,
+      "targetMs": 2000
+    },
+    {
+      "operation": "200KB full-buffer edit to diagnostics",
+      "samples": 30,
+      "p50Ms": 125.7344,
+      "p95Ms": 291.8968,
+      "targetP95Ms": 300
+    },
+    {
+      "operation": "workspace index and warm definition",
+      "files": 1001,
+      "indexMs": 2118.6007,
+      "filesPerSecond": 472.48167151082316,
+      "workingSetBytes": 92819456,
+      "samples": 50,
+      "p50Ms": 12.0323,
+      "p95Ms": 17.8007,
+      "targetP95Ms": 100
+    },
+    {
+      "operation": "workspace index and warm definition",
+      "files": 10001,
+      "indexMs": 9470.721,
+      "filesPerSecond": 1055.991407623559,
+      "workingSetBytes": 211365888,
+      "samples": 50,
+      "p50Ms": 58.6017,
+      "p95Ms": 122.8263,
+      "targetP95Ms": null
+    }
+  ]
+}

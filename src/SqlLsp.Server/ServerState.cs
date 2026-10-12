@@ -26,6 +26,12 @@ public sealed class ServerState : IAsyncDisposable
     private readonly CancellationTokenSource lifetime = new();
     public bool IsReadOnlySnapshot(Uri uri) => databases.Values.Any(d => d.Files?.Owns(uri) == true);
 
+    public void FailInitialization()
+    {
+        ConfigurationError = "Workspace initialization failed; details suppressed. Restart with an accessible workspace.";
+        Console.Error.WriteLine(ConfigurationError);
+    }
+
     public async Task InitializeAsync(ILanguageServerFacade server, InitializeParams request, CancellationToken token)
     {
         ServerConfiguration config;
@@ -78,6 +84,7 @@ public sealed class ServerState : IAsyncDisposable
 
     public async Task<SqlNavigationIndex> NavigationAsync(CancellationToken token)
     {
+        if (ConfigurationError != null) return new([], uri => uri.AbsoluteUri, Resolution);
         using var request = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.Token);
         token = request.Token;
         var documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
@@ -140,6 +147,7 @@ public sealed class ServerState : IAsyncDisposable
 
     public async Task<ImmutableArray<SqlDeclaration>> DeclarationsAsync(Uri uri, CancellationToken token)
     {
+        if (ConfigurationError != null) return [];
         if (IsReadOnlySnapshot(uri))
             return (await NavigationAsync(token)).Symbols.Where(s => s.Target.Uri == uri).Select(s => s.Declaration).ToImmutableArray();
         var document = Documents == null ? null : await Documents.GetAsync(uri, token);

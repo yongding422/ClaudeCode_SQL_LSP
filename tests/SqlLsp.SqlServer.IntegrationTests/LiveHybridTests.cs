@@ -36,7 +36,7 @@ public class LiveHybridTests(SqlServerFixture fixture)
     [SqlServerFact]
     public async Task Local_and_unsaved_definitions_win_catalog_fallback_and_drift_references_survive_close()
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-live-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-live-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -96,7 +96,7 @@ public class LiveHybridTests(SqlServerFixture fixture)
     [SqlServerFact]
     public async Task Configured_database_preference_selects_deployed_source_and_local_duplicates_still_prevent_a_jump()
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-preference-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-preference-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
@@ -121,7 +121,7 @@ public class LiveHybridTests(SqlServerFixture fixture)
     [SqlServerFact]
     public async Task Multiple_roots_keep_profile_contexts_isolated_and_one_failed_profile_does_not_remove_other_metadata()
     {
-        var parent = Path.Combine(Path.GetTempPath(), "hybrid-multi-" + Guid.NewGuid().ToString("N"));
+        var parent = Path.Combine(TestPaths.TempRoot, "hybrid-multi-" + Guid.NewGuid().ToString("N"));
         var good = Path.Combine(parent, "good"); var failed = Path.Combine(parent, "failed");
         Directory.CreateDirectory(good); Directory.CreateDirectory(failed);
         try
@@ -166,7 +166,7 @@ public class LiveHybridTests(SqlServerFixture fixture)
     [SqlServerFact]
     public async Task Real_database_outage_after_cache_expiry_preserves_local_navigation_and_removes_deployed_targets()
     {
-        var root = Path.Combine(Path.GetTempPath(), "hybrid-outage-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "hybrid-outage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         var stopped = false;
         try

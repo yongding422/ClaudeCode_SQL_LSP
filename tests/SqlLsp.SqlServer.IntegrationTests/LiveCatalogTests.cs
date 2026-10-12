@@ -82,7 +82,7 @@ public class LiveCatalogTests(SqlServerFixture fixture)
     [SqlServerFact]
     public async Task Online_wire_navigation_opens_readonly_files_resolves_modules_and_does_not_scan_repository()
     {
-        var root = Path.Combine(Path.GetTempPath(), "lsp-online-test-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "lsp-online-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         string? snapshotPath = null;
         try

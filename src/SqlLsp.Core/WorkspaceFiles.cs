@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace SqlLsp.Core;
 
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
@@ -40,7 +42,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         foreach (var uri in folders.Where(u => u.IsFile))
         {
             var path = Path.GetFullPath(uri.LocalPath);
-            if (Directory.Exists(path) && !IsLink(path)) roots.Add(path);
+            if (Directory.Exists(path) && !HasLinkedAncestor(path)) roots.Add(path);
         }
         return roots.SelectMany(Enumerate).Distinct().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
     }
@@ -56,7 +58,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
             var parts = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (parts.Any(ExcludedDirectories.Contains)) continue;
             var current = root;
-            if (IsLink(current)) continue;
+            if (HasLinkedAncestor(current)) continue;
             foreach (var part in parts)
             {
                 current = Path.Combine(current, part);
@@ -76,16 +78,22 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                 4096, FileOptions.Asynchronous);
             if (stream.Length > options.MaxFileSizeBytes) return null;
             // Bounded read even if a file grows after opening.
-            var bytes = new byte[options.MaxFileSizeBytes + 1];
-            var length = 0;
-            while (length < bytes.Length)
+            using var contents = new MemoryStream((int)stream.Length);
+            var bytes = ArrayPool<byte>.Shared.Rent((int)Math.Min(65_536, Math.Max(1, stream.Length + 1)));
+            try
             {
-                var count = await stream.ReadAsync(bytes.AsMemory(length), token);
-                if (count == 0) break;
-                length += count;
+                while (true)
+                {
+                    var remaining = options.MaxFileSizeBytes + 1 - (int)contents.Length;
+                    var count = await stream.ReadAsync(bytes.AsMemory(0, Math.Min(bytes.Length, remaining)), token);
+                    if (count == 0) break;
+                    if (contents.Length + count > options.MaxFileSizeBytes) return null;
+                    contents.Write(bytes, 0, count);
+                }
             }
-            if (length > options.MaxFileSizeBytes) return null;
-            using var reader = new StreamReader(new MemoryStream(bytes, 0, length), detectEncodingFromByteOrderMarks: true);
+            finally { ArrayPool<byte>.Shared.Return(bytes, clearArray: true); }
+            contents.Position = 0;
+            using var reader = new StreamReader(contents, detectEncodingFromByteOrderMarks: true);
             return await reader.ReadToEndAsync(token);
         }
         catch (IOException) { return null; }
@@ -98,6 +106,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         pending.Push(root);
         while (pending.TryPop(out var directory))
         {
+            if (HasLinkedAncestor(directory)) continue;
             string[] entries;
             try { entries = Directory.GetFileSystemEntries(directory); }
             catch (IOException) { continue; }
@@ -119,5 +128,12 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         try { return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0; }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return true; }
+    }
+
+    private static bool HasLinkedAncestor(string path)
+    {
+        for (var current = new DirectoryInfo(path); current != null; current = current.Parent)
+            if (IsLink(current.FullName)) return true;
+        return false;
     }
 }

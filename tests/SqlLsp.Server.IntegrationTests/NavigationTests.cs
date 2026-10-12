@@ -215,7 +215,7 @@ public class NavigationTests
 
 internal sealed class NavigationWorkspace : IDisposable
 {
-    public string Root { get; } = Path.Combine(Path.GetTempPath(), "sql-lsp-m2-wire-" + Guid.NewGuid().ToString("N"));
+    public string Root { get; } = Path.Combine(TestPaths.TempRoot, "sql-lsp-m2-wire-" + Guid.NewGuid().ToString("N"));
     public NavigationWorkspace() => Directory.CreateDirectory(Root);
     public string Write(string name, string sql)
     {

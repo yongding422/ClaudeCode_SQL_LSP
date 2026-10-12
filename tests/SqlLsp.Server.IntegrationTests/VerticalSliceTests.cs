@@ -138,7 +138,7 @@ public class VerticalSliceTests
     [Fact]
     public async Task Close_restores_disk_and_saved_content_over_an_unsaved_overlay()
     {
-        var root = Path.Combine(Path.GetTempPath(), "sql-lsp-integration-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(TestPaths.TempRoot, "sql-lsp-integration-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {

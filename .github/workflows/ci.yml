@@ -15,6 +15,32 @@ jobs:
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --no-restore --configuration Release
       - run: dotnet format --no-restore --verify-no-changes
+  packages:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-15
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore --configuration Release
+      - shell: pwsh
+        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}'
+      - shell: pwsh
+        run: ./scripts/test-package.ps1 -Runtime '${{ matrix.rid }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sqlscriptdom-lsp-${{ matrix.rid }}
+          path: artifacts/packages/*.zip*
   sqlserver:
     # Owns an ephemeral SQL Server Developer container; no external credentials or database.
     runs-on: ubuntu-latest

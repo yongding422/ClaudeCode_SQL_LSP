@@ -133,3 +133,34 @@ Dependencies remain .NET SDK 10.0.401, ScriptDOM 180.117.0, OmniSharp 1.0.0, Jso
 Known limits: normalized token comparison is not semantic drift analysis; original table DDL and inaccessible source cannot be compared. Cross-server names, full collation/USE rebinding, runtime mappings/reconfiguration, large-index performance and stale-cache opt-in are not implemented. Cache freshness and private file lifetime retain M3 limits. Local evidence is Windows plus Docker's Linux SQL Server engine; Linux/macOS host CI and actual Claude Code LSP behavior are separate gates.
 
 Next milestone: M5 real Claude Code LSP/plugin verification, reproducible distribution/installation, performance/security/stress hardening and documented client/platform results.
+
+## M5 — complete (2026-10-11)
+
+- [x] Recheck official Claude plugin/LSP semantics against installed 2.1.201 and validate the minimal 0.5.0 manifest. Document current-version fields and separate manifest validation from actual client requests in ADR 0006.
+- [x] Build self-contained win-x64/linux-x64/osx-arm64 plugin ZIPs with pinned .NET 10.0.12, locked RID dependency graphs, bundled apphosts, dependency/license notices, checksums, deterministic archive metadata and source provenance. Provide local install/demo/troubleshooting instructions and native packaging CI gates; do not publish or mutate global client settings.
+- [x] Run real signed-in Claude sessions using public isolated fixtures. The final extracted Windows plugin path contains spaces/Chinese text; Claude registers the server, starts the apphost, receives initialize, sends didOpen, receives one ScriptDOM diagnostic after Edit, and shuts down cleanly. Default behavior works without a compatibility flag. Record sanitized evidence and the navigation-tool exposure limitation explicitly.
+- [x] Add startup without PATH/dotnet discovery, child-environment secret redaction, unknown-method/concurrent requests, rapid multi-document edits/two-root isolation, 200-file churn, bounded UTF-8/BOM reads, unexpected initialization failures, and linked-root/ancestor fixtures. Canonicalize test temp paths for macOS's standard /var alias while retaining production's strict link rejection.
+- [x] Bound active ScriptDOM parsing to four, release completed disk job bookkeeping, pool bounded file reads, reject database attachment/user-instance/failover options before connection, and suppress unexpected initialization exception details while answering the handshake and disabling analysis.
+- [x] Measure real stdio startup, 200KB diagnostics, 1,000-file warm definitions and 10,000-file indexing/memory. Record standalone results and a contended target miss without converting wall-clock targets into unreliable unit test assertions.
+
+Verification on Windows with the owned disposable SQL Server fixture:
+
+| Check | Result |
+| --- | --- |
+| Locked restore and Release build | Passed; 0 warnings, 0 errors |
+| Full functional suite with live opt-in | **156 passed: 79 core, 48 wire/process, 29 provider/catalog; 0 failed**; benchmark separately opt-in |
+| Live SQL Server cases | **9 passed**; 20 deterministic provider cases |
+| Explicit standalone performance fixture | **1 passed**; raw public measurement JSON committed |
+| Default no-database suite | **147 passed, 10 explicitly skipped** (nine live SQL cases and one benchmark) |
+| Extracted self-contained Windows apphost suites | **48 wire/process + 29 provider/catalog passed**, including live SQL and PATH-empty startup; benchmark skipped |
+| Actual Claude session on extracted plugin | Passed diagnostics smoke; initialize/didOpen/nonempty diagnostics/shutdown observed, exit 0 |
+| Strict plugin validation | Development plus all three RID plugin manifests passed |
+| Cross-publish | All three RID archives built; Windows executed locally, other native host runs remain CI gates |
+| Formatting, PowerShell syntax, diff whitespace checks | Passed |
+| NuGet audit including transitive packages | No vulnerable packages reported by configured nuget.org source |
+
+Small-workspace startup measured 1.13 s; 200KB diagnostic p95 292 ms; 1,001-file warm definition p95 18 ms. Ten-thousand-file indexing took 9.47 s with 201.6 MiB sampled working set. A contended diagnostic run missed the 300 ms target (487 ms p95). These are synthetic host measurements, not universal performance guarantees. See [performance evidence](performance.md).
+
+M5 acceptance is met through actual Claude diagnostics and generic LSP navigation proof. Claude's LSP navigation tool was absent from the tested constrained 2.1.201 sessions; no successful Claude definition/references claim is made. Linux/macOS native execution/client sessions, fresh-OS dependency certification, signed/public marketplace distribution, other database authentication setups and larger complex/hybrid workloads remain unverified. The server trusts its local client and does not enforce a process-wide memory quota; abrupt termination/private snapshot and metadata freshness limits remain documented.
+
+See [installation](installation.md), [client evidence](claude-verification.md), [security/resource model](security.md), [limitations](semantic-limitations.md) and ADR 0006. Next is optional M6: choose a focused feature such as hover or richer binding, with complete confidence/coverage tests before broader completion/rename/MCP work.
