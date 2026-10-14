@@ -28,7 +28,7 @@ MCP analyzes **saved workspace/catalog snapshots**. It receives no unsaved LSP b
 
 Dynamic SQL, remote rowsets, missing/ambiguous objects, unavailable bodies and writes through CTEs have explicit issues. View writes report the verified view target, but underlying write effects/triggers remain unknown. Built-in effects, synonyms, runtime values and implicit engine behavior are not fully analyzed. An empty access/call list never proves no effects.
 
-Control flow, transactions, error paths, argument/value propagation and full column lineage are not yet deterministic analyzer features. The skill reads source to interpret these and labels the distinction. No analyzed SQL is executed. No hooks, AI SDK or remote telemetry collector are included.
+Control flow, transactions, error paths, argument/value propagation and full column lineage are not yet deterministic analyzer features. The skill reads source to interpret these and labels the distinction. No analyzed SQL is executed. The server makes no AI model calls and includes no hooks or remote telemetry collector; the MCP SDK uses AI tool abstractions internally.
 
 ## Configuration and development
 

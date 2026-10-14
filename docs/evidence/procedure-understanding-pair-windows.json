@@ -1,0 +1,45 @@
+{
+  "purpose": "Metric collector smoke only; no superiority claim",
+  "fixture": "public-ohio-smoke",
+  "repeats": 1,
+  "claudeVersion": "2.1.224",
+  "modelObserved": "deepseek-v4-pro",
+  "effort": "low",
+  "pluginVersion": "0.7.0",
+  "cacheConditions": "Fresh client process and SQL copy; OS/model caches uncontrolled",
+  "accuracyScores": null,
+  "runs": [
+    {
+      "arm": "plugin",
+      "outcome": "success",
+      "elapsedMs": 29152,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "readCalls": 1,
+      "grepCalls": 0,
+      "toolFailures": 0,
+      "inputTokens": 10185,
+      "outputTokens": 1782,
+      "reportedCostUsd": 0.115304
+    },
+    {
+      "arm": "grep",
+      "outcome": "success",
+      "elapsedMs": 23406,
+      "mcpCalls": 0,
+      "skillCalls": 0,
+      "readCalls": 1,
+      "grepCalls": 2,
+      "toolFailures": 0,
+      "inputTokens": 3803,
+      "outputTokens": 1430,
+      "reportedCostUsd": 0.062110
+    }
+  ],
+  "limits": [
+    "Single small synthetic task; treatment was slower and used more tokens.",
+    "Accuracy remains unscored pending independent review.",
+    "Reported client cost may differ from subscription billing.",
+    "The paired runner explicitly enables only the bundled MCP configuration under strict isolation; plugin autoload is proved separately by the capability smoke."
+  ]
+}

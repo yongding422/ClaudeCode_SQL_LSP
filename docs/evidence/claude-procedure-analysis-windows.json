@@ -1,0 +1,34 @@
+{
+  "pluginVersion": "0.7.0",
+  "claudeVersion": "2.1.224",
+  "platform": "Windows x64",
+  "sourceCommit": "5e2a09d2b53c93ac2470012f2d226b5c27a4b776",
+  "dirtySource": false,
+  "serverRuntime": "10.0.13",
+  "modelObserved": "deepseek-v4-pro",
+  "fixture": "public samples/understanding-evaluation/modules.sql copied into a fresh SQL-only workspace",
+  "prompt": "Explain dbo.ProcessPayroll and how Ohio is handled; direct/transitive effects, citations and unknowns.",
+  "skillExplicitlyRequested": false,
+  "skillCalls": 1,
+  "pluginMcpAutoloadConnected": true,
+  "discoveryCalls": 1,
+  "analysisCalls": 1,
+  "sourceReads": 1,
+  "verifiedFacts": {
+    "entryPoint": "dbo.ProcessPayroll",
+    "directInsert": "dbo.PayrollAudit",
+    "directRead": "dbo.Employee",
+    "callee": "dbo.ApplyOhioRules",
+    "calleeUpdate": "dbo.Payroll",
+    "dynamicInvocationIssue": "call-unsupported"
+  },
+  "failedToolAttempts": 0,
+  "exitCode": 0,
+  "reportedCostUsd": 0.101931,
+  "limits": [
+    "Windows actual-client evidence; Mac model calls remain unverified.",
+    "Configured backend is recorded rather than inferred from the client brand.",
+    "No SQL Server was contacted and no analyzed SQL was executed.",
+    "This capability smoke is not a comparative benchmark."
+  ]
+}
