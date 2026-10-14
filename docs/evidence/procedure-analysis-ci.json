@@ -1,0 +1,30 @@
+{
+  "version": "0.7.0",
+  "publishedRelease": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.7.0",
+  "packageSourceCommit": "7fa11ed6a4c9f1bf3362d8d845daef5ecd511d69",
+  "nativeBuildWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38571887327",
+  "nativeBuildJobsSucceeded": 9,
+  "defaultFunctionalPassedPerOs": 207,
+  "defaultSkippedPerOs": 14,
+  "localLiveFunctionalPassed": 220,
+  "counts": { "core": 113, "lspProcess": 60, "mcpProcess": 8, "providerDeterministic": 26, "providerLive": 13 },
+  "packagePlatforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+  "bothApphostArchitecturesAndUnixModesVerified": true,
+  "publishedAssetsMatchCatalogDigests": true,
+  "marketplaceInstallWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38574241007",
+  "marketplaceInstallJobsSucceeded": 4,
+  "installedTestsPerPlatform": { "lspPassed": 60, "mcpPassed": 8, "performanceBenchmarkSkipped": 1 },
+  "initialInstallVerification": {
+    "workflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38573558920",
+    "result": "failure",
+    "cause": "Install succeeded; the test locator counted the referenced LSP apphost in the MCP directory as a second primary apphost.",
+    "fixCommit": "af67f349faa8a7fdedbb4bb336b22f35001fa4cb",
+    "publishedServerBinariesChanged": false
+  },
+  "limits": [
+    "Native installation/wire tests make no model calls. Mac model tool use remains unverified.",
+    "One Windows paired collector smoke is not a representative accuracy/value benchmark.",
+    "MCP reads saved/catalog snapshots; it does not receive unsaved LSP buffers.",
+    "Control-flow/value tracing and general IDE enhancements remain deferred."
+  ]
+}

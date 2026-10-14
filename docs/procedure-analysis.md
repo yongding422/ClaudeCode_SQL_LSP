@@ -2,6 +2,8 @@
 
 The 0.7.0 implementation adds verified table operation footprints, visible coverage issues, bounded dependency expansion, read-only MCP tools and a bundled Claude skill. It keeps the existing LSP navigation and static call hierarchy. Publication/native-client evidence is recorded separately in [milestones](milestones.md); source implementation alone is not marketplace availability.
 
+[Release 0.7.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.7.0) is public. [Marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38574241007) passed on all four platforms with both protocols exercised. Update your platform entry through the marketplace, then start a fresh Claude session.
+
 [Native source CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38570366592) passed all nine jobs, including both Mac architectures. [Windows Claude evidence](evidence/claude-procedure-analysis-windows.json) verifies automatic skill selection and real MCP results. Mac model calls remain unverified.
 
 After updating your platform's marketplace entry and starting Claude from the SQL repository, ask:

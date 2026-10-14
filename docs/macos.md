@@ -1,5 +1,7 @@
 # macOS and Claude Code
 
+Release [0.7.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.7.0) includes both LSP and read-only MCP analysis plus the explanation skill. [Marketplace install CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38574241007) passed on Apple Silicon and Intel Mac, with 60 LSP and 8 MCP tests per installed package. These tests prove native installation/protocol behavior; Mac model tool calls remain unverified. See [procedure-analysis usage](procedure-analysis.md).
+
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
 ## Install from the marketplace
