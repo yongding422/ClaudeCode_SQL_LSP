@@ -2,6 +2,8 @@
 
 Release [0.8.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.8.0) adds structural branch/error/transaction maps to both LSP and read-only MCP analysis plus the explanation skill. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38647456391) passed on Apple Silicon and Intel Mac, with 60 LSP and 10 MCP tests after native unzip, plus 26 deterministic provider tests in package checks. Native protocol tests and model behavior are separate; Mac model tool calls remain unverified. See [procedure-analysis usage](procedure-analysis.md) and [marketplace installation evidence](milestones.md).
 
+[Actual 0.8.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38648254350) also passed on both Mac architectures, Windows and Linux, with 60 LSP and 10 MCP tests per installed package. Executable permissions survived the Claude archive installer without repair. Update through the marketplace; no separate ZIP extraction is required.
+
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
 ## Install from the marketplace

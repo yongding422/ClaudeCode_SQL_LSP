@@ -1,0 +1,33 @@
+{
+  "version": "0.8.0",
+  "publishedRelease": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.8.0",
+  "packageSourceCommit": "3e3606376974d74dfa270925d2e1570910fcea97",
+  "nativeBuildWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38647456391",
+  "nativeBuildJobsSucceeded": 9,
+  "defaultFunctionalPassedPerOs": 215,
+  "defaultSkippedPerOs": 14,
+  "localLiveFunctionalPassed": 228,
+  "counts": { "core": 119, "lspProcess": 60, "mcpProcess": 10, "providerDeterministic": 26, "providerLive": 13 },
+  "packagePlatforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+  "packageTestsPerPlatform": { "lspPassed": 60, "mcpPassed": 10, "providerDeterministicPassed": 26 },
+  "macNativeUnzipTestsPerArchitecture": { "lspPassed": 60, "mcpPassed": 10 },
+  "bothApphostArchitecturesAndUnixModesVerified": true,
+  "publishedAssetsMatchCatalogDigests": true,
+  "marketplaceInstallWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38648254350",
+  "marketplaceInstallStatus": "success",
+  "marketplaceInstallJobsSucceeded": 4,
+  "installedTestsPerPlatform": { "lspPassed": 60, "mcpPassed": 10, "performanceBenchmarkSkipped": 1 },
+  "duplicateTagBuild": {
+    "workflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38648173110",
+    "conclusion": "cancelled",
+    "reason": "Publishing the tag retriggered the identical source already verified by the successful native build workflow. The duplicate was cancelled to prioritize actual marketplace installation checks."
+  },
+  "limits": [
+    "Structural contexts are not full execution guards, a complete CFG, sequential reachability or transaction correctness.",
+    "No context does not prove unconditional execution; node/preview limits remain visible.",
+    "MCP reads saved/catalog snapshots independently of unsaved LSP buffers.",
+    "Native installation/protocol checks do not establish Mac model tool behavior.",
+    "Windows tool results are verified, but model prose overstatement and a citation error are recorded separately in claude-control-flow-windows.json.",
+    "Comparative answer accuracy and superiority over Grep/Read remain unproven."
+  ]
+}

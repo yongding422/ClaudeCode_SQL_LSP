@@ -2,9 +2,9 @@
 
 Version 0.8.0 adds a [structural control-flow map](control-flow.md) to the verified table footprints, coverage issues, bounded dependency expansion, read-only MCP tools and bundled Claude skill introduced in 0.7.0. Existing LSP navigation and static call hierarchy remain available. Publication/native-client evidence is recorded separately in [milestones](milestones.md); source implementation alone is not marketplace availability.
 
-[Release 0.8.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.8.0) is public with four checksum-pinned native packages. Update your platform entry through the marketplace, then start a fresh Claude session. Native build checks and actual marketplace installation checks are recorded separately in [milestones](milestones.md).
+[Release 0.8.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.8.0) is public with four checksum-pinned native packages. [Actual marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38648254350) passed on all four platforms with 60 LSP and 10 MCP tests per installed package. Update your platform entry through the marketplace, then start a fresh Claude session. [Native evidence](evidence/control-flow-ci.json) separates build, installation and client checks.
 
-[Native source CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38647456391) passed all nine jobs, including both Mac architectures. [Windows Claude evidence](evidence/claude-control-flow-windows.json) verifies automatic skill selection and real branch/predicate data in MCP results. Its answer review records overconfident execution wording despite the report's limits; tool use is not proof of prose accuracy. Mac model calls remain unverified.
+[Native source CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38647456391) passed all nine jobs, including both Mac architectures. [Windows Claude evidence](evidence/claude-control-flow-windows.json) verifies automatic skill selection and real branch/predicate data in MCP results. Its answer review records overconfident execution wording and one citation error; tool use is not proof of prose accuracy. Mac model calls remain unverified.
 
 After updating your platform's marketplace entry and starting Claude from the SQL repository, ask:
 

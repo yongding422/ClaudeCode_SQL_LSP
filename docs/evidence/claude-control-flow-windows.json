@@ -31,7 +31,8 @@
     "reviewScope": "Capability smoke; no representative accuracy scoring",
     "argumentPropagationLabeledSourceReasoning": true,
     "dynamicTargetLabeledUnverified": true,
-    "observedOverstatement": "The model used unconditional/runs unconditionally for statements outside the IF, despite report and skill guidance that empty context is not an execution guarantee. Tool facts were verified; this phrasing must not be treated as an analyzer conclusion."
+    "observedOverstatement": "The model used unconditional/runs unconditionally for statements outside the IF, despite report and skill guidance that empty context is not an execution guarantee. Tool facts were verified; this phrasing must not be treated as an analyzer conclusion.",
+    "observedCitationError": "The callee UPDATE was cited as modules.sql:11 in the write list; the public fixture's UPDATE is on line 12 (line 11 is BEGIN). Core/wire range tests passed, but model citations still require review."
   },
   "limits": [
     "Windows actual-client evidence only; Mac model calls remain unverified.",
