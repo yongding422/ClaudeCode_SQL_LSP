@@ -1,5 +1,7 @@
 # Hover (M6 first increment, plugin 0.6.0)
 
+The completed hover increment remains supported. Remaining M6 work is deferred as of 2026-10-13 while the roadmap prioritizes SQL code search and navigation; see [milestone priorities](milestones.md).
+
 `textDocument/hover` returns kind, signature, source/provenance, definition file/context, available buffer version or catalog capture time, and permitted documentation. Reference hover uses the same uniquely selected target as definition navigation. Declaration hover inspects the declaration anchor itself. Ambiguous, missing, remote, dynamic, unsupported and malformed bindings return null; comments, literals and unbound column tokens receive no invented hover.
 
 Workspace and unsaved signatures come from safely parsed ScriptDOM declaration nodes. Procedures/functions show parameter names/types and declared OUTPUT/READONLY/VARYING modifiers; functions show scalar or table return syntax. Parameter defaults and module/initializer bodies are omitted. Tables preview declared columns and explicit NULL/NOT NULL clauses; omitted nullability, computed-column types, primary-key implications, migration effects and view projection types are not inferred. Parameters and scalar/table variables show verified lexical types where available; CTE/derived alias/temp bindings remain conservative descriptions, not inferred row shapes.

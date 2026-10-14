@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET. **M0–M5 are complete; M6 has started with hover.** Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
+A working T-SQL language server in C#/.NET for SQL code search and navigation. **M0–M5 are complete; remaining M6 work is deferred at the user's request.** The tested hover increment remains available. Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md), with current priorities recorded in [milestone evidence](docs/milestones.md).
 
 ## Build and test
 
@@ -96,6 +96,6 @@ M3 adds `sql.mode=online` with explicitly enabled profiles and environment-varia
 
 M4 adds `sql.mode=hybrid` with explicit workspace/profile mappings, local and unsaved navigation preference, catalog fallback, source provenance and conservative module drift reporting. Duplicate declarations and competing identities remain ambiguous. Failed profiles remove expired catalog targets while local analysis stays available. See [hybrid setup](docs/hybrid.md).
 
-M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests, bounded parsing and measured performance. M6's first completed increment is hover (plugin 0.6.0). See [hover coverage](docs/hover.md), [benchmark results](docs/performance.md) and [security model](docs/security.md). Completion, semantic tokens, richer column binding, safe rename and MCP remain later M6 increments. No analyzed SQL is executed.
+M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests, bounded parsing and measured performance. M6's first completed increment is hover (plugin 0.6.0); remaining M6 work is deferred as of 2026-10-13. Future priorities are SQL search/navigation in Claude, reference and dependency coverage, and indexing reliability and performance. Completion, semantic tokens, richer column binding, safe rename, DacFx evaluation and MCP are deferred proposals. See [hover coverage](docs/hover.md), [benchmark results](docs/performance.md) and [security model](docs/security.md). No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

@@ -165,7 +165,7 @@ M5 acceptance is met through actual Claude diagnostics and generic LSP navigatio
 
 See [installation](installation.md), [client evidence](claude-verification.md), [security/resource model](security.md), [limitations](semantic-limitations.md) and ADR 0006. Next is optional M6: choose a focused feature such as hover or richer binding, with complete confidence/coverage tests before broader completion/rename/MCP work.
 
-## M6 — in progress; first hover increment complete (2026-10-13)
+## M6 — remaining work deferred; first hover increment complete (2026-10-13)
 
 - [x] Compile/register actual `textDocument/hover` with OmniSharp 1.0.0 and disable it on failed initialization. Reuse definition selection and precise requesting-document UTF-16 ranges; missing/ambiguous/unsupported bindings return null.
 - [x] Add bounded ScriptDOM-derived declaration signatures and lexical types, excluding defaults/body expressions and labeling syntax/unknown column or implicit-nullability limits. Surface authoritative permitted catalog names, types/parameters/columns, coverage and capture time without reconstructing hidden DDL.
@@ -189,4 +189,13 @@ See [installation](installation.md), [client evidence](claude-verification.md), 
 
 Packaged runtime 10.0.13 measured 27-file startup 1.31 s, 200KB diagnostic p95 345 ms (target miss), and 1,001-file warm definition p95 13 ms. Its 10,001-file indexing took 58.41 s, near the deadline; startup variability is unresolved and needs profiling before performance guarantees. See [raw measurements and caveats](performance.md). Real Claude hover is demonstrated in documented sessions, not guaranteed in every constrained session or every platform.
 
-M6 is **not complete**: contextual completion, semantic tokens, richer scope/column resolution, confidence-gated rename, optional DacFx evaluation and a separate MCP adapter remain later increments. None are advertised as implemented. Next executable increment: contextual completion with root/source/ambiguity and cancellation tests, followed by conservative semantic tokens. See [hover contract](hover.md), ADR 0007 and [client evidence](claude-verification.md).
+M6 is **not complete and its remaining work is deferred**, following the user's direction on 2026-10-13 to focus the plugin on SQL code search. The completed hover increment and dependency security fixes remain available. Contextual completion, semantic tokens, richer scope/column resolution, confidence-gated rename, optional DacFx evaluation and a separate MCP adapter are deferred proposals; none are advertised as implemented. This priority change supersedes the earlier recommendation to implement completion next. See [hover contract](hover.md), ADR 0007 and [client evidence](claude-verification.md).
+
+Proposed next work, to be scoped around SQL code search:
+
+1. Verify real Claude definition, references and workspace search calls and document tool availability with reproducible evidence.
+2. Improve search relevance and qualified, root-scoped matching while preserving source provenance and conservative ambiguity handling.
+3. Expand verified static reference/dependency coverage, with explicit limits for dynamic SQL and incomplete bindings.
+4. Profile indexing and startup variability, then improve reliability and performance on larger SQL workspaces.
+
+These are roadmap priorities, not claims of implemented features or a new completed milestone. The original implementation specification remains the historical baseline.
