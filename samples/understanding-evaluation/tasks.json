@@ -1,0 +1,6 @@
+[
+  {
+    "id": "public-ohio-smoke",
+    "question": "Explain dbo.ProcessPayroll and how Ohio is handled. Identify direct and possible transitive table reads/writes and called procedures. Explain the Ohio guard, cite source lines, and report dependencies that cannot be verified."
+  }
+]

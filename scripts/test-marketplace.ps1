@@ -11,11 +11,15 @@ function Write-FixtureArchive([string] $Runtime, [string] $Name, [bool] $SelfCon
     $zip = [System.IO.Compression.ZipArchive]::new([System.IO.File]::Open($path, [System.IO.FileMode]::Create), [System.IO.Compression.ZipArchiveMode]::Create)
     try {
         $binary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-lsp.exe' } else { 'sqlscriptdom-lsp' }
+        $mcpBinary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-mcp.exe' } else { 'sqlscriptdom-mcp' }
         $files = @{
             '.claude-plugin/plugin.json' = (@{ name = $Name; version = $version } | ConvertTo-Json)
             'build.json' = (@{ version = $version; runtime = $Runtime; selfContained = $SelfContained } | ConvertTo-Json)
             '.lsp.json' = '{}'
             "server/$binary" = 'synthetic archive validation fixture, not an executable'
+            '.mcp.json' = '{}'
+            "mcp/$mcpBinary" = 'synthetic MCP archive validation fixture, not an executable'
+            'skills/explain-procedure/SKILL.md' = 'synthetic skill fixture'
         }
         foreach ($file in $files.GetEnumerator()) {
             $writer = [System.IO.StreamWriter]::new($zip.CreateEntry($file.Key).Open())

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sqlscriptdom-analysis": {
+      "command": "dotnet",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/sqlscriptdom-mcp.dll", "--stdio"]
+    }
+  }
+}

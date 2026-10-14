@@ -11,6 +11,9 @@ New-Item -ItemType Directory -Path $stage -Force | Out-Null
 & dotnet publish (Join-Path $repo 'src/SqlLsp.Server') -c Release -r $Runtime --self-contained true -p:RestoreLockedMode=true `
     -p:PublishTrimmed=false -p:PublishSingleFile=false -p:PublishAot=false -o (Join-Path $stage 'server')
 if ($LASTEXITCODE -ne 0) { throw 'Self-contained publish failed.' }
+& dotnet publish (Join-Path $repo 'src/SqlLsp.Mcp') -c Release -r $Runtime --self-contained true -p:RestoreLockedMode=true `
+    -p:PublishTrimmed=false -p:PublishSingleFile=false -p:PublishAot=false -o (Join-Path $stage 'mcp')
+if ($LASTEXITCODE -ne 0) { throw 'Self-contained MCP publish failed.' }
 New-Item -ItemType Directory -Path (Join-Path $stage '.claude-plugin') | Out-Null
 $manifest = Get-Content -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Raw | ConvertFrom-Json
 # Marketplace entries have distinct architecture names; entry and plugin names must match.
@@ -22,14 +25,21 @@ $config = [ordered]@{ sqlscriptdom = [ordered]@{
     extensionToLanguage = [ordered]@{ '.sql' = 'sql' }
 } }
 $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage '.lsp.json') -Encoding utf8NoBOM
+$mcpBinary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-mcp.exe' } else { 'sqlscriptdom-mcp' }
+$mcpConfig = [ordered]@{ mcpServers = [ordered]@{ 'sqlscriptdom-analysis' = [ordered]@{
+    command = '${CLAUDE_PLUGIN_ROOT}/mcp/' + $mcpBinary; args = @('--stdio')
+} } }
+$mcpConfig | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage '.mcp.json') -Encoding utf8NoBOM
+Copy-Item -LiteralPath (Join-Path $repo 'claude-plugin/skills') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'README.md') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $repo 'docs') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'samples') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'SqlScriptDOM_LSP_Implementation_Plan.md') -Destination $stage
 # Inventory bundled libraries and include the licenses supplied by their NuGet packages.
-$deps = Get-Content -LiteralPath (Join-Path $stage 'server/sqlscriptdom-lsp.deps.json') -Raw | ConvertFrom-Json -AsHashtable
-$packages = @($deps.libraries.GetEnumerator() | Where-Object { $_.Value.type -in @('package', 'runtimepack') } |
-    Sort-Object Key | ForEach-Object { $_.Key })
+$packages = @(@('server/sqlscriptdom-lsp.deps.json', 'mcp/sqlscriptdom-mcp.deps.json') | ForEach-Object {
+    $deps = Get-Content -LiteralPath (Join-Path $stage $_) -Raw | ConvertFrom-Json -AsHashtable
+    $deps.libraries.GetEnumerator() | Where-Object { $_.Value.type -in @('package', 'runtimepack') } | ForEach-Object { $_.Key }
+} | Sort-Object -Unique)
 $packages | Set-Content -LiteralPath (Join-Path $stage 'dependencies.txt')
 $cacheLine = & dotnet nuget locals global-packages --list
 if ($LASTEXITCODE -ne 0) { throw 'Cannot locate NuGet license metadata.' }
@@ -73,7 +83,7 @@ try {
             $relative = [System.IO.Path]::GetRelativePath($stage, $file.FullName).Replace('\', '/')
             $entry = $zip.CreateEntry($relative, [System.IO.Compression.CompressionLevel]::Optimal)
             $entry.LastWriteTime = [datetimeoffset]::new(2026, 1, 1, 0, 0, 0, [timespan]::Zero)
-            $mode = if ($file.Name -eq $binary -or $file.Extension -eq '.so' -or $file.Extension -eq '.dylib') { 33261 } else { 33188 }
+            $mode = if ($file.Name -in @($binary, $mcpBinary) -or $file.Extension -eq '.so' -or $file.Extension -eq '.dylib') { 33261 } else { 33188 }
             $entry.ExternalAttributes = $mode -shl 16
             $source = [System.IO.File]::OpenRead($file.FullName)
             $target = $entry.Open()

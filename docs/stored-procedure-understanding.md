@@ -2,6 +2,8 @@
 
 The product's main job is to help a developer understand a complex procedure and answer questions such as "where is Ohio handled?". That requires reliable evidence about dependencies and behavior, followed by an explanation. A language server supplies verified source facts; Claude interprets those facts. The plugin itself is deterministic C# and does not call an AI model or execute analyzed SQL.
 
+For implementation order and acceptance tests, see the [procedure-understanding implementation plan](procedure-understanding-implementation-plan.md). The first increment's [analysis tools and explanation workflow](procedure-analysis.md) are implemented in the 0.7.0 source; release/client evidence is recorded in milestones. Flow/value tracing, indexing improvements and server telemetry remain subsequent work.
+
 ## Current foundation and remaining gaps
 
 Existing strengths are SqlScriptDOM parsing, declaration locations and signatures, scoped static references, unsaved changes, source-aware workspace/catalog navigation, and conservative handling of ambiguous targets. Version 0.6.2 adds the three standard call hierarchy methods, grouped static call sites, procedure/function traversal and per-item partial-coverage information. The remaining general M6 editor enhancements stay deferred.
@@ -9,15 +11,15 @@ Existing strengths are SqlScriptDOM parsing, declaration locations and signature
 | Priority | Capability | Current state | Why it matters for understanding a procedure |
 | --- | --- | --- | --- |
 | P0 | Incoming/outgoing procedure and function calls | Added for supported static calls in 0.6.2; client should traverse with depth/size limits | Establishes entry points, callees, recursive paths and boundaries where logic moves into another module |
-| P0 | Table/view reads and writes | Some relation references exist; operation classification and complete DML footprints are missing | Distinguishes a lookup from UPDATE/INSERT/DELETE/MERGE/SELECT INTO side effects; follows views to underlying relations |
-| P0 | Honest coverage report | Call items carry counts/body availability in protocol data/detail; Claude's rendered tool output may omit them, and a unified whole-procedure report is missing | An empty graph must not be mistaken for no dependencies; reports missing files, permissions, encrypted bodies and dynamic targets |
+| P0 | Table/view reads and writes | 0.7.0 adds scoped operation footprints and bounded view/callee expansion; runtime/implicit effects and CTE/view write binding remain partial | Distinguishes lookup reads from DML effects and preserves direct versus transitive possibilities |
+| P0 | Honest coverage report | 0.7.0 MCP output includes per-module issues, body availability, revisions, expansion limits and static limitations | Empty results cannot establish no dependencies; missing/dynamic/ambiguous sources stay visible |
 | P1 | Control flow, errors and transaction map | AST is retained; structured IF/CASE/loop/TRY-CATCH/transaction/return summaries are missing | Shows possible branches, early exits, rollback/error paths and the locations that govern Ohio-specific behavior |
 | P1 | Parameter and data-flow tracing | Parameter/local declarations are available; assignments, argument mapping, column lineage and cross-module propagation are missing | Traces state/region values through variables, temp tables, filters and called procedures |
-| P1 | Automatic explanation workflow | Claude can use LSP and Read/Grep; no bundled procedure-understanding skill exists | Makes developers ask business questions naturally, without manually choosing cursor positions or tool names |
+| P1 | Automatic explanation workflow | 0.7.0 bundles explain-procedure, using MCP analysis plus LSP/Read/Grep; automatic selection remains model behavior | Developers can ask business questions or explicitly invoke the skill |
 | P1 | Robust large-workspace indexing | In-memory indexing works; startup variability and sequential initial scans remain | Makes repeated investigation practical in large repositories rather than paying a long cold-start cost |
 | P2 | Full-text discovery combined with semantic verification | Grep and LSP are separate tools; unified relevance/path search is missing | Finds literals such as Ohio, OH and region codes, then associates each hit with its module and verified dependencies |
-| P2 | Structured source context and evidence export | Source/capture details exist across separate responses; a compact reusable procedure context bundle is missing | Reduces repeated reads and tokens while keeping file/range citations and deployed-vs-local identity clear |
-| P2 | Measured product value | Functional tests and server benchmarks exist; a paired Claude-vs-grep task benchmark and aggregate telemetry do not | Establishes whether developers get more correct answers with less time, effort and usage |
+| P2 | Structured source context and evidence export | 0.7.0 provides bounded structured module reports; further compactness/pagination is future work | Keeps file/range evidence and deployed-vs-local identity clear |
+| P2 | Measured product value | A paired client evaluation runner exists; a reviewed representative benchmark and server telemetry remain outstanding | Establishes whether developers get more correct answers with less time, effort and usage |
 
 Do not prioritize completion, semantic coloring or rename for this goal. First add read/write footprints and unified coverage, then control-flow/argument tracing, and then a reusable explanation workflow. Dynamic SQL, runtime branches, triggers, synonyms, cross-server targets and inaccessible catalog modules remain explicit coverage gaps rather than inferred facts. Static analysis alone cannot prove which branch ran or the contents of live data.
 
@@ -27,7 +29,7 @@ After installing the plugin, a developer can ask:
 
 > Explain dbo.ProcessPayroll, focusing on how Ohio payroll is handled. Locate the procedure, inspect its outgoing calls and incoming callers, and expand relevant callees up to two levels. Read the actual definitions. Show the inputs, table reads/writes, Ohio-related conditions, transactions/error handling, and open questions. Cite file paths and lines for each conclusion. Distinguish verified LSP locations from text interpretation and leave unsupported dynamic SQL unresolved. Do not execute SQL.
 
-Claude should locate the entry point, use definition and call hierarchy for verified module locations, read the relevant bodies, and use text search for business literals/aliases. Tables and control-flow descriptions currently come from Claude reading source, not a new deterministic plugin endpoint. An answer should include a bounded dependency diagram, a source-cited behavior narrative, and explicit unknowns; it should not claim complete impact analysis.
+With 0.7.0, Claude can use the bundled skill and MCP analysis for verified module locations, operation footprints and visible coverage issues. It reads relevant bodies and uses text search for business literals/aliases. Control-flow and value-flow descriptions still come from source reasoning. An answer should include bounded dependencies, a source-cited behavior narrative and explicit unknowns; it should not claim complete impact analysis. The LSP/Read/Grep instructions below also work with older releases.
 
 To make that workflow a project default, a team can add this short instruction to its own `CLAUDE.md`:
 
@@ -43,7 +45,7 @@ If LSP fails, report the failure and fallback explicitly. Do not execute analyze
 
 [Claude reads project instructions at session startup](https://code.claude.com/docs/en/memory). They guide model behavior rather than guaranteeing tool selection; verify actual calls. No hooks are required for this workflow. This repository does not alter a developer's personal project instructions automatically.
 
-A future bundled skill could trigger on procedure explanation, dependency or impact questions and orchestrate the same steps. Keep it small, bounded and focused on collecting evidence. It would be Claude instructions, not an AI model embedded in the server. A structured analysis API may later be exposed through an adapter if standard LSP cannot carry the required read/write/control-flow facts; do not represent table reads as function calls just to fit call hierarchy.
+The 0.7.0 bundled skill guides procedure explanation and impact questions using the structured analysis adapter. It supplies Claude instructions; the server contains no AI model. Standard LSP calls remain calls, while MCP carries relation footprints and coverage. Deterministic control-flow/value tracing remain future increments.
 
 ## Measuring value against grep
 
@@ -71,7 +73,7 @@ Report paired differences and uncertainty, with results by task class and all fa
 
 ## How to capture metrics
 
-Start with an external evaluation runner. Claude's CLI can emit structured events with `--print --verbose --output-format stream-json`; the existing public-fixture smoke already reads real tool calls/results and reported cost. A runner can correlate tool-use/result IDs, count tool types/failures, record elapsed wall time and collect final usage where exposed. Keep raw private SQL/transcripts out of aggregate reports; persist task IDs, pseudonymous object IDs, numeric measurements and reviewed scores. Reusing the current smoke verbatim would not measure this comparison: it restricts tools and has fixed prompts for capability checks.
+Use [the external evaluation runner](procedure-analysis.md#measure-against-grepread). It correlates structured CLI tool-use/result IDs, counts tool types/failures, records elapsed wall time and collects final usage where exposed. Aggregate reports omit SQL/transcripts; accuracy columns require independent review. Existing capability smokes remain separate checks with restricted tools and fixed prompts.
 
 Then add **opt-in server telemetry** for method name, duration, success/cancellation, indexed-file counts, cold/warm state, cache hits and resolved/ambiguous/missing/unsupported counts. Write compact aggregates to a chosen local file or stderr, never LSP stdout. Avoid SQL text, business literals, paths, credentials and module bodies in default metric records. Current release does not implement this telemetry switch.
 

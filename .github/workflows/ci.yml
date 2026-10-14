@@ -15,6 +15,7 @@ jobs:
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --no-restore --configuration Release
       - run: dotnet format --no-restore --verify-no-changes
+      - run: python scripts/test_evaluation_metrics.py
       - shell: pwsh
         run: ./scripts/test-marketplace.ps1
   packages:
@@ -55,8 +56,11 @@ jobs:
           test -f "$destination/.claude-plugin/plugin.json"
           test -f "$destination/.lsp.json"
           test -x "$destination/server/sqlscriptdom-lsp"
+          test -x "$destination/mcp/sqlscriptdom-mcp"
           SQLLSP_TEST_SERVER_EXE="$destination/server/sqlscriptdom-lsp" \
             dotnet test tests/SqlLsp.Server.IntegrationTests --no-build --no-restore -c Release
+          SQLLSP_TEST_MCP_EXE="$destination/mcp/sqlscriptdom-mcp" \
+            dotnet test tests/SqlLsp.Mcp.IntegrationTests --no-build --no-restore -c Release
       - shell: pwsh
         run: ./scripts/test-package.ps1 -Runtime '${{ matrix.rid }}' -Marketplace
       - uses: actions/upload-artifact@v4

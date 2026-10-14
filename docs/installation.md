@@ -34,7 +34,7 @@ dotnet build --no-restore -c Release
 
 Use `linux-x64` on Linux x64, `osx-arm64` on Apple Silicon and `osx-x64` on Intel Mac. CI builds and exercises each target on its native OS/architecture. Locally, Windows is the verified host; configured CI is not proof that another platform has passed. See [macOS setup](macos.md) and [GitHub marketplace distribution](publishing.md) for dedicated instructions and release status. No global Claude configuration or plugin installation is changed by these scripts.
 
-Each ZIP contains `.claude-plugin/plugin.json`, `.lsp.json`, a multi-file executable with the pinned .NET 10.0.13 runtime, documentation, sample SQL, dependency/license inventory, runtime notices and build provenance. SHA-256 sidecars verify archive integrity; they are not publisher signatures. Builds use locked RID dependency graphs and disable trimming, AOT and single-file bundling because ScriptDOM and the LSP framework use reflection. Rebuilding identical source with the same toolchain creates a stable archive; the source revision and dirty-source flag are in `build.json`.
+Each 0.7.0 ZIP contains `.claude-plugin/plugin.json`, `.lsp.json`, `.mcp.json`, separate self-contained LSP/MCP apphosts with pinned .NET 10.0.13 runtimes, the explanation skill, documentation, samples, dependency/license inventory and build provenance. SHA-256 sidecars verify integrity; they are not publisher signatures. Locked RID graphs and disabled trimming/AOT/single-file preserve reflection-dependent APIs. Source revision and dirty-source status are recorded in `build.json`.
 
 Extract all files, including dotfiles. Keep the directory together. On Windows:
 

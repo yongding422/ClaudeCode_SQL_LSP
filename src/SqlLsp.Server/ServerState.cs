@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using OmniSharp.Extensions.JsonRpc;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
@@ -15,6 +16,8 @@ public sealed class ServerState : IAsyncDisposable
     public string? ConfigurationError { get; private set; }
     public WorkspaceFiles? Files { get; private set; }
     public ResolutionOptions Resolution { get; private set; } = new();
+    public ImmutableArray<string> SourceStatuses => sourceStatuses.Values.ToImmutableArray();
+    private readonly ConcurrentDictionary<string, string> sourceStatuses = new(StringComparer.Ordinal);
     private WorkspaceWatcher? watcher;
     private ServerConfiguration? configuration;
     private readonly Dictionary<string, SqlDatabaseSourceSession> databases = new(StringComparer.Ordinal);
@@ -44,16 +47,25 @@ public sealed class ServerState : IAsyncDisposable
             Console.Error.WriteLine(ConfigurationError);
             return;
         }
+        facade = server;
+        await InitializeSourcesAsync(config, roots, token);
+    }
+
+    // Shared acquisition for LSP and the read-only analysis adapter. Each process owns its snapshots.
+    public async Task InitializeSourcesAsync(ServerConfiguration config, IEnumerable<Uri> workspaceRoots, CancellationToken token)
+    {
+        if (Documents != null) throw new InvalidOperationException("Sources already initialized.");
+        var roots = workspaceRoots.ToArray();
+        config.ValidateMappings(roots);
         var parser = config.Parser;
         configuration = config;
-        facade = server;
         var workspace = config.Workspace;
         workspace.Validate();
         Resolution = config.Resolution;
         Files = new WorkspaceFiles(workspace);
         Documents = new DocumentStore(new SqlParser(parser, Resolution), Files, workspace);
         Documents.Fault += message => Console.Error.WriteLine(message);
-        Documents.Diagnostics += publication => server.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
+        Documents.Diagnostics += publication => facade?.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams
         {
             Uri = publication.Uri.AbsoluteUri,
             Version = publication.Version,
@@ -160,7 +172,14 @@ public sealed class ServerState : IAsyncDisposable
         return Uri.TryCreate(context, UriKind.Absolute, out var root) && root.IsFile ? ServerConfiguration.NormalizeRoot(root) : context;
     }
 
-    private void ReportStatus(string status) => facade?.Window.LogMessage(new LogMessageParams { Type = MessageType.Info, Message = status });
+    private void ReportStatus(string status)
+    {
+        // Keep the latest status per profile, so recovery does not retain an old unavailable warning.
+        var key = status.Split(':', 2)[0];
+        sourceStatuses[key] = status;
+        if (facade != null) facade.Window.LogMessage(new LogMessageParams { Type = MessageType.Info, Message = status });
+        else Console.Error.WriteLine(status);
+    }
 
     public static Range ToRange(TextRange range) => new(
         new Position(range.Start.Line, range.Start.Character), new Position(range.End.Line, range.End.Character));

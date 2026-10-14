@@ -88,7 +88,7 @@ cd "$HOME/projects/your-sql-project"
 claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp-0.6.2"
 ```
 
-Claude decides how to expose LSP operations. Hover and automatic diagnostics have actual Windows client evidence; definition/references and workspace search have independent stdio test evidence. Those results do not establish successful Claude calls on Mac. There is no custom SQL slash command or MCP tool adapter in this release.
+Claude decides how to expose LSP operations. Windows has actual client evidence for navigation/hover/call hierarchy and the 0.7.0 analysis workflow. Mac model calls still need separate evidence. The 0.7.0 implementation includes read-only MCP tools and an explain-procedure skill; see [usage and coverage](procedure-analysis.md).
 
 ## Build and verify on a Mac
 

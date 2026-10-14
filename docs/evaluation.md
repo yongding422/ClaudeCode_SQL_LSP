@@ -8,6 +8,8 @@ The plugin registers `.sql` handling through `.lsp.json`. Claude starts its bund
 
 There are **no plugin hooks**, no model calls inside the server, and no interception of Grep/Bash. Claude decides when to use its LSP tool. Grep remains useful for discovering names and searching text; LSP resolves supported object uses. The default offline mode reads workspace SQL without connecting to a database. Online/hybrid metadata access is explicitly opt-in.
 
+The 0.7.0 implementation adds read-only MCP discovery/analysis and an explanation skill alongside LSP. See [procedure analysis](procedure-analysis.md) for operation footprints, visible coverage and the paired client evaluation runner. The reference fixture below remains a navigation check, not a benchmark of the new explanation workflow.
+
 ```mermaid
 flowchart LR
     A[Claude's LSP tool] -->|definition / references / hover| B[C# SQL server]

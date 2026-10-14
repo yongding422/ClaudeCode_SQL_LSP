@@ -3,6 +3,8 @@
 TestResults/
 **/TestResults/
 artifacts/
+__pycache__/
 claude-plugin/server/
+claude-plugin/mcp/
 .vs/
 *.user

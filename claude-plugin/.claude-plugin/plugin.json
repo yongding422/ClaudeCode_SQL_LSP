@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.6.2",
-  "description": "T-SQL navigation, static call hierarchy, diagnostics and source details for understanding stored procedures",
+  "version": "0.7.0",
+  "description": "T-SQL procedure understanding with verified reads/writes, coverage reports, call hierarchy and an explanation skill",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

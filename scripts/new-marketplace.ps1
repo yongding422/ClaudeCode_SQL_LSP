@@ -31,11 +31,14 @@ $entries = foreach ($runtime in @('win-x64', 'linux-x64', 'osx-arm64', 'osx-x64'
             $build.version -ne $version -or $build.selfContained -ne $true) { throw "Package identity mismatch: $fileName. Build with -Marketplace." }
         $binary = if ($runtime.StartsWith('win-')) { 'sqlscriptdom-lsp.exe' } else { 'sqlscriptdom-lsp' }
         if ($null -eq $zip.GetEntry('server/' + $binary)) { throw "Missing apphost: $fileName" }
+        $mcpBinary = if ($runtime.StartsWith('win-')) { 'sqlscriptdom-mcp.exe' } else { 'sqlscriptdom-mcp' }
+        if ($null -eq $zip.GetEntry('mcp/' + $mcpBinary) -or $null -eq $zip.GetEntry('.mcp.json') -or
+            $null -eq $zip.GetEntry('skills/explain-procedure/SKILL.md')) { throw "Missing analysis adapter/skill: $fileName" }
     } finally { $zip.Dispose() }
     [ordered]@{
         name = $name
         version = $version
-        description = "T-SQL code search and navigation for $runtime; includes .NET runtime. Install only your platform's entry."
+        description = "T-SQL procedure understanding, read/write analysis and navigation for $runtime; includes .NET runtime. Install only your platform's entry."
         source = [ordered]@{ source = 'archive'; url = "https://github.com/$Repository/releases/download/v$version/$fileName"; sha256 = $actual }
     }
 }

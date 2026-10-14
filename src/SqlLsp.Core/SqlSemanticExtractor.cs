@@ -83,6 +83,15 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         }
     }
 
+    public override void ExplicitVisit(TruncateTableStatement node)
+    {
+        var name = QualifiedSqlName.From(node.TableName);
+        var local = RelationLocal(name);
+        Add(name, node.TableName, SqlReferenceKind.Table, local,
+            name.Name.StartsWith('#') && local == null ? "Temporary table scope is unknown." : null);
+        base.ExplicitVisit(node);
+    }
+
     public override void ExplicitVisit(VariableReference node)
     {
         var local = FindLocal(lexical, node.Name);
@@ -99,6 +108,8 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
     public override void ExplicitVisit(SelectStatement node)
     {
         WithCtes(node);
+        if (node.Into is { } destination && QualifiedSqlName.From(destination).Name.StartsWith('#'))
+            Local(QualifiedSqlName.From(destination).Name, SqlObjectKind.TempTable, destination);
     }
 
     // WITH can also scope CTEs used by INSERT/UPDATE/DELETE/MERGE.

@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; remaining M6 work is deferred at the user's request.** Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md), with current priorities recorded in [milestone evidence](docs/milestones.md).
+A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; general M6 editor work stays deferred.** The 0.7.0 implementation adds table read/write footprints, unified coverage reports, read-only MCP analysis tools and a bundled explanation skill. Existing features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained packaging. See [procedure analysis and usage](docs/procedure-analysis.md), [the full specification](SqlScriptDOM_LSP_Implementation_Plan.md), and [release evidence](docs/milestones.md).
 
 ## Build and test
 
@@ -31,6 +31,7 @@ Publish once, then launch the published DLL directly. Build/run output must neve
 
 ```sh
 dotnet publish src/SqlLsp.Server -c Release --no-restore -o claude-plugin/server
+dotnet publish src/SqlLsp.Mcp -c Release --no-restore -o claude-plugin/mcp
 dotnet claude-plugin/server/sqlscriptdom-lsp.dll --stdio
 ```
 
@@ -73,9 +74,9 @@ claude
 
 For Intel Mac use `sqlscriptdom-lsp-osx-x64`; Windows x64 uses `sqlscriptdom-lsp-win-x64`, and Linux x64 uses `sqlscriptdom-lsp-linux-x64`, each followed by `@sqlscriptdom-lsp-marketplace`. Install one entry for your platform. The packages include the runtime; no .NET installation is required. See [marketplace setup](docs/publishing.md) and [Mac usage](docs/macos.md).
 
-The plugin uses Claude's built-in LSP integration with no hooks. See [how it works and how to evaluate it against grep](docs/evaluation.md) for a public fixture with known reference locations, actual tool-call checks and a fair task-level comparison.
+The plugin uses Claude's built-in LSP integration plus read-only MCP analysis and an explanation skill, with no hooks. See [procedure analysis](docs/procedure-analysis.md) and [evaluation](docs/evaluation.md) for actual tool checks and a fair task-level comparison.
 
-For complex procedure investigation, [the stored-procedure assessment](docs/stored-procedure-understanding.md) ranks missing capabilities, gives an automatic Claude workflow, and proposes task accuracy/time/usage metrics. Version 0.6.2 adds [static incoming/outgoing call hierarchy](docs/call-hierarchy.md); other optional M6 editor enhancements remain deferred.
+For complex procedure investigation, [the assessment](docs/stored-procedure-understanding.md) records implemented footprints/workflows, remaining gaps and accuracy/time/usage metrics. [Static call hierarchy](docs/call-hierarchy.md) remains available; general M6 editor enhancements stay deferred.
 
 Build a self-contained package with PowerShell 7 and the pinned SDK. Supported package targets are `win-x64`, `linux-x64`, `osx-arm64` (Apple Silicon), and `osx-x64` (Intel Mac):
 
@@ -113,6 +114,6 @@ M3 adds `sql.mode=online` with explicitly enabled profiles and environment-varia
 
 M4 adds `sql.mode=hybrid` with explicit workspace/profile mappings, local and unsaved navigation preference, catalog fallback, source provenance and conservative module drift reporting. Duplicate declarations and competing identities remain ambiguous. Failed profiles remove expired catalog targets while local analysis stays available. See [hybrid setup](docs/hybrid.md).
 
-M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests, bounded parsing and measured performance. M6's first completed increment is hover (plugin 0.6.0); remaining M6 work is deferred as of 2026-10-13. Future priorities are SQL search/navigation in Claude, reference and dependency coverage, and indexing reliability and performance. Completion, semantic tokens, richer column binding, safe rename, DacFx evaluation and MCP are deferred proposals. See [hover coverage](docs/hover.md), [benchmark results](docs/performance.md) and [security model](docs/security.md). No analyzed SQL is executed.
+M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests and measured performance. Hover and static call hierarchy are complete; 0.7.0 adds procedure footprints, coverage and MCP/skill delivery. Next priorities are control-flow/value tracing, indexing reliability and reviewed product evaluation. Completion, semantic tokens, rename and DacFx remain deferred. See [the understanding plan](docs/procedure-understanding-implementation-plan.md), [benchmarks](docs/performance.md) and [security model](docs/security.md). No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

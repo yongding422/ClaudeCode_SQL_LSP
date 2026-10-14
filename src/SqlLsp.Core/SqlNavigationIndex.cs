@@ -11,6 +11,7 @@ public sealed partial class SqlNavigationIndex
     private readonly SqlHybridPolicy? hybrid;
     public ImmutableArray<IndexedSqlSymbol> Symbols { get; }
     public ImmutableArray<SqlDefinitionDrift> Drifts { get; }
+    public int DocumentCount => documents.Length;
 
     public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options,
         ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true, SqlHybridPolicy? hybrid = null,
