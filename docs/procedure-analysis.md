@@ -1,6 +1,6 @@
 # Explain a stored procedure with the plugin
 
-The 0.7.0 implementation adds verified table operation footprints, visible coverage issues, bounded dependency expansion, read-only MCP tools and a bundled Claude skill. It keeps the existing LSP navigation and static call hierarchy. Publication/native-client evidence is recorded separately in [milestones](milestones.md); source implementation alone is not marketplace availability.
+Version 0.8.0 adds a [structural control-flow map](control-flow.md) to the verified table footprints, coverage issues, bounded dependency expansion, read-only MCP tools and bundled Claude skill introduced in 0.7.0. Existing LSP navigation and static call hierarchy remain available. Publication/native-client evidence is recorded separately in [milestones](milestones.md); source implementation alone is not marketplace availability.
 
 [Release 0.7.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.7.0) is public. [Marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38574241007) passed on all four platforms with both protocols exercised. Update your platform entry through the marketplace, then start a fresh Claude session.
 
@@ -32,7 +32,7 @@ MCP analyzes **saved workspace/catalog snapshots**. It receives no unsaved LSP b
 
 Dynamic SQL, remote rowsets, missing/ambiguous objects, unavailable bodies and writes through CTEs have explicit issues. View writes report the verified view target, but underlying write effects/triggers remain unknown. Built-in effects, synonyms, runtime values and implicit engine behavior are not fully analyzed. An empty access/call list never proves no effects.
 
-Control flow, transactions, error paths, argument/value propagation and full column lineage are not yet deterministic analyzer features. The skill reads source to interpret these and labels the distinction. No analyzed SQL is executed. The server makes no AI model calls and includes no hooks or remote telemetry collector; the MCP SDK uses AI tool abstractions internally.
+Each module's `controlFlow` maps IF/ELSE, CASE, WHILE, TRY/CATCH, exits, error and transaction/savepoint statements. Call/access `flowContext` IDs identify enclosing constructs with predicate/source evidence. At most 256 nodes per module share the existing fact budgets; previews are bounded to 256 UTF-16 units and retain full ranges. These are structural observations: empty context does not mean unconditional execution, and sequential reachability, transaction correctness, argument/value propagation and full column lineage remain unsupported. The skill reads source for interpretation and labels the distinction. No analyzed SQL is executed. The server makes no AI model calls and includes no hooks or remote telemetry collector; the MCP SDK uses AI tool abstractions internally.
 
 ## Configuration and development
 

@@ -9,14 +9,23 @@ public enum SqlAccessOperation { Read, Insert, Update, Delete, Create, Drop, Tru
 public sealed record SqlAnalysisLocation(Uri Uri, TextRange Range);
 public sealed record SqlCoverageIssue(string Code, string Message, SqlAnalysisLocation? Location);
 public sealed record SqlRelationAccess(SqlAccessOperation Operation, string Name, SqlAnalysisLocation Location,
-    ResolutionStatus Status, SqlNavigationTarget? Target, SqlLocalDefinition? Local, string Explanation);
+    ResolutionStatus Status, SqlNavigationTarget? Target, SqlLocalDefinition? Local, string Explanation)
+{
+    public ImmutableArray<string> FlowContext { get; init; } = [];
+}
 public sealed record SqlAnalyzedCall(string Name, SqlAnalysisLocation Location, ResolutionStatus Status,
-    SqlNavigationTarget? Target, string Explanation);
+    SqlNavigationTarget? Target, string Explanation)
+{
+    public ImmutableArray<string> FlowContext { get; init; } = [];
+}
 public sealed record SqlAnalysisParameter(string Name, string? Type, SqlAnalysisLocation Location);
 public sealed record SqlModuleAnalysis(string Id, SqlObjectIdentity Identity, SqlSourceKind SourceKind, string Revision,
     DateTimeOffset? CapturedAt, SqlAnalysisLocation Definition, string? Signature, bool BodyAvailable,
     ImmutableArray<SqlAnalysisParameter> Parameters, ImmutableArray<SqlRelationAccess> Accesses,
-    ImmutableArray<SqlAnalyzedCall> Calls, ImmutableArray<SqlCoverageIssue> Issues, bool Truncated);
+    ImmutableArray<SqlAnalyzedCall> Calls, ImmutableArray<SqlCoverageIssue> Issues, bool Truncated)
+{
+    public SqlControlFlowSummary? ControlFlow { get; init; }
+}
 public sealed record SqlProcedureReport(ResolutionStatus Status, string Explanation,
     ImmutableArray<SqlNavigationTarget> Candidates, ImmutableArray<SqlModuleAnalysis> Modules,
     ImmutableArray<SqlCoverageIssue> ExpansionIssues, ImmutableArray<string> Limitations,
@@ -29,7 +38,7 @@ public sealed partial class SqlNavigationIndex
     [
         "Static possible effects, not observed execution. Direct effects belong to each module; expanded module effects are transitive possibilities.",
         "Dynamic SQL, triggers, synonyms, remote rowsets, runtime data and implicit engine effects are not fully analyzed.",
-        "Built-in/unqualified function effects, control flow, transaction correctness, argument/value propagation and full column lineage are not modeled.",
+        "Control scopes are structural observations, not complete execution conditions. Sequential reachability, transaction correctness, built-in effects, argument/value propagation and full column lineage are not modeled.",
         "CTE reads retain local identity and underlying query reads. Writes through CTEs/views require further binding and are explicitly partial.",
         "Results cover indexed sources only. File exclusions, size limits and metadata permissions can hide dependencies. Empty results do not prove no effects."
     ];
@@ -81,7 +90,7 @@ public sealed partial class SqlNavigationIndex
             }
             var analysis = AnalyzeModule(entry.Symbol, token, Math.Min(MaxAnalysisFacts, remainingFacts));
             modules.Add(analysis);
-            remainingFacts -= analysis.Accesses.Length + analysis.Calls.Length + analysis.Parameters.Length;
+            remainingFacts -= analysis.Accesses.Length + analysis.Calls.Length + analysis.Parameters.Length + (analysis.ControlFlow?.Nodes.Length ?? 0);
             var dependencies = analysis.Calls.Where(c => c.Status == ResolutionStatus.Resolved && c.Target != null).Select(c => (c.Target!, c.Location))
                 .Concat(analysis.Accesses.Where(a => a.Operation == SqlAccessOperation.Read && a.Status == ResolutionStatus.Resolved && a.Target?.Identity?.Kind == SqlObjectKind.View)
                     .Select(a => (a.Target!, a.Location)));
@@ -176,11 +185,18 @@ public sealed partial class SqlNavigationIndex
         var parameters = allParameters.Take(Math.Max(0, maxFacts - calls.Count - accesses.Count))
             .Select(l => new SqlAnalysisParameter(l.Name, l.DeclaredType, new(document.Uri, l.Range))).ToImmutableArray();
         truncated |= allParameters.Length > parameters.Length;
+        var flow = SqlControlFlow.Extract(finder.Body, document, Math.Max(0, maxFacts - calls.Count - accesses.Count - parameters.Length), token);
+        foreach (var issue in flow.Issues) Issue(issue.Code, issue.Message, issue.Location?.Range);
+        truncated |= flow.Truncated;
         if (truncated) issues.Add(new("fact-limit", "Module report reached its fact limit; omitted facts may include effects.", new(document.Uri, symbol.Declaration.Range)));
         return new(document.Uri.AbsoluteUri + "#" + symbol.Target.Range.Start.Line + ":" + symbol.Target.Range.Start.Character,
             symbol.Identity, document.SourceKind, AnalysisRevision(document), symbol.CapturedAt,
             new(document.Uri, symbol.Declaration.Range), symbol.Declaration.Documentation?.Signature,
-            finder.Body != null, parameters, accesses.Distinct().ToImmutableArray(), calls.ToImmutableArray(), issues.Distinct().ToImmutableArray(), truncated);
+            finder.Body != null, parameters,
+            accesses.Distinct().Select(a => a with { FlowContext = flow.ContextAt(a.Location.Range.Start) }).ToImmutableArray(),
+            calls.Select(c => c with { FlowContext = flow.ContextAt(c.Location.Range.Start) }).ToImmutableArray(),
+            issues.Distinct().ToImmutableArray(), truncated)
+        { ControlFlow = flow };
     }
 
     private sealed class AnalysisBodyFinder(SourceText source, TextRange range) : TSqlFragmentVisitor

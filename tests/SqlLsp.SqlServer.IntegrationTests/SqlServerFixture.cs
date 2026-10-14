@@ -74,6 +74,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
                 "CREATE TABLE sales.Payroll (PayrollId int NULL);",
                 "CREATE PROCEDURE dbo.ProcessPayroll @PayrollId int, @Note nvarchar(40) = NULL, @Result int OUTPUT AS BEGIN SELECT * FROM dbo.Payroll WHERE PayrollId=@PayrollId; SET @Result=1; END;",
                 "CREATE PROCEDURE dbo.RunPayroll AS BEGIN DECLARE @result int; EXEC dbo.ProcessPayroll @PayrollId=42,@Result=@result OUTPUT; END;",
+                "CREATE PROCEDURE dbo.FlowPayroll @State varchar(2) AS BEGIN TRY BEGIN TRANSACTION; SAVE TRANSACTION beforeWrite; IF @State='OH' UPDATE dbo.Payroll SET Amount=Amount+1; ELSE RETURN; COMMIT TRANSACTION; END TRY BEGIN CATCH ROLLBACK TRANSACTION; THROW; END CATCH;",
                 "CREATE VIEW dbo.PayrollView AS SELECT PayrollId, Amount FROM dbo.Payroll;",
                 "CREATE FUNCTION dbo.PayrollTotal(@id int) RETURNS decimal(12,2) AS BEGIN RETURN (SELECT Amount FROM dbo.Payroll WHERE PayrollId=@id); END;",
                 "CREATE PROCEDURE dbo.EncryptedPayroll WITH ENCRYPTION AS SELECT PayrollId FROM dbo.Payroll;",

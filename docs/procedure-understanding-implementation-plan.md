@@ -1,6 +1,6 @@
 # Plan to close the procedure-understanding gaps
 
-Status: increments 1 and 2 are implemented in 0.7.0 source; see [usage and boundaries](procedure-analysis.md) and milestone release evidence. Subsequent increments remain proposed. This extends the [assessment](stored-procedure-understanding.md) around understanding complex stored procedures. Version 0.6.2 supplies static call hierarchy. Completion, semantic coloring, rename and other general M6 editor enhancements remain deferred.
+Status: increments 1 and 2 shipped in 0.7.0; increment 3 is implemented in 0.8.0 source as a structural map with explicit reachability/transaction limits. See [usage and boundaries](procedure-analysis.md), [control-flow contract](control-flow.md) and milestone release evidence. Subsequent increments remain proposed. This extends the [assessment](stored-procedure-understanding.md) around understanding complex stored procedures. Version 0.6.2 supplies static call hierarchy. Completion, semantic coloring, rename and other general M6 editor enhancements remain deferred.
 
 ## Architecture
 
@@ -58,6 +58,8 @@ Automatic skill selection is model behavior, not a guarantee. Supply a manual sk
 Acceptance: protocol integration tests for the adapter, strict plugin validation, installed-package tests on Windows/Linux/macOS ARM64/x64, and actual Claude tool-call evidence. Test ambiguous selection, stale revisions, cancellation, unavailable tools and explicit fallback. The answer must expose coverage issues that existing LSP rendering can omit.
 
 ## 3. Control flow, transactions and errors
+
+Implemented in 0.8.0: enclosing structural contexts with original predicate ranges, bounded previews and visible truncation. Full sequential CFG/reachability and transaction outcomes remain unsupported; empty lexical context never proves an unconditional effect. See [ADR 0010](adr/0010-structural-control-flow.md).
 
 Extract nested IF/ELSE, CASE, WHILE, TRY/CATCH, RETURN, THROW/RAISERROR and transaction/savepoint statements with conditions and source ranges. Associate calls and relation effects with their enclosing branches. Describe possible paths, not the path taken by an actual execution. Transaction statements are observations; avoid asserting balanced commits or guaranteed rollback without a supported path analysis.
 

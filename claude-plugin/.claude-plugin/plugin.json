@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.7.0",
-  "description": "T-SQL procedure understanding with verified reads/writes, coverage reports, call hierarchy and an explanation skill",
+  "version": "0.8.0",
+  "description": "T-SQL procedure understanding with reads/writes, branch and transaction maps, coverage, call hierarchy and an explanation skill",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

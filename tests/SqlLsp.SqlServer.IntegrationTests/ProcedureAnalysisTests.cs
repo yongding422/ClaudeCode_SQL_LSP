@@ -34,7 +34,7 @@ public class CatalogProcedureAnalysisTests
         var catalog = ProviderTests.Snapshot with
         {
             Objects = ProviderTests.Snapshot.Objects.Select(o => o.ObjectId == 1
-                ? o with { Definition = "CREATE PROC dbo.OldName AS EXEC dbo.Hidden;" } : o).ToImmutableArray()
+                ? o with { Definition = "CREATE PROC dbo.OldName @n int AS IF @n>0 EXEC dbo.Hidden;" } : o).ToImmutableArray()
         };
         using var storage = new CatalogDocuments();
         var snapshot = await storage.BuildAsync(catalog, new(), CancellationToken.None);
@@ -44,9 +44,14 @@ public class CatalogProcedureAnalysisTests
         Assert.Equal(2, report.Modules.Length);
         Assert.Equal("CurrentName", report.Modules[0].Identity.Name);
         Assert.True(report.Modules[0].BodyAvailable);
+        var flow = Assert.IsType<SqlControlFlowSummary>(report.Modules[0].ControlFlow);
+        Assert.Equal("@n>0", flow.Nodes.Single(n => n.Kind == SqlFlowKind.If).Predicate!.Preview);
+        Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.Then && report.Modules[0].Calls[0].FlowContext.Contains(n.Id));
         Assert.Equal(SqlSourceKind.Database, report.Modules[0].SourceKind);
         var hidden = report.Modules.Single(m => m.Identity.Name == "Hidden");
         Assert.False(hidden.BodyAvailable);
+        Assert.False(Assert.IsType<SqlControlFlowSummary>(hidden.ControlFlow).BodyAvailable);
+        Assert.Empty(hidden.ControlFlow!.Nodes);
         Assert.Contains(hidden.Issues, i => i.Code == "body-unavailable");
         Assert.Empty(hidden.Accesses);
         Assert.NotNull(hidden.CapturedAt);
@@ -70,5 +75,14 @@ public class LiveProcedureAnalysisTests(SqlServerFixture fixture)
         var encrypted = snapshot.Symbols.Single(s => s.Identity.Name == "EncryptedPayroll");
         var unavailable = index.AnalyzeProcedure(encrypted.Target.Uri, encrypted.Target.Range.Start, CancellationToken.None);
         Assert.Contains(unavailable.Modules[0].Issues, i => i.Code == "body-unavailable");
+        Assert.False(unavailable.Modules[0].ControlFlow!.BodyAvailable);
+        var flowProc = snapshot.Symbols.Single(s => s.Identity.Name == "FlowPayroll");
+        var flowModule = index.AnalyzeProcedure(flowProc.Target.Uri, flowProc.Target.Range.Start, CancellationToken.None).Modules[0];
+        var flow = Assert.IsType<SqlControlFlowSummary>(flowModule.ControlFlow);
+        Assert.Equal("@State='OH'", flow.Nodes.Single(n => n.Kind == SqlFlowKind.If).Predicate!.Preview);
+        var write = Assert.Single(flowModule.Accesses.Where(a => a.Operation == SqlAccessOperation.Update));
+        Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.Then && write.FlowContext.Contains(n.Id));
+        Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.SaveTransaction && n.Subject!.Preview == "beforeWrite");
+        Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.Throw);
     }
 }

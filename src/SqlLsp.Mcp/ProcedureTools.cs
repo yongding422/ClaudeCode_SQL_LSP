@@ -76,7 +76,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Analyze a verified T-SQL procedure/function/view definition or body. Returns direct table operations, static calls, parameters, source spans and explicit unknowns, with bounded callee/view expansion. This is static possible-effect analysis, not execution or complete runtime impact. No analyzed SQL is executed. Source positions are zero-based UTF-16; use find_procedures first.")]
+    [Description("Analyze a verified T-SQL procedure/function/view definition or body. Returns direct table operations, static calls, parameters, structural control-flow contexts (IF/ELSE, CASE, loops, TRY/CATCH, exits and transaction statements), source spans and explicit unknowns, with bounded callee/view expansion. Contexts describe syntax enclosure, not complete execution conditions or transaction outcomes. This is static possible-effect analysis, not execution or complete runtime impact. No analyzed SQL is executed. Source positions are zero-based UTF-16; use find_procedures first.")]
     public async Task<CallToolResult> AnalyzeProcedure(string documentUri, int line, int character,
         [Description("Call/view expansion levels, 0..4; default 2.")] int maxDepth = 2,
         [Description("Maximum modules including entry point, 1..40; default 20.")] int maxModules = 20,

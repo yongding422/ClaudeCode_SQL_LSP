@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; general M6 editor work stays deferred.** The 0.7.0 implementation adds table read/write footprints, unified coverage reports, read-only MCP analysis tools and a bundled explanation skill. Existing features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained packaging. See [procedure analysis and usage](docs/procedure-analysis.md), [the full specification](SqlScriptDOM_LSP_Implementation_Plan.md), and [release evidence](docs/milestones.md).
+A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; general M6 editor work stays deferred.** Version 0.8.0 adds structural branch, loop, error and transaction maps to table read/write footprints, coverage reports, read-only MCP tools and a bundled explanation skill. Existing features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained packaging. See [procedure analysis and usage](docs/procedure-analysis.md), [the full specification](SqlScriptDOM_LSP_Implementation_Plan.md), and [release evidence](docs/milestones.md).
 
 ## Build and test
 
@@ -85,7 +85,7 @@ Build a self-contained package with PowerShell 7 and the pinned SDK. Supported p
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract your local `artifacts/packages/sqlscriptdom-lsp-0.7.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract your local `artifacts/packages/sqlscriptdom-lsp-0.8.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
@@ -114,6 +114,6 @@ M3 adds `sql.mode=online` with explicitly enabled profiles and environment-varia
 
 M4 adds `sql.mode=hybrid` with explicit workspace/profile mappings, local and unsaved navigation preference, catalog fallback, source provenance and conservative module drift reporting. Duplicate declarations and competing identities remain ambiguous. Failed profiles remove expired catalog targets while local analysis stays available. See [hybrid setup](docs/hybrid.md).
 
-M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests and measured performance. Hover and static call hierarchy are complete; 0.7.0 adds procedure footprints, coverage and MCP/skill delivery. Next priorities are control-flow/value tracing, indexing reliability and reviewed product evaluation. Completion, semantic tokens, rename and DacFx remain deferred. See [the understanding plan](docs/procedure-understanding-implementation-plan.md), [benchmarks](docs/performance.md) and [security model](docs/security.md). No analyzed SQL is executed.
+M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests and measured performance. Hover and static call hierarchy are complete; 0.7.0 adds procedure footprints, coverage and MCP/skill delivery. Version 0.8.0 adds structural control-flow contexts; sequential reachability and transaction outcomes remain unsupported. Next priorities are parameter/value tracing, indexing reliability and reviewed product evaluation. Completion, semantic tokens, rename and DacFx remain deferred. See [the understanding plan](docs/procedure-understanding-implementation-plan.md), [benchmarks](docs/performance.md) and [security model](docs/security.md). No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

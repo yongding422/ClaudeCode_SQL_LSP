@@ -2,7 +2,7 @@
 
 The product's main job is to help a developer understand a complex procedure and answer questions such as "where is Ohio handled?". That requires reliable evidence about dependencies and behavior, followed by an explanation. A language server supplies verified source facts; Claude interprets those facts. The plugin itself is deterministic C# and does not call an AI model or execute analyzed SQL.
 
-For implementation order and acceptance tests, see the [procedure-understanding implementation plan](procedure-understanding-implementation-plan.md). The first increment's [analysis tools and explanation workflow](procedure-analysis.md) are implemented in the 0.7.0 source; release/client evidence is recorded in milestones. Flow/value tracing, indexing improvements and server telemetry remain subsequent work.
+For implementation order and acceptance tests, see the [procedure-understanding implementation plan](procedure-understanding-implementation-plan.md). The first increment's [analysis tools and explanation workflow](procedure-analysis.md) are implemented in the 0.7.0 source; release/client evidence is recorded in milestones. Version 0.8.0 adds structural flow contexts; value tracing, indexing improvements and server telemetry remain subsequent work.
 
 ## Current foundation and remaining gaps
 
@@ -13,7 +13,7 @@ Existing strengths are SqlScriptDOM parsing, declaration locations and signature
 | P0 | Incoming/outgoing procedure and function calls | Added for supported static calls in 0.6.2; client should traverse with depth/size limits | Establishes entry points, callees, recursive paths and boundaries where logic moves into another module |
 | P0 | Table/view reads and writes | 0.7.0 adds scoped operation footprints and bounded view/callee expansion; runtime/implicit effects and CTE/view write binding remain partial | Distinguishes lookup reads from DML effects and preserves direct versus transitive possibilities |
 | P0 | Honest coverage report | 0.7.0 MCP output includes per-module issues, body availability, revisions, expansion limits and static limitations | Empty results cannot establish no dependencies; missing/dynamic/ambiguous sources stay visible |
-| P1 | Control flow, errors and transaction map | AST is retained; structured IF/CASE/loop/TRY-CATCH/transaction/return summaries are missing | Shows possible branches, early exits, rollback/error paths and the locations that govern Ohio-specific behavior |
+| P1 | Control flow, errors and transaction map | 0.8.0 adds IF/ELSE, CASE, loop, TRY/CATCH, exit and transaction source regions with enclosing call/effect IDs; sequential reachability and transaction outcomes remain unsupported | Shows possible branches, early exits, rollback/error paths and the locations that govern Ohio-specific behavior |
 | P1 | Parameter and data-flow tracing | Parameter/local declarations are available; assignments, argument mapping, column lineage and cross-module propagation are missing | Traces state/region values through variables, temp tables, filters and called procedures |
 | P1 | Automatic explanation workflow | 0.7.0 bundles explain-procedure, using MCP analysis plus LSP/Read/Grep; automatic selection remains model behavior | Developers can ask business questions or explicitly invoke the skill |
 | P1 | Robust large-workspace indexing | In-memory indexing works; startup variability and sequential initial scans remain | Makes repeated investigation practical in large repositories rather than paying a long cold-start cost |
@@ -29,7 +29,7 @@ After installing the plugin, a developer can ask:
 
 > Explain dbo.ProcessPayroll, focusing on how Ohio payroll is handled. Locate the procedure, inspect its outgoing calls and incoming callers, and expand relevant callees up to two levels. Read the actual definitions. Show the inputs, table reads/writes, Ohio-related conditions, transactions/error handling, and open questions. Cite file paths and lines for each conclusion. Distinguish verified LSP locations from text interpretation and leave unsupported dynamic SQL unresolved. Do not execute SQL.
 
-With 0.7.0, Claude can use the bundled skill and MCP analysis for verified module locations, operation footprints and visible coverage issues. It reads relevant bodies and uses text search for business literals/aliases. Control-flow and value-flow descriptions still come from source reasoning. An answer should include bounded dependencies, a source-cited behavior narrative and explicit unknowns; it should not claim complete impact analysis. The LSP/Read/Grep instructions below also work with older releases.
+With 0.7.0, Claude can use the bundled skill and MCP analysis for verified module locations, operation footprints and visible coverage issues. It reads relevant bodies and uses text search for business literals/aliases. Version 0.8.0 supplies structural flow regions and predicate evidence; runtime path and value-flow descriptions still require source reasoning. An answer should include bounded dependencies, a source-cited behavior narrative and explicit unknowns; it should not claim complete impact analysis. The LSP/Read/Grep instructions below also work with older releases.
 
 To make that workflow a project default, a team can add this short instruction to its own `CLAUDE.md`:
 
@@ -45,7 +45,7 @@ If LSP fails, report the failure and fallback explicitly. Do not execute analyze
 
 [Claude reads project instructions at session startup](https://code.claude.com/docs/en/memory). They guide model behavior rather than guaranteeing tool selection; verify actual calls. No hooks are required for this workflow. This repository does not alter a developer's personal project instructions automatically.
 
-The 0.7.0 bundled skill guides procedure explanation and impact questions using the structured analysis adapter. It supplies Claude instructions; the server contains no AI model. Standard LSP calls remain calls, while MCP carries relation footprints and coverage. Deterministic control-flow/value tracing remain future increments.
+The 0.7.0 bundled skill guides procedure explanation and impact questions using the structured analysis adapter. It supplies Claude instructions; the server contains no AI model. Standard LSP calls remain calls, while MCP carries relation footprints and coverage. Version 0.8.0 adds structural control-flow contexts; path-sensitive reasoning and value tracing remain future increments.
 
 ## Measuring value against grep
 

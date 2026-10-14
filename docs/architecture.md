@@ -1,4 +1,6 @@
-# Architecture (M0–M6 hover increment)
+# Architecture (procedure understanding)
+
+`SqlControlFlow` maps retained ScriptDOM branch/loop/CASE/error/transaction nodes into revision-local parent/child source regions. Calls and accesses reference enclosing node IDs within their own module. Predicate/subject previews and node counts are bounded within report fact budgets. Contexts are structural; sequential reachability and transaction outcomes are not inferred. See [ADR 0010](adr/0010-structural-control-flow.md).
 
 `SqlNavigationIndex.AnalyzeProcedure` consumes the retained AST and the existing scope/resolution model. Statement context classifies direct relation operations; each expanded procedure/function/view retains its own identity, revision, facts and coverage issues. Cycles, depth/module limits and fact budgets bound output. `SqlLsp.Mcp` exposes discovery and analysis via the official C# SDK's stdio MCP transport, reusing `ServerState.InitializeSourcesAsync` and `NavigationAsync` for source acquisition. LSP/MCP have independent snapshots: the adapter receives saved files/catalogs, not unsaved LSP overlays. A packaged skill guides evidence collection and source interpretation without hooks. See [ADR 0009](adr/0009-procedure-analysis-and-mcp.md).
 

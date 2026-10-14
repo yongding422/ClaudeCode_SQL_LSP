@@ -52,7 +52,11 @@ $successful = @($analysisResults | Where-Object {
         $data = $_.content | ConvertFrom-Json
         $entry = $data.report.modules | Where-Object { $_.identity.schema -eq 'dbo' -and $_.identity.name -eq 'ProcessPayroll' }
         $callee = $data.report.modules | Where-Object { $_.identity.schema -eq 'dbo' -and $_.identity.name -eq 'ApplyOhioRules' }
+        $ohio = @($entry.controlFlow.nodes | Where-Object { $_.kind -eq 'If' -and $_.predicate.preview -eq "@State = 'OH'" })
+        $call = $entry.calls | Where-Object { $_.target.identity.name -eq 'ApplyOhioRules' }
+        $then = @($entry.controlFlow.nodes | Where-Object { $_.kind -eq 'Then' -and $_.parentId -in $ohio.id -and $_.id -in $call.flowContext })
         return $data.report.status -eq 'Resolved' -and
+            $ohio.Count -eq 1 -and $then.Count -eq 1 -and -not $entry.controlFlow.truncated -and
             @($entry.accesses | Where-Object { $_.operation -eq 'Insert' -and $_.target.identity.name -eq 'PayrollAudit' }).Count -eq 1 -and
             @($callee.accesses | Where-Object { $_.operation -eq 'Update' -and $_.target.identity.name -eq 'Payroll' }).Count -eq 1 -and
             @($entry.issues | Where-Object { $_.code -eq 'call-unsupported' }).Count -eq 1
@@ -63,6 +67,7 @@ $skillCalls = @($calls | Where-Object { $_.name -eq 'Skill' })
 $summary = [ordered]@{
     claudeVersion = (& $claudeCommand --version); exitCode = $process.ExitCode; pluginName = $name
     discoveryCalls = $discoveryCalls.Count; analysisCalls = $analysisCalls.Count; successfulAnalysisResults = $successful.Count
+    requiredFlowEvidence = 'Exact OH predicate, Then parent and callee call context in actual MCP tool result'
     skillRequested = [bool]$InvokeSkill; skillCalls = $skillCalls.Count
     toolNames = @($calls | ForEach-Object { $_.name }); failedToolAttempts = @($results | Where-Object { $_.is_error }).Count
     costUsd = $final.total_cost_usd; outcome = $final.subtype; evidenceDirectory = $evidence

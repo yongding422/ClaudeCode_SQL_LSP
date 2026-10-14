@@ -5,6 +5,50 @@ namespace SqlLsp.Mcp.IntegrationTests;
 public class ProcedureTests
 {
     [Fact]
+    public async Task Structural_flow_survives_the_wire_and_guards_calls_without_claiming_transaction_outcomes()
+    {
+        await using var client = await McpClient.Start("-- 😀 中文\r\nCREATE PROC dbo.P @state varchar(2) AS BEGIN\r\n" +
+            "BEGIN TRY BEGIN TRANSACTION Payroll; IF @state='OH' EXEC dbo.Q; ELSE RETURN; COMMIT TRANSACTION Payroll; END TRY\r\n" +
+            "BEGIN CATCH ROLLBACK TRANSACTION Payroll; THROW; END CATCH; END;\r\nGO\r\n" +
+            "CREATE PROC dbo.Q AS UPDATE dbo.A SET id=1;\r\nGO\r\nCREATE TABLE dbo.A(id int);");
+        var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.P" })).GetProperty("modules")[0];
+        var report = McpClient.Data(await Analyze(client, selected)).GetProperty("report");
+        var root = report.GetProperty("modules")[0];
+        var flow = root.GetProperty("controlFlow");
+        var nodes = flow.GetProperty("nodes").EnumerateArray().ToArray();
+        Assert.True(flow.GetProperty("bodyAvailable").GetBoolean());
+        Assert.False(flow.GetProperty("truncated").GetBoolean());
+        var branch = Assert.Single(nodes, n => n.GetProperty("kind").GetString() == "If");
+        Assert.Equal("@state='OH'", branch.GetProperty("predicate").GetProperty("preview").GetString());
+        Assert.Equal(2, branch.GetProperty("predicate").GetProperty("location").GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
+        var call = Assert.Single(root.GetProperty("calls").EnumerateArray());
+        var contexts = call.GetProperty("flowContext").EnumerateArray().Select(id => nodes.Single(n => n.GetProperty("id").GetString() == id.GetString()).GetProperty("kind").GetString());
+        Assert.Equal(new[] { "TryCatch", "Try", "If", "Then" }, contexts);
+        Assert.Contains(nodes, n => n.GetProperty("kind").GetString() == "RollbackTransaction" && n.GetProperty("subject").GetProperty("preview").GetString() == "Payroll");
+        Assert.Contains(nodes, n => n.GetProperty("kind").GetString() == "Throw");
+        var callee = report.GetProperty("modules")[1];
+        Assert.Empty(Assert.Single(callee.GetProperty("accesses").EnumerateArray()).GetProperty("flowContext").EnumerateArray());
+        Assert.Contains(flow.GetProperty("limitations").EnumerateArray(), l => l.GetString()!.Contains("actual commit/rollback outcomes are not inferred", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Truncated_control_map_has_visible_coverage_and_no_dangling_context_ids()
+    {
+        await using var client = await McpClient.Start("CREATE PROC dbo.P @n int AS BEGIN " +
+            string.Concat(Enumerable.Repeat("IF @n=0 RETURN; ", 100)) + "END;");
+        var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "P" })).GetProperty("modules")[0];
+        var module = McpClient.Data(await Analyze(client, selected)).GetProperty("report").GetProperty("modules")[0];
+        Assert.True(module.GetProperty("truncated").GetBoolean());
+        var flow = module.GetProperty("controlFlow");
+        Assert.True(flow.GetProperty("truncated").GetBoolean());
+        var nodes = flow.GetProperty("nodes").EnumerateArray().ToArray();
+        Assert.Equal(256, nodes.Length);
+        var ids = nodes.Select(n => n.GetProperty("id").GetString()).ToHashSet();
+        Assert.All(nodes, n => Assert.True(n.GetProperty("parentId").ValueKind == JsonValueKind.Null || ids.Contains(n.GetProperty("parentId").GetString())));
+        Assert.Contains(module.GetProperty("issues").EnumerateArray(), i => i.GetProperty("code").GetString() == "control-flow-limit");
+    }
+
+    [Fact]
     public async Task Parse_errors_stay_visible_even_when_the_malformed_module_cannot_be_discovered()
     {
         await using var client = await McpClient.Start("CREATE PROC dbo.P AS SELECT FROM;");
