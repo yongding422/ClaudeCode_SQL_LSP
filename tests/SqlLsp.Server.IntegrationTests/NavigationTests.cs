@@ -6,6 +6,38 @@ namespace SqlLsp.Server.IntegrationTests;
 public class NavigationTests
 {
     [Fact]
+    public async Task Public_search_evaluation_returns_verified_calls_excludes_text_noise_and_keeps_ambiguity()
+    {
+        using var fixture = new NavigationWorkspace();
+        var sample = Path.Combine(LspClient.RepositoryRoot, "samples", "search-evaluation");
+        var declarations = await File.ReadAllTextAsync(Path.Combine(sample, "definitions.sql"));
+        var calls = await File.ReadAllTextAsync(Path.Combine(sample, "calls.sql"));
+        var definition = fixture.Write("definitions.sql", declarations);
+        var caller = fixture.Write("calls.sql", calls);
+        await using var client = new LspClient();
+        await client.InitializeAsync(new Uri(fixture.Root).AbsoluteUri);
+        await client.NotifyAsync("initialized", new { });
+        var target = Assert.Single((await DefinitionAsync(client, caller, calls, "dbo.SearchProbe")).EnumerateArray());
+        AssertUri(definition, target.GetProperty("uri"));
+        Assert.Equal(0, target.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
+        var references = await ReferencesAsync(client, definition, declarations, "dbo.SearchProbe", false);
+        Assert.Equal(2, references.GetArrayLength());
+        Assert.All(references.EnumerateArray(), r => AssertUri(caller, r.GetProperty("uri")));
+        Assert.Equal(new[] { 0, 1 }, references.EnumerateArray().Select(r =>
+            r.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32()).Order().ToArray());
+        var auditReferences = await ReferencesAsync(client, definition, declarations, "audit.SearchProbe", false);
+        Assert.Single(auditReferences.EnumerateArray());
+        Assert.Equal(2, auditReferences[0].GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
+        foreach (var line in new[] { 3, 4, 5, 6 })
+        {
+            var response = await client.RequestAsync("textDocument/definition", new
+            { textDocument = new { uri = new Uri(caller).AbsoluteUri }, position = new { line, character = 10 } });
+            Assert.Empty(response.GetProperty("result").EnumerateArray());
+        }
+        await client.StopAsync();
+    }
+
+    [Fact]
     public async Task Cross_file_definition_references_workspace_search_and_unsaved_changes_work_over_stdio()
     {
         using var fixture = new NavigationWorkspace();

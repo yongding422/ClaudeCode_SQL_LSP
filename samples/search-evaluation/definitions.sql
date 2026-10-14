@@ -1,0 +1,6 @@
+CREATE PROCEDURE dbo.SearchProbe AS SELECT 1;
+GO
+CREATE PROCEDURE audit.SearchProbe AS SELECT 2;
+GO
+CREATE PROCEDURE dbo.SearchProbeArchive AS SELECT 3;
+GO

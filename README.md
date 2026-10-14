@@ -73,6 +73,8 @@ claude
 
 For Intel Mac use `sqlscriptdom-lsp-osx-x64`; Windows x64 uses `sqlscriptdom-lsp-win-x64`, and Linux x64 uses `sqlscriptdom-lsp-linux-x64`, each followed by `@sqlscriptdom-lsp-marketplace`. Install one entry for your platform. The packages include the runtime; no .NET installation is required. See [marketplace setup](docs/publishing.md) and [Mac usage](docs/macos.md).
 
+The plugin uses Claude's built-in LSP integration with no hooks. See [how it works and how to evaluate it against grep](docs/evaluation.md) for a public fixture with known reference locations, actual tool-call checks and a fair task-level comparison.
+
 Build a self-contained package with PowerShell 7 and the pinned SDK. Supported package targets are `win-x64`, `linux-x64`, `osx-arm64` (Apple Silicon), and `osx-x64` (Intel Mac):
 
 ```powershell
