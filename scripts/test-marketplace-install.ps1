@@ -14,7 +14,10 @@ try {
     & npx --yes --package '@anthropic-ai/claude-code@2.1.224' claude plugin install "sqlscriptdom-lsp-$Runtime@sqlscriptdom-lsp-marketplace"
     if ($LASTEXITCODE -ne 0) { throw 'Archive plugin installation failed.' }
     $binary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-lsp.exe' } else { 'sqlscriptdom-lsp' }
-    $executables = @(Get-ChildItem -LiteralPath $env:CLAUDE_CONFIG_DIR -File -Recurse -Force -Filter $binary)
+    # The MCP publish also carries the referenced LSP project's apphost. Select the configured LSP directory.
+    $executables = @(Get-ChildItem -LiteralPath $env:CLAUDE_CONFIG_DIR -File -Recurse -Force -Filter $binary |
+        Where-Object { $_.Directory.Name -eq 'server' -and
+            (Test-Path -LiteralPath (Join-Path $_.Directory.Parent.FullName '.claude-plugin/plugin.json')) })
     if ($executables.Count -ne 1) { throw 'Expected exactly one installed apphost in the isolated configuration.' }
     $executable = $executables[0].FullName
     $plugin = Split-Path (Split-Path $executable)
