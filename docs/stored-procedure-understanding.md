@@ -10,7 +10,7 @@ Existing strengths are SqlScriptDOM parsing, declaration locations and signature
 | --- | --- | --- | --- |
 | P0 | Incoming/outgoing procedure and function calls | Added for supported static calls in 0.6.2; client should traverse with depth/size limits | Establishes entry points, callees, recursive paths and boundaries where logic moves into another module |
 | P0 | Table/view reads and writes | Some relation references exist; operation classification and complete DML footprints are missing | Distinguishes a lookup from UPDATE/INSERT/DELETE/MERGE/SELECT INTO side effects; follows views to underlying relations |
-| P0 | Honest coverage report | Call items expose resolved/ambiguous/missing/unsupported counts and unavailable bodies; a unified whole-procedure report is missing | An empty graph must not be mistaken for no dependencies; reports missing files, permissions, encrypted bodies and dynamic targets |
+| P0 | Honest coverage report | Call items carry counts/body availability in protocol data/detail; Claude's rendered tool output may omit them, and a unified whole-procedure report is missing | An empty graph must not be mistaken for no dependencies; reports missing files, permissions, encrypted bodies and dynamic targets |
 | P1 | Control flow, errors and transaction map | AST is retained; structured IF/CASE/loop/TRY-CATCH/transaction/return summaries are missing | Shows possible branches, early exits, rollback/error paths and the locations that govern Ohio-specific behavior |
 | P1 | Parameter and data-flow tracing | Parameter/local declarations are available; assignments, argument mapping, column lineage and cross-module propagation are missing | Traces state/region values through variables, temp tables, filters and called procedures |
 | P1 | Automatic explanation workflow | Claude can use LSP and Read/Grep; no bundled procedure-understanding skill exists | Makes developers ask business questions naturally, without manually choosing cursor positions or tool names |
@@ -76,6 +76,8 @@ Start with an external evaluation runner. Claude's CLI can emit structured event
 Then add **opt-in server telemetry** for method name, duration, success/cancellation, indexed-file counts, cold/warm state, cache hits and resolved/ambiguous/missing/unsupported counts. Write compact aggregates to a chosen local file or stderr, never LSP stdout. Avoid SQL text, business literals, paths, credentials and module bodies in default metric records. Current release does not implement this telemetry switch.
 
 Server telemetry alone cannot measure Claude tokens/cost, Grep calls, developer understanding or answer correctness. Those need client events and reviewed gold tasks. Optional PostToolUse-style hooks could observe client tools for interactive measurement, but they are a later opt-in design; the shipped plugin currently installs no hooks and does not send telemetry anywhere. An external runner is the clearest first implementation because it controls both experimental arms and avoids changing ordinary developer sessions.
+
+An actual 0.6.2 Windows Claude smoke illustrates this distinction: an incoming-call file sync failed during client startup, then a retry returned the correct graph. Both operations ultimately worked, but server request timings alone would miss the failed client attempt. [The evidence](evidence/claude-call-hierarchy-windows.json) records the failure instead of presenting only successful requests.
 
 Suggested report columns:
 

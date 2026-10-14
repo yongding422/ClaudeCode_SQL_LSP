@@ -1,0 +1,28 @@
+{
+  "pluginVersion": "0.6.2",
+  "claudeVersion": "2.1.224",
+  "platform": "Windows x64",
+  "serverRuntime": "10.0.13",
+  "sourceCommit": "606b984167171d227c33546b658386aea88081bb",
+  "fixture": "public payroll files copied outside the Git repository",
+  "enableLspToolCompatibilityFlag": false,
+  "operations": ["outgoingCalls", "incomingCalls"],
+  "verifiedOutgoing": { "caller": "dbo.RunPayroll", "callee": "dbo.ProcessPayroll", "callSites": 1 },
+  "verifiedIncoming": { "callee": "dbo.ProcessPayroll", "caller": "dbo.RunPayroll", "callSites": 1 },
+  "initializePrepareOutgoingIncomingShutdownResponsesObserved": true,
+  "successfulLspOperations": 2,
+  "failedClientAttempts": 1,
+  "failure": "Incoming file synchronization raced client server-starting state; retry succeeded.",
+  "exitCode": 0,
+  "reportedCostUsd": 0.068642,
+  "sequentialRepeat": {
+    "successfulLspOperations": 2,
+    "failedClientAttempts": 0,
+    "initializePrepareOutgoingIncomingShutdownResponsesObserved": true,
+    "reportedCostUsd": 0.057582,
+    "exitCode": 0,
+    "change": "Prompt waits for the outgoing tool result before requesting incoming calls."
+  },
+  "initialToolEnumeration": ["Read"],
+  "limits": ["The initial tool enumeration omitted LSP despite actual successful calls.", "This is Windows client evidence, not proof of Mac model tool calls or comparative speed/usage gains.", "No SQL Server was contacted and no analyzed SQL was executed.", "Retries are retained as reliability evidence rather than removed from metrics."]
+}

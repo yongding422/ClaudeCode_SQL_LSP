@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET for SQL code search and navigation. **M0–M5 are complete; remaining M6 work is deferred at the user's request.** The tested hover increment remains available. Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md), with current priorities recorded in [milestone evidence](docs/milestones.md).
+A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; remaining M6 work is deferred at the user's request.** Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md), with current priorities recorded in [milestone evidence](docs/milestones.md).
 
 ## Build and test
 
@@ -58,11 +58,11 @@ Scanning excludes `bin`, `obj`, `node_modules`, `.git`, links/reparse points, an
 
 Native filesystem watchers refresh creates, changes, deletes, and file/directory renames after a short debounce. Client `workspace/didChangeWatchedFiles` notifications also refresh the index. Disk updates preserve open overlays, and closing a deleted file drops its overlay. Each workspace root has an independent source context.
 
-The server advertises incremental text synchronization, document symbols, definition, references, hover, and workspace symbol search. Hierarchical outline clients receive `DocumentSymbol`; other clients receive `SymbolInformation`. Procedures/functions map to LSP Function, tables to Class, and views to Interface. Definition returns a verified declaration location, or an empty result for ambiguous, unresolved or unsupported targets. References include supported static object uses and verified alias qualifiers, with the declaration controlled by `includeDeclaration`. [Hover](docs/hover.md) describes the selected definition's kind, syntax signature or visible catalog metadata, source, capture/buffer version and available comparison state. It returns null for unsupported or ambiguous bindings and does not infer projected column types.
+The server advertises incremental text synchronization, document symbols, definition, references, hover, call hierarchy and workspace symbol search. Hierarchical outline clients receive `DocumentSymbol`; other clients receive `SymbolInformation`. Procedures/functions map to LSP Function, tables to Class, and views to Interface. Definition returns a verified declaration location, or an empty result for ambiguous, unresolved or unsupported targets. References include supported static object uses and verified alias qualifiers, with the declaration controlled by `includeDeclaration`. [Call hierarchy](docs/call-hierarchy.md) groups supported static procedure/function invocations with partial coverage and source-revision validation. [Hover](docs/hover.md) describes the selected definition's kind, syntax signature or visible catalog metadata, source, capture/buffer version and available comparison state. It returns null for unsupported or ambiguous bindings and does not infer projected column types.
 
 ## Install the Claude Code plugin
 
-Release [0.6.1](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1) is available through this repository's GitHub marketplace. Use Claude Code **2.1.224 or later** for archive installs; check `claude --version` and use `claude update` if needed. On an Apple Silicon Mac:
+Release [0.6.2](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.2) is available through this repository's GitHub marketplace. Use Claude Code **2.1.224 or later** for archive installs; check `claude --version` and use `claude update` if needed. On an Apple Silicon Mac:
 
 ```sh
 claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
@@ -84,7 +84,7 @@ Build a self-contained package with PowerShell 7 and the pinned SDK. Supported p
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract `artifacts/packages/sqlscriptdom-lsp-0.6.1-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract `artifacts/packages/sqlscriptdom-lsp-0.6.2-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'

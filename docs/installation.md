@@ -39,8 +39,8 @@ Each ZIP contains `.claude-plugin/plugin.json`, `.lsp.json`, a multi-file execut
 Extract all files, including dotfiles. Keep the directory together. On Windows:
 
 ```powershell
-Get-FileHash ./sqlscriptdom-lsp-0.6.1-win-x64.zip -Algorithm SHA256
-Expand-Archive ./sqlscriptdom-lsp-0.6.1-win-x64.zip -DestinationPath 'C:/Tools/SQL LSP'
+Get-FileHash ./sqlscriptdom-lsp-0.6.2-win-x64.zip -Algorithm SHA256
+Expand-Archive ./sqlscriptdom-lsp-0.6.2-win-x64.zip -DestinationPath 'C:/Tools/SQL LSP'
 claude plugin validate 'C:/Tools/SQL LSP' --strict
 cd 'C:/Tools/SQL LSP/samples/sql-workspace'
 claude --plugin-dir 'C:/Tools/SQL LSP'
@@ -49,8 +49,8 @@ claude --plugin-dir 'C:/Tools/SQL LSP'
 On Linux x64:
 
 ```sh
-sha256sum -c sqlscriptdom-lsp-0.6.1-linux-x64.zip.sha256
-unzip sqlscriptdom-lsp-0.6.1-linux-x64.zip -d "$HOME/tools/sqlscriptdom-lsp"
+sha256sum -c sqlscriptdom-lsp-0.6.2-linux-x64.zip.sha256
+unzip sqlscriptdom-lsp-0.6.2-linux-x64.zip -d "$HOME/tools/sqlscriptdom-lsp"
 chmod +x "$HOME/tools/sqlscriptdom-lsp/server/sqlscriptdom-lsp"
 cd "$HOME/tools/sqlscriptdom-lsp/samples/sql-workspace"
 claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp"
@@ -59,8 +59,8 @@ claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp"
 On Apple Silicon macOS:
 
 ```sh
-shasum -a 256 -c sqlscriptdom-lsp-0.6.1-osx-arm64.zip.sha256
-unzip sqlscriptdom-lsp-0.6.1-osx-arm64.zip -d "$HOME/tools/sqlscriptdom-lsp"
+shasum -a 256 -c sqlscriptdom-lsp-0.6.2-osx-arm64.zip.sha256
+unzip sqlscriptdom-lsp-0.6.2-osx-arm64.zip -d "$HOME/tools/sqlscriptdom-lsp"
 chmod +x "$HOME/tools/sqlscriptdom-lsp/server/sqlscriptdom-lsp"
 claude plugin validate "$HOME/tools/sqlscriptdom-lsp" --strict
 cd "$HOME/tools/sqlscriptdom-lsp/samples/sql-workspace"
