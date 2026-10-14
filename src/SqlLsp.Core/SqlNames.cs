@@ -27,7 +27,7 @@ public enum SqlReferenceKind { Procedure, Relation, Table, Function, Variable, A
 public enum ResolutionStatus { Resolved, Ambiguous, Unresolved, Unsupported }
 public sealed record SqlLocalDefinition(string Name, SqlObjectKind Kind, TextRange Range, bool IsAmbiguous = false, string? DeclaredType = null);
 public sealed record SqlStaticReference(QualifiedSqlName? Name, string RawName, SqlReferenceKind Kind,
-    TextRange Range, string? Database, SqlLocalDefinition? LocalTarget = null, string? UnsupportedReason = null);
+    TextRange Range, string? Database, SqlLocalDefinition? LocalTarget = null, string? UnsupportedReason = null, bool IsInvocation = false);
 public sealed record SqlSemanticDocument(ImmutableArray<SqlStaticReference> References, ImmutableArray<SqlLocalDefinition> Locals);
 public sealed record SqlObjectIdentity(string SourceContextId, string? Server, string? Database, string? Schema,
     string Name, SqlObjectKind Kind);

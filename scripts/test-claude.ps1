@@ -4,10 +4,12 @@ param(
     [switch] $EnableLspTool,
     [switch] $Diagnostics,
     [switch] $Hover,
+    [switch] $CallHierarchy,
+    [string] $ClaudeExecutable,
     [decimal] $MaxBudgetUsd = 1
 )
 $ErrorActionPreference = 'Stop'
-if ($Diagnostics -and $Hover) { throw 'Choose either Diagnostics or Hover for this smoke run.' }
+if (@($Diagnostics, $Hover, $CallHierarchy | Where-Object { $_ }).Count -gt 1) { throw 'Choose one smoke mode: Diagnostics, Hover or CallHierarchy.' }
 $repo = Split-Path $PSScriptRoot
 $plugin = (Resolve-Path -LiteralPath $PluginPath).Path
 $pluginName = (Get-Content -LiteralPath (Join-Path $plugin '.claude-plugin/plugin.json') -Raw | ConvertFrom-Json).name
@@ -17,7 +19,8 @@ $evidence = Join-Path $repo ('artifacts/claude-smoke-' + $runId)
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 Copy-Item (Join-Path $repo 'samples/sql-workspace/payroll-*.sql') -Destination $fixture
-$start = [System.Diagnostics.ProcessStartInfo]::new((Get-Command claude -ErrorAction Stop).Source)
+$claudeCommand = if ($ClaudeExecutable) { (Resolve-Path -LiteralPath $ClaudeExecutable).Path } else { (Get-Command claude -ErrorAction Stop).Source }
+$start = [System.Diagnostics.ProcessStartInfo]::new($claudeCommand)
 $start.WorkingDirectory = $fixture
 $start.UseShellExecute = $false
 $start.CreateNoWindow = $true
@@ -29,6 +32,9 @@ $prompt = 'Read payroll-caller.sql, then use LSP goToDefinition on payroll-calle
 $toolNames = 'Read,LSP,ToolSearch'
 if ($Hover) {
     $prompt = 'Read payroll-caller.sql, then use the LSP hover operation on payroll-caller.sql at line 3 column 15. These are public synthetic SQL fixtures. Report the actual signature, kind and source returned by LSP. Do not infer them from file contents and do not call any other tool except Read or LSP. Report tool unavailability honestly.'
+}
+if ($CallHierarchy) {
+    $prompt = 'Read payroll-caller.sql. Use LSP outgoingCalls on payroll-caller.sql at line 1 column 25, then LSP incomingCalls on payroll-procedure.sql at line 1 column 25. Report actual tool results showing dbo.ProcessPayroll as the callee and dbo.RunPayroll as the caller. Do not infer graph edges from text. Report tool unavailability honestly. Only Read, LSP and ToolSearch are permitted.'
 }
 if ($Diagnostics) {
     $toolNames = 'Read,Edit,LSP'
@@ -65,12 +71,16 @@ $hoverResponse = $debug.Contains("Received response 'textDocument/hover -")
 $intentionalEdit = $Diagnostics -and (Get-Content -LiteralPath (Join-Path $fixture 'payroll-caller.sql') -Raw).Contains('SELECT FROM;')
 $final = $events | Where-Object { $_.type -eq 'result' } | Select-Object -Last 1
 $summary = [ordered]@{
-    claudeVersion = (& claude --version); exitCode = $process.ExitCode; enableLspTool = [bool]$EnableLspTool
+    claudeVersion = (& $claudeCommand --version); exitCode = $process.ExitCode; enableLspTool = [bool]$EnableLspTool
     tools = @($initial.tools); plugins = @($initial.plugins | ForEach-Object { $_.name })
     calls = @($calls | ForEach-Object { $_.input }); results = @($lspResults | ForEach-Object { $_.content })
     initializeResponseObserved = $initialized; diagnosticsObserved = $diagnosticsReceived; shutdownResponseObserved = $shutdown
     hoverRequested = [bool]$Hover
     hoverResponseObserved = $hoverResponse
+    callHierarchyRequested = [bool]$CallHierarchy
+    prepareCallHierarchyResponseObserved = $debug.Contains("Received response 'textDocument/prepareCallHierarchy -")
+    outgoingCallsResponseObserved = $debug.Contains("Received response 'callHierarchy/outgoingCalls -")
+    incomingCallsResponseObserved = $debug.Contains("Received response 'callHierarchy/incomingCalls -")
     costUsd = $final.total_cost_usd; outcome = $final.subtype; evidenceDirectory = $evidence; publicFixtureDirectory = $fixture
 }
 $summary | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json')
@@ -81,6 +91,14 @@ $success = if ($Diagnostics) { $initialized -and $diagnosticsReceived -and $shut
     $initialized -and $hoverResponse -and $shutdown -and $hoverCalls.Count -gt 0 -and $hoverResults.Count -eq $hoverCalls.Count -and
         @($hoverResults | Where-Object { $_.is_error }).Count -eq 0 -and
         ($hoverResults.content -join '\n').Contains('Signature:') -and ($hoverResults.content -join '\n').Contains('Source:')
+} elseif ($CallHierarchy) {
+    $initialized -and $shutdown -and $summary.prepareCallHierarchyResponseObserved -and
+        $summary.outgoingCallsResponseObserved -and $summary.incomingCallsResponseObserved -and
+        @($calls | Where-Object { $_.input.operation -eq 'outgoingCalls' }).Count -gt 0 -and
+        @($calls | Where-Object { $_.input.operation -eq 'incomingCalls' }).Count -gt 0 -and
+        @($lspResults | Where-Object { $_.is_error }).Count -eq 0 -and
+        ($lspResults.content -join '\n').Contains('dbo.ProcessPayroll') -and
+        ($lspResults.content -join '\n').Contains('dbo.RunPayroll')
 } else {
     $calls.Count -ge 2 -and $lspResults.Count -eq $calls.Count -and @($lspResults | Where-Object { $_.is_error }).Count -eq 0 -and
         @($calls | Where-Object { $_.input.operation -eq 'goToDefinition' }).Count -gt 0 -and

@@ -123,6 +123,7 @@ internal sealed class LspClient : IAsyncDisposable
                     documentSymbol = new { hierarchicalDocumentSymbolSupport = hierarchical },
                     definition = new { dynamicRegistration = false, linkSupport = false },
                     references = new { dynamicRegistration = false },
+                    callHierarchy = new { dynamicRegistration = false },
                     hover = new { dynamicRegistration = false, contentFormat = hoverFormats ?? new[] { "plaintext", "markdown" } }
                 },
                 workspace = new { symbol = new { dynamicRegistration = false }, didChangeWatchedFiles = new { dynamicRegistration = false } }

@@ -20,6 +20,7 @@ using var server = await LanguageServer.From(options => options
     .WithHandler<SqlDefinitionHandler>()
     .WithHandler<SqlReferencesHandler>()
     .WithHandler<SqlHoverHandler>()
+    .WithHandler<SqlCallHierarchyHandler>()
     .WithHandler<SqlWorkspaceSymbolsHandler>()
     .WithHandler<SqlWatchedFilesHandler>()
     .OnInitialize(async (facade, request, token) =>
@@ -44,6 +45,7 @@ using var server = await LanguageServer.From(options => options
             response.Capabilities.DefinitionProvider = false;
             response.Capabilities.ReferencesProvider = false;
             response.Capabilities.HoverProvider = false;
+            response.Capabilities.CallHierarchyProvider = false;
             response.Capabilities.WorkspaceSymbolProvider = false;
         }
         return Task.CompletedTask;

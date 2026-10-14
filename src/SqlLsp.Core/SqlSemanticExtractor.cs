@@ -194,10 +194,10 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         {
             var name = procedure.ProcedureReference?.ProcedureReference?.Name;
             if (name != null && procedure.ProcedureReference?.ProcedureReference?.Number == null && procedure.AdHocDataSource == null && node.LinkedServer == null)
-                Add(QualifiedSqlName.From(name), name, SqlReferenceKind.Procedure);
-            else Add(null, procedure, SqlReferenceKind.Dynamic, null, "Variable, numbered, remote or ad-hoc EXEC target is unsupported.");
+                Add(QualifiedSqlName.From(name), name, SqlReferenceKind.Procedure, invocation: true);
+            else Add(null, procedure, SqlReferenceKind.Dynamic, null, "Variable, numbered, remote or ad-hoc EXEC target is unsupported.", true);
         }
-        else Add(null, node.ExecutableEntity, SqlReferenceKind.Dynamic, null, "Dynamic SQL target is unsupported.");
+        else Add(null, node.ExecutableEntity, SqlReferenceKind.Dynamic, null, "Dynamic SQL target is unsupported.", true);
         base.ExplicitVisit(node);
     }
 
@@ -215,7 +215,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
             if (target.MultiPartIdentifier.Identifiers.Count <= 3)
             {
                 var start = target.StartOffset;
-                Add(QualifiedSqlName.FromParts(parts), source.Range(start, node.FunctionName.StartOffset + node.FunctionName.FragmentLength - start), SqlReferenceKind.Function);
+                Add(QualifiedSqlName.FromParts(parts), source.Range(start, node.FunctionName.StartOffset + node.FunctionName.FragmentLength - start), SqlReferenceKind.Function, invocation: true);
             }
         }
         // Unqualified functions may be built-ins; do not fabricate a user-function binding.
@@ -224,7 +224,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
 
     public override void ExplicitVisit(SchemaObjectFunctionTableReference node)
     {
-        Add(QualifiedSqlName.From(node.SchemaObject), node.SchemaObject, SqlReferenceKind.Function);
+        Add(QualifiedSqlName.From(node.SchemaObject), node.SchemaObject, SqlReferenceKind.Function, invocation: true);
         if (node.Alias != null) Add(QualifiedSqlName.From(node.SchemaObject), node.Alias, SqlReferenceKind.Function);
         base.ExplicitVisit(node);
     }
@@ -258,12 +258,12 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         locals.Add(definition);
     }
 
-    private void Add(QualifiedSqlName? name, TSqlFragment? node, SqlReferenceKind kind, SqlLocalDefinition? local = null, string? unsupported = null)
+    private void Add(QualifiedSqlName? name, TSqlFragment? node, SqlReferenceKind kind, SqlLocalDefinition? local = null, string? unsupported = null, bool invocation = false)
     {
-        if (node != null) Add(name, source.Range(node.StartOffset, node.FragmentLength), kind, local, unsupported);
+        if (node != null) Add(name, source.Range(node.StartOffset, node.FragmentLength), kind, local, unsupported, invocation);
     }
 
-    private void Add(QualifiedSqlName? name, TextRange range, SqlReferenceKind kind, SqlLocalDefinition? local = null, string? unsupported = null)
+    private void Add(QualifiedSqlName? name, TextRange range, SqlReferenceKind kind, SqlLocalDefinition? local = null, string? unsupported = null, bool invocation = false)
     {
         token.ThrowIfCancellationRequested();
         if (local?.IsAmbiguous == true || (local?.Kind == SqlObjectKind.Cte && source.OffsetAt(local.Range.Start) > source.OffsetAt(range.Start)))
@@ -273,7 +273,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         }
         var start = source.OffsetAt(range.Start);
         var end = source.OffsetAt(range.End);
-        references.Add(new(name, source.Text[start..end], kind, range, database, local, unsupported));
+        references.Add(new(name, source.Text[start..end], kind, range, database, local, unsupported, invocation));
     }
 
     private sealed record Binding(QualifiedSqlName? Name, SqlReferenceKind Kind, SqlLocalDefinition? Local = null, string? VariableName = null);

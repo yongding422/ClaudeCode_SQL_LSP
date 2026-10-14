@@ -45,6 +45,8 @@ Replace `dbo.ProcessPayroll` with an object in your project. No manual server la
 
 To verify actual LSP calls and compare search accuracy with grep, use [the public fixture and evaluation guide](evaluation.md). The plugin uses Claude's LSP integration and does not install hooks or intercept text searches.
 
+For complex procedure questions, see [the automatic investigation workflow and metrics proposal](stored-procedure-understanding.md). [Call hierarchy](call-hierarchy.md) is supported in 0.6.2; 0.6.1 returns Method not found for those requests.
+
 ## Verification and compatibility
 
 [Marketplace installation verification](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077) passed on both Mac architectures with Claude Code 2.1.224, followed by 54 real LSP tests against each installed apphost. User Claude settings were isolated and no model calls were made.

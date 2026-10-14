@@ -75,6 +75,8 @@ For Intel Mac use `sqlscriptdom-lsp-osx-x64`; Windows x64 uses `sqlscriptdom-lsp
 
 The plugin uses Claude's built-in LSP integration with no hooks. See [how it works and how to evaluate it against grep](docs/evaluation.md) for a public fixture with known reference locations, actual tool-call checks and a fair task-level comparison.
 
+For complex procedure investigation, [the stored-procedure assessment](docs/stored-procedure-understanding.md) ranks missing capabilities, gives an automatic Claude workflow, and proposes task accuracy/time/usage metrics. Version 0.6.2 adds [static incoming/outgoing call hierarchy](docs/call-hierarchy.md); other optional M6 editor enhancements remain deferred.
+
 Build a self-contained package with PowerShell 7 and the pinned SDK. Supported package targets are `win-x64`, `linux-x64`, `osx-arm64` (Apple Silicon), and `osx-x64` (Intel Mac):
 
 ```powershell

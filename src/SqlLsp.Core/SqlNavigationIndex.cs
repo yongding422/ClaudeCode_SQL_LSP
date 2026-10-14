@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 namespace SqlLsp.Core;
 
 // A request reads one immutable workspace snapshot; resolution never consults changing dictionaries.
-public sealed class SqlNavigationIndex
+public sealed partial class SqlNavigationIndex
 {
     private readonly ImmutableArray<DocumentSnapshot> documents;
     private readonly Func<Uri, string> context;
