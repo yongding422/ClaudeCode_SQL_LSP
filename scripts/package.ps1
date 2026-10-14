@@ -1,17 +1,21 @@
 # PowerShell 7, .NET SDK from global.json. Each run creates a fresh owned staging directory.
-param([ValidateSet('win-x64', 'linux-x64', 'osx-arm64')] [string] $Runtime = 'win-x64')
+param([ValidateSet('win-x64', 'linux-x64', 'osx-arm64', 'osx-x64')] [string] $Runtime = 'win-x64', [switch] $Marketplace)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Raw | ConvertFrom-Json).version
 $name = "sqlscriptdom-lsp-$version-$Runtime"
 $output = Join-Path $repo 'artifacts/packages'
+if ($Marketplace) { $output = Join-Path $output 'marketplace' }
 $stage = Join-Path $output ($name + '-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 & dotnet publish (Join-Path $repo 'src/SqlLsp.Server') -c Release -r $Runtime --self-contained true -p:RestoreLockedMode=true `
     -p:PublishTrimmed=false -p:PublishSingleFile=false -p:PublishAot=false -o (Join-Path $stage 'server')
 if ($LASTEXITCODE -ne 0) { throw 'Self-contained publish failed.' }
 New-Item -ItemType Directory -Path (Join-Path $stage '.claude-plugin') | Out-Null
-Copy-Item -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Destination (Join-Path $stage '.claude-plugin/plugin.json')
+$manifest = Get-Content -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Raw | ConvertFrom-Json
+# Marketplace entries have distinct architecture names; entry and plugin names must match.
+if ($Marketplace) { $manifest.name = 'sqlscriptdom-lsp-' + $Runtime }
+$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage '.claude-plugin/plugin.json') -Encoding utf8NoBOM
 $binary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-lsp.exe' } else { 'sqlscriptdom-lsp' }
 $config = [ordered]@{ sqlscriptdom = [ordered]@{
     command = '${CLAUDE_PLUGIN_ROOT}/server/' + $binary; args = @('--stdio'); transport = 'stdio'

@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "T-SQL diagnostics, navigation and hover with source details for offline, online and hybrid workspaces",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

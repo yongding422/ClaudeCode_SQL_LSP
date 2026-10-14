@@ -62,20 +62,22 @@ The server advertises incremental text synchronization, document symbols, defini
 
 ## Install the Claude Code plugin
 
-Build a self-contained package with PowerShell 7 and the pinned SDK. Supported package targets are `win-x64`, `linux-x64`, and `osx-arm64`:
+Build a self-contained package with PowerShell 7 and the pinned SDK. Supported package targets are `win-x64`, `linux-x64`, `osx-arm64` (Apple Silicon), and `osx-x64` (Intel Mac):
 
 ```powershell
 ./scripts/package.ps1 -Runtime win-x64
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract `artifacts/packages/sqlscriptdom-lsp-0.6.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract `artifacts/packages/sqlscriptdom-lsp-0.6.1-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
 ```
 
 The bundled `.lsp.json` invokes its executable directly, including when the extraction path contains spaces. See [installation, demonstrations and troubleshooting](docs/installation.md). Offline mode is the default. Database access requires explicit options and environment-variable secrets; see [online](docs/online.md) and [hybrid](docs/hybrid.md) setup.
+
+Mac users can follow [the macOS guide](docs/macos.md) for native package selection, checksum verification and Claude SQL search prompts. [GitHub marketplace distribution](docs/publishing.md) describes release preparation and platform-specific install commands; archive installs require Claude Code 2.1.224 or later.
 
 Claude Code **2.1.201 on Windows** has been tested with actual server initialization, automatic SqlScriptDOM diagnostics after an Edit, and a real `LSP` hover call returning kind/signature/source. Initial tool enumeration does not reliably describe deferred LSP availability. Definition/references, outlines and search are verified independently over LSP; their current Claude behavior remains separate evidence. [Client evidence](docs/claude-verification.md) records reproducible smoke commands and limits.
 

@@ -6,6 +6,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Deterministic>true</Deterministic>
-    <RuntimeIdentifiers Condition="'$(MSBuildProjectName)' == 'SqlLsp.Server' or '$(MSBuildProjectName)' == 'SqlLsp.Core' or '$(MSBuildProjectName)' == 'SqlLsp.Providers.SqlServer'">win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(MSBuildProjectName)' == 'SqlLsp.Server' or '$(MSBuildProjectName)' == 'SqlLsp.Core' or '$(MSBuildProjectName)' == 'SqlLsp.Providers.SqlServer'">win-x64;linux-x64;osx-arm64;osx-x64</RuntimeIdentifiers>
   </PropertyGroup>
 </Project>

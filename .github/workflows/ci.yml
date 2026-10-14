@@ -15,6 +15,8 @@ jobs:
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --no-restore --configuration Release
       - run: dotnet format --no-restore --verify-no-changes
+      - shell: pwsh
+        run: ./scripts/test-marketplace.ps1
   packages:
     strategy:
       matrix:
@@ -25,6 +27,8 @@ jobs:
             rid: linux-x64
           - os: macos-15
             rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -34,13 +38,31 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build --no-restore --configuration Release
       - shell: pwsh
-        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}'
+        run: ./scripts/package.ps1 -Runtime '${{ matrix.rid }}' -Marketplace
+      - if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          expected='${{ matrix.rid }}'
+          case "$expected:$(uname -m)" in
+            osx-arm64:arm64|osx-x64:x86_64) ;;
+            *) echo "Package/runner architecture mismatch" >&2; exit 1 ;;
+          esac
+          version=$(python3 -c 'import json; print(json.load(open("claude-plugin/.claude-plugin/plugin.json"))["version"])')
+          archive="sqlscriptdom-lsp-$version-$expected.zip"
+          (cd artifacts/packages/marketplace && shasum -a 256 -c "$archive.sha256")
+          destination="$RUNNER_TEMP/SQL LSP 中文 $(uuidgen)"
+          unzip -q "artifacts/packages/marketplace/$archive" -d "$destination"
+          test -f "$destination/.claude-plugin/plugin.json"
+          test -f "$destination/.lsp.json"
+          test -x "$destination/server/sqlscriptdom-lsp"
+          SQLLSP_TEST_SERVER_EXE="$destination/server/sqlscriptdom-lsp" \
+            dotnet test tests/SqlLsp.Server.IntegrationTests --no-build --no-restore -c Release
       - shell: pwsh
-        run: ./scripts/test-package.ps1 -Runtime '${{ matrix.rid }}'
+        run: ./scripts/test-package.ps1 -Runtime '${{ matrix.rid }}' -Marketplace
       - uses: actions/upload-artifact@v4
         with:
           name: sqlscriptdom-lsp-${{ matrix.rid }}
-          path: artifacts/packages/*.zip*
+          path: artifacts/packages/marketplace/*.zip*
   sqlserver:
     # Owns an ephemeral SQL Server Developer container; no external credentials or database.
     runs-on: ubuntu-latest
@@ -55,3 +77,20 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test tests/SqlLsp.SqlServer.IntegrationTests --no-build --no-restore --configuration Release
+  catalog:
+    needs: [offline, packages, sqlserver]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sqlscriptdom-lsp-*
+          path: artifacts/packages/marketplace
+          merge-multiple: true
+      - shell: pwsh
+        run: ./scripts/new-marketplace.ps1 -Repository '${{ github.repository }}' -OutputPath ./artifacts/catalog/.claude-plugin/marketplace.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-catalog
+          path: artifacts/catalog/.claude-plugin/marketplace.json
+          include-hidden-files: true

@@ -1,8 +1,10 @@
-param([ValidateSet('win-x64', 'linux-x64', 'osx-arm64')] [string] $Runtime = 'win-x64', [switch] $LiveDatabase)
+param([ValidateSet('win-x64', 'linux-x64', 'osx-arm64', 'osx-x64')] [string] $Runtime = 'win-x64', [switch] $LiveDatabase, [switch] $Marketplace)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Raw | ConvertFrom-Json).version
-$archive = Join-Path $repo "artifacts/packages/sqlscriptdom-lsp-$version-$Runtime.zip"
+$output = Join-Path $repo 'artifacts/packages'
+if ($Marketplace) { $output = Join-Path $output 'marketplace' }
+$archive = Join-Path $output "sqlscriptdom-lsp-$version-$Runtime.zip"
 $expected = (Get-Content -LiteralPath ($archive + '.sha256') -Raw).Split(' ')[0]
 if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Package checksum mismatch.' }
 $destination = Join-Path $repo ('artifacts/package test 中文 ' + [guid]::NewGuid().ToString('N'))
