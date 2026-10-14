@@ -2,6 +2,8 @@
 
 Target repository: [yongding422/ClaudeCode_SQL_LSP](https://github.com/yongding422/ClaudeCode_SQL_LSP). It can host source, CI, the `.claude-plugin/marketplace.json` catalog and GitHub Release ZIP assets. This is an independently hosted Claude Code marketplace; publishing it does not list it in Anthropic's official marketplace.
 
+Release [0.6.1](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1) is public with all four native packages and checksum sidecars. Its catalog pins the exact ZIPs tested by [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165); published GitHub asset digests match every catalog pin. [Real marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077) passed using Claude Code 2.1.224 on Windows, Linux, Apple Silicon Mac and Intel Mac in isolated Claude configurations. Each installed apphost passed all 54 functional wire tests, including startup without machine dotnet discovery; the opt-in benchmark was skipped. These checks make no model calls and do not claim Claude model-driven SQL navigation on Mac.
+
 The catalog generator uses the documented [archive source](https://code.claude.com/docs/en/plugins/marketplace-reference#archive-plugin-source) with immutable versioned release URLs and SHA-256 pins. **Archive installation requires Claude Code 2.1.224 or later.** The locally verified 2.1.201 supports extracted plugins via `--plugin-dir`; it cannot validate/install this newer source type. Do not treat catalog JSON validation as installation or Mac client proof.
 
 ## Prepare a release
@@ -22,7 +24,7 @@ Native Linux and Mac package tests must run on their corresponding CI runners. C
 
 Test the actual install on a current Claude client, from an isolated configuration, before calling marketplace installation verified. Actual publication also requires authenticated GitHub access and green native package CI. A draft release can hold assets for review but its URLs are not usable for public installation.
 
-## User installation after publication
+## Install release 0.6.1
 
 With Claude Code 2.1.224 or later:
 

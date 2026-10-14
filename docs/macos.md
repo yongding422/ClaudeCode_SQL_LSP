@@ -2,11 +2,13 @@
 
 The self-contained packages target Apple Silicon (`osx-arm64`) and Intel (`osx-x64`). No .NET installation or SQL Server is required for offline SQL search. Building packages from source requires PowerShell 7 and .NET SDK 10.0.401; using a package requires neither.
 
+[Marketplace installation verification](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077) passed on both Mac architectures with Claude Code 2.1.224, followed by 54 real LSP tests against each installed apphost. User Claude settings were isolated and no model calls were made.
+
 Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Native wire/catalog tests passed on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel): each ran 54 wire tests against both Unix unzip and .NET ZipFile extraction, plus 22 deterministic provider tests. See [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165) and [recorded counts](evidence/macos-ci.json). Actual Claude model tool calls on Mac still need separate evidence.
 
 ## Install a local ZIP
 
-Copy the matching ZIP and its `.sha256` sidecar from a trusted build onto your Mac. Local build outputs are under `artifacts/packages`; published release assets, once available, are at [GitHub Releases](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases). Use a fresh destination directory; keep the entire extracted package together.
+Copy the matching ZIP and its `.sha256` sidecar from [release 0.6.1](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1) onto your Mac, or use a trusted local build from `artifacts/packages`. Use a fresh destination directory; keep the entire extracted package together. Marketplace installation is also available; see [the install commands](publishing.md#install-release-061).
 
 In Terminal on Apple Silicon:
 
@@ -71,4 +73,4 @@ This can spend up to $1 and fails unless it observes actual hover and transport 
 | No definitions from a temp or linked directory | Use its physical path. `/var` is typically a link to `/private/var`; the server rejects linked ancestors when scanning. |
 | Plugin registered but LSP unavailable | Restart a fresh Claude session and inspect client diagnostics. Registration alone does not prove a callable LSP tool. See [client evidence](claude-verification.md). |
 
-For marketplace installation after publication, see [publishing and installation](publishing.md).
+For marketplace installation, see [publishing and installation](publishing.md).

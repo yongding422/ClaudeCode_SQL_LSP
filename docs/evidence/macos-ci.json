@@ -12,5 +12,17 @@
   "ownedLinuxSqlServerFixture": { "providerPassed": 33, "liveCasesIncluded": 11 },
   "packagedRuntime": "10.0.13",
   "pkcsVersion": "9.0.21",
+  "marketplaceInstallation": {
+    "run": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077",
+    "conclusion": "success",
+    "claudeVersion": "2.1.224",
+    "release": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1",
+    "platforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+    "wirePassedPerInstalledApphost": 54,
+    "benchmarkSkippedPerApphost": 1,
+    "isolatedClaudeConfigurations": true,
+    "modelCalls": 0,
+    "publishedAssetDigestsMatchCatalog": true
+  },
   "limits": ["Native Mac LSP process tests do not prove Claude model tool calls on Mac.", "The performance fixture is separately opt-in and was not rerun for this distribution change.", "Packages are unsigned and not notarized."]
 }
