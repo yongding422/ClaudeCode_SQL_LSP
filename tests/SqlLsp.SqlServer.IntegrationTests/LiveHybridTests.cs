@@ -54,6 +54,10 @@ public class LiveHybridTests(SqlServerFixture fixture)
             await client.NotifyAsync("initialized", new { });
             await Open(client, queryUri, "EXEC dbo.ProcessPayroll;");
             Assert.Equal(new Uri(procUri), new Uri((await Definition(client, queryUri)).GetProperty("uri").GetString()!));
+            var localHover = await Hover(client, queryUri);
+            Assert.Contains("Source: Workspace", localHover);
+            Assert.Contains("Definition comparison: Match", localHover);
+            Assert.Contains("Comparison catalog captured:", localHover);
             var status = await client.NotificationAsync("window/logMessage");
             Assert.Contains("captured", status.GetProperty("message").GetString());
             var searched = await client.RequestAsync("workspace/symbol", new { query = "ProcessPayroll" });
@@ -72,6 +76,9 @@ public class LiveHybridTests(SqlServerFixture fixture)
             var buffer = Assert.Single(changed.GetProperty("result").EnumerateArray(), c => c.GetProperty("data").GetProperty("source").GetString() == "UnsavedBuffer");
             Assert.Equal("Different", buffer.GetProperty("data").GetProperty("drift").GetString());
             Assert.Equal(new Uri(procUri), new Uri((await Definition(client, queryUri)).GetProperty("uri").GetString()!));
+            var bufferHover = await Hover(client, queryUri);
+            Assert.Contains("Source: UnsavedBuffer", bufferHover);
+            Assert.Contains("Definition comparison: Different", bufferHover);
             var references = await client.RequestAsync("textDocument/references", new
             {
                 textDocument = new { uri = procUri },
@@ -109,10 +116,19 @@ public class LiveHybridTests(SqlServerFixture fixture)
             await Open(client, queryUri, "EXEC dbo.ProcessPayroll;");
             var deployed = await Definition(client, queryUri);
             Assert.Contains("sqlscriptdom-lsp-", new Uri(deployed.GetProperty("uri").GetString()!).LocalPath);
+            var deployedHover = await Hover(client, queryUri);
+            Assert.Contains("Source: Database", deployedHover);
+            Assert.Contains("@PayrollId [sys].[int]", deployedHover);
+            Assert.Contains("Definition comparison: Different", deployedHover);
             var duplicate = Path.Combine(root, "duplicate.sql");
             await File.WriteAllTextAsync(duplicate, "ALTER PROCEDURE dbo.ProcessPayroll AS SELECT 2;");
             await client.NotifyAsync("workspace/didChangeWatchedFiles", new { changes = new[] { new { uri = new Uri(duplicate).AbsoluteUri, type = 1 } } });
             Assert.Empty((await Definition(client, queryUri)).EnumerateArray());
+            Assert.Equal(JsonValueKind.Null, (await client.RequestAsync("textDocument/hover", new
+            {
+                textDocument = new { uri = queryUri },
+                position = new { line = 0, character = 12 }
+            })).GetProperty("result").ValueKind);
             await client.StopAsync();
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -184,10 +200,18 @@ public class LiveHybridTests(SqlServerFixture fixture)
             await Task.Delay(1100);
             await Open(client, queryUri, "EXEC dbo.ProcessPayroll;");
             Assert.Equal(new Uri(procPath), new Uri((await Definition(client, queryUri)).GetProperty("uri").GetString()!));
+            var fallbackHover = await Hover(client, queryUri);
+            Assert.Contains("Source: Workspace", fallbackHover);
+            Assert.DoesNotContain("Catalog captured:", fallbackHover);
             var after = await client.RequestAsync("workspace/symbol", new { query = "ProcessPayroll" });
             Assert.Equal("Unavailable", Assert.Single(after.GetProperty("result").EnumerateArray()).GetProperty("data").GetProperty("drift").GetString());
             await Open(client, queryUri, "SELECT * FROM dbo.Payroll;", 2);
             Assert.Empty((await Definition(client, queryUri, 20)).EnumerateArray());
+            Assert.Equal(JsonValueKind.Null, (await client.RequestAsync("textDocument/hover", new
+            {
+                textDocument = new { uri = queryUri },
+                position = new { line = 0, character = 20 }
+            })).GetProperty("result").ValueKind);
             await client.StopAsync();
         }
         finally
@@ -196,4 +220,8 @@ public class LiveHybridTests(SqlServerFixture fixture)
             Directory.Delete(root, recursive: true);
         }
     }
+
+    private static async Task<string> Hover(LspClient client, string uri) =>
+        (await client.RequestAsync("textDocument/hover", new { textDocument = new { uri }, position = new { line = 0, character = 12 } }))
+            .GetProperty("result").GetProperty("contents").GetProperty("value").GetString()!;
 }

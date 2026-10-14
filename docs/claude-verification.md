@@ -1,5 +1,9 @@
 # Claude Code verification
 
+Update, 2026-10-13: plugin **0.6.0** demonstrated an actual Claude `LSP` hover call and protocol response containing the payroll procedure kind/signature/source. The same installed 2.1.201 initially listed only Read, yet successfully used LSP later; initial tool enumeration alone must not be treated as proof of availability/unavailability. See [hover evidence](evidence/claude-hover-windows.json) and [coverage](hover.md). The M5 diagnostics and failed navigation attempts below remain historical evidence; definition/references/online/hybrid client operations are not newly claimed by this hover result.
+
+The final patched apphost (.NET 10.0.13, PKCS 9.0.21) returned real hover in 146 ms in a child-only `ENABLE_LSP_TOOL=1` compatibility probe, cost $0.052019, with initialize/hover/shutdown confirmed. Raw ignored logs: `artifacts/claude-smoke-b7a6429d799d480085a73a1984a8e680`. A default-flags earlier session also succeeded (154 ms); another repeat registered the plugin/server but exposed no LSP tool and never launched it. This is observed variability, not an assertion that the compatibility flag guarantees availability or is an official configuration requirement. The smoke fails on absent calls/protocol responses. Other client operations remain unverified.
+
 Tested: **Claude Code 2.1.201**, Windows x64, local plugin **0.5.0**, bundled .NET 10.0.12 apphost. Official [plugin configuration](https://code.claude.com/docs/en/plugins-reference) and [code intelligence behavior](https://code.claude.com/docs/en/plugins/code-intelligence) were checked separately from execution. Strict validation passed for the development and self-contained manifests.
 
 ## Demonstrated client behavior

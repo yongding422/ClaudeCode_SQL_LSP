@@ -112,6 +112,32 @@ public sealed class SqlNavigationIndex
             .ThenBy(r => r.Range.Start.Line).ThenBy(r => r.Range.Start.Character).ToImmutableArray();
     }
 
+    public SqlHover? Hover(Uri uri, TextPosition position, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var document = documents.FirstOrDefault(d => d.Uri == uri);
+        if (document == null) return null;
+        try { document.Parse.Source.OffsetAt(position); }
+        catch (ArgumentException) { return null; }
+        var resolution = Definition(uri, position, token);
+        if (resolution.Target is not { } target) return null;
+        var reference = document.Parse.Semantics.References.Where(r => Contains(r.Range, position))
+            .OrderBy(r => SpanLength(document, r.Range)).FirstOrDefault();
+        var symbol = Symbols.FirstOrDefault(s => SameAnchor(s.Target, target));
+        var targetDocument = documents.FirstOrDefault(d => d.Uri == target.Uri);
+        var local = reference?.LocalTarget ?? targetDocument?.Parse.Semantics.Locals.FirstOrDefault(l => l.Range == target.Range);
+        if (local?.IsAmbiguous == true) return null;
+        var range = reference?.Range ?? local?.Range ?? symbol?.Target.Range;
+        if (range == null) return null;
+        var captured = symbol?.CapturedAt ?? Symbols.FirstOrDefault(s => s.Target.Uri == target.Uri)?.CapturedAt;
+        var drift = Drifts.FirstOrDefault(d => SameAnchor(d.Local, target));
+        // A database-selected target can still have a local counterpart comparison; never borrow its syntax details.
+        drift ??= Drifts.FirstOrDefault(d => d.Local.Identity?.SourceContextId == context(uri) &&
+            d.DatabaseCandidates.Any(c => SameAnchor(c, target)));
+        token.ThrowIfCancellationRequested();
+        return new(range.Value, SqlHoverFormatting.Describe(target, symbol?.Declaration.Documentation, local, captured, targetDocument?.Version, drift));
+    }
+
     public ImmutableArray<IndexedSqlSymbol> Search(string query, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();

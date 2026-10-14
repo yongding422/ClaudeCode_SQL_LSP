@@ -164,3 +164,29 @@ Small-workspace startup measured 1.13 s; 200KB diagnostic p95 292 ms; 1,001-file
 M5 acceptance is met through actual Claude diagnostics and generic LSP navigation proof. Claude's LSP navigation tool was absent from the tested constrained 2.1.201 sessions; no successful Claude definition/references claim is made. Linux/macOS native execution/client sessions, fresh-OS dependency certification, signed/public marketplace distribution, other database authentication setups and larger complex/hybrid workloads remain unverified. The server trusts its local client and does not enforce a process-wide memory quota; abrupt termination/private snapshot and metadata freshness limits remain documented.
 
 See [installation](installation.md), [client evidence](claude-verification.md), [security/resource model](security.md), [limitations](semantic-limitations.md) and ADR 0006. Next is optional M6: choose a focused feature such as hover or richer binding, with complete confidence/coverage tests before broader completion/rename/MCP work.
+
+## M6 — in progress; first hover increment complete (2026-10-13)
+
+- [x] Compile/register actual `textDocument/hover` with OmniSharp 1.0.0 and disable it on failed initialization. Reuse definition selection and precise requesting-document UTF-16 ranges; missing/ambiguous/unsupported bindings return null.
+- [x] Add bounded ScriptDOM-derived declaration signatures and lexical types, excluding defaults/body expressions and labeling syntax/unknown column or implicit-nullability limits. Surface authoritative permitted catalog names, types/parameters/columns, coverage and capture time without reconstructing hidden DDL.
+- [x] Respect hybrid source preference/unsaved overlays and requesting-root comparison context. Test real catalog/restricted accounts, renamed/encrypted modules, database preference/duplicates and continued local hover after expired/outage catalog removal.
+- [x] Negotiate plaintext/Markdown with safe text fences and display-only control sanitization. Verify incremental changes/close restoration, request cancellation, hostile identifiers, UTF-16/CRLF/emoji, direct catalog anchors and preview/content limits.
+- [x] Demonstrate actual Claude Code 2.1.201 hover with public SQL and client initialize/hover/shutdown traffic. An initial default-flags run succeeded; a final patched apphost compatibility probe succeeded in 146 ms. Another repeat exposed no LSP tool despite registration. Record evidence/variability rather than claiming uniform availability.
+- [x] Address newly published Oct 13 PKCS high/moderate advisories by pinning PKCS **9.0.21**, updating locks and bundling runtime **10.0.13**. Audit all projects again and run real SQL/TLS catalog tests. SDK 10.0.401, ScriptDOM 180.117.0, OmniSharp 1.0.0, JsonSchema.Net 9.4.0 and existing test pins remain unchanged.
+
+| Verification | Result |
+| --- | --- |
+| Locked restore / Release build | Passed; 0 warnings/errors |
+| Patched full functional suite with owned SQL Server opt-in | **181 passed: 94 core, 54 wire/process, 33 provider/catalog; 0 failed**; benchmark separately opt-in |
+| Live SQL Server cases | **11 passed**; 22 deterministic provider/catalog cases |
+| Default suite | **170 passed, 12 skipped** (11 live cases plus benchmark); no database required |
+| Extracted patched Windows apphost suites | **54 wire/process + 33 provider/catalog passed**, including hover/live SQL and PATH-empty startup |
+| Packaged performance fixture | Passed on traced repeat; earlier 10,000-file initialize exceeded its 60-second deadline |
+| Final patched Claude hover probe | Actual LSP call/result and protocol response observed; signature/source matched; exit 0 |
+| RID publishing | win-x64/linux-x64/osx-arm64 builds; Windows executed locally; native other hosts remain CI gates |
+| Post-patch NuGet audit | No vulnerable packages reported across all projects by configured source |
+| Formatting / diff checks | Passed |
+
+Packaged runtime 10.0.13 measured 27-file startup 1.31 s, 200KB diagnostic p95 345 ms (target miss), and 1,001-file warm definition p95 13 ms. Its 10,001-file indexing took 58.41 s, near the deadline; startup variability is unresolved and needs profiling before performance guarantees. See [raw measurements and caveats](performance.md). Real Claude hover is demonstrated in documented sessions, not guaranteed in every constrained session or every platform.
+
+M6 is **not complete**: contextual completion, semantic tokens, richer scope/column resolution, confidence-gated rename, optional DacFx evaluation and a separate MCP adapter remain later increments. None are advertised as implemented. Next executable increment: contextual completion with root/source/ambiguity and cancellation tests, followed by conservative semantic tokens. See [hover contract](hover.md), ADR 0007 and [client evidence](claude-verification.md).

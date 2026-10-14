@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET. **M0–M5** implement stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
+A working T-SQL language server in C#/.NET. **M0–M5 are complete; M6 has started with hover.** Implemented features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, hover with source details, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained plugin packaging. The implementation specification is [the full plan](SqlScriptDOM_LSP_Implementation_Plan.md).
 
 ## Build and test
 
@@ -58,7 +58,7 @@ Scanning excludes `bin`, `obj`, `node_modules`, `.git`, links/reparse points, an
 
 Native filesystem watchers refresh creates, changes, deletes, and file/directory renames after a short debounce. Client `workspace/didChangeWatchedFiles` notifications also refresh the index. Disk updates preserve open overlays, and closing a deleted file drops its overlay. Each workspace root has an independent source context.
 
-The server advertises incremental text synchronization, document symbols, definition, references, and workspace symbol search. Hierarchical outline clients receive `DocumentSymbol`; other clients receive `SymbolInformation`. Procedures/functions map to LSP Function, tables to Class, and views to Interface. Definition returns a verified declaration location, or an empty result for ambiguous, unresolved or unsupported targets. References include supported static object uses and verified alias qualifiers, with the declaration controlled by `includeDeclaration`.
+The server advertises incremental text synchronization, document symbols, definition, references, hover, and workspace symbol search. Hierarchical outline clients receive `DocumentSymbol`; other clients receive `SymbolInformation`. Procedures/functions map to LSP Function, tables to Class, and views to Interface. Definition returns a verified declaration location, or an empty result for ambiguous, unresolved or unsupported targets. References include supported static object uses and verified alias qualifiers, with the declaration controlled by `includeDeclaration`. [Hover](docs/hover.md) describes the selected definition's kind, syntax signature or visible catalog metadata, source, capture/buffer version and available comparison state. It returns null for unsupported or ambiguous bindings and does not infer projected column types.
 
 ## Install the Claude Code plugin
 
@@ -69,7 +69,7 @@ Build a self-contained package with PowerShell 7 and the pinned SDK. Supported p
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract `artifacts/packages/sqlscriptdom-lsp-0.5.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.12** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract `artifacts/packages/sqlscriptdom-lsp-0.6.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
@@ -77,7 +77,7 @@ claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
 
 The bundled `.lsp.json` invokes its executable directly, including when the extraction path contains spaces. See [installation, demonstrations and troubleshooting](docs/installation.md). Offline mode is the default. Database access requires explicit options and environment-variable secrets; see [online](docs/online.md) and [hybrid](docs/hybrid.md) setup.
 
-Claude Code **2.1.201 on Windows** has been tested with actual server initialization and automatic SqlScriptDOM diagnostics after an Edit. Navigation through Claude's `LSP` tool was not exposed in the isolated tested sessions; definition/references, outlines and search are verified independently over LSP. [Client evidence](docs/claude-verification.md) records the distinction and reproducible smoke command.
+Claude Code **2.1.201 on Windows** has been tested with actual server initialization, automatic SqlScriptDOM diagnostics after an Edit, and a real `LSP` hover call returning kind/signature/source. Initial tool enumeration does not reliably describe deferred LSP availability. Definition/references, outlines and search are verified independently over LSP; their current Claude behavior remains separate evidence. [Client evidence](docs/claude-verification.md) records reproducible smoke commands and limits.
 
 For source development, the [plugin directory](claude-plugin) targets a published DLL and requires a .NET 10 runtime. After publishing:
 
@@ -96,6 +96,6 @@ M3 adds `sql.mode=online` with explicitly enabled profiles and environment-varia
 
 M4 adds `sql.mode=hybrid` with explicit workspace/profile mappings, local and unsaved navigation preference, catalog fallback, source provenance and conservative module drift reporting. Duplicate declarations and competing identities remain ambiguous. Failed profiles remove expired catalog targets while local analysis stays available. See [hybrid setup](docs/hybrid.md).
 
-M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests, bounded parsing and measured performance. See [benchmark results](docs/performance.md) and [security model](docs/security.md). Optional M6 features (hover, completion, richer binding, safe rename and MCP) remain future work. No analyzed SQL is executed.
+M5 adds packaging, real Claude diagnostics evidence, security/stress/startup regression tests, bounded parsing and measured performance. M6's first completed increment is hover (plugin 0.6.0). See [hover coverage](docs/hover.md), [benchmark results](docs/performance.md) and [security model](docs/security.md). Completion, semantic tokens, richer column binding, safe rename and MCP remain later M6 increments. No analyzed SQL is executed.
 
 See [milestone evidence](docs/milestones.md), [technology decisions](docs/adr/0001-technology-selection.md), [architecture](docs/architecture.md) and [limitations](docs/semantic-limitations.md).

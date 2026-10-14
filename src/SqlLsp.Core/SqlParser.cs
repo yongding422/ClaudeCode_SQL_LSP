@@ -6,7 +6,8 @@ namespace SqlLsp.Core;
 public enum SqlObjectKind { Procedure, View, Function, Table, Cte, TempTable, Alias, Variable, Parameter }
 public enum SqlSourceKind { Workspace, UnsavedBuffer, Database }
 public sealed record SqlDeclaration(string Name, SqlObjectKind Kind, TextRange Range, TextRange SelectionRange,
-    QualifiedSqlName? QualifiedName = null, string? Database = null, bool IsDefinition = true);
+    QualifiedSqlName? QualifiedName = null, string? Database = null, bool IsDefinition = true,
+    SqlSymbolDocumentation? Documentation = null);
 public sealed record SqlParseDiagnostic(int Code, string Message, TextRange Range, int Offset = -1);
 public sealed record SqlParseResult(SourceText Source, TSqlFragment Ast,
     ImmutableArray<TSqlParserToken> Tokens, ImmutableArray<SqlParseDiagnostic> Diagnostics,
@@ -101,7 +102,7 @@ public sealed class SqlParser(ParserOptions options, ResolutionOptions? resoluti
             if (errors.Any(e => e.Offset >= node.StartOffset && e.Offset <= node.StartOffset + node.FragmentLength)) return;
             Declarations.Add(new SqlDeclaration(string.Join('.', name.Identifiers.Select(i => i.Value)), kind,
                 source.Range(node.StartOffset, node.FragmentLength), source.Range(name.StartOffset, name.FragmentLength),
-                QualifiedSqlName.From(name), database, isDefinition));
+                QualifiedSqlName.From(name), database, isDefinition, SqlSyntaxDocumentation.Describe(node, QualifiedSqlName.From(name), source)));
         }
     }
 

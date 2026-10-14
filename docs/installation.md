@@ -13,13 +13,13 @@ dotnet build --no-restore -c Release
 
 Use `linux-x64` on Linux x64 and `osx-arm64` on Apple Silicon. CI builds and exercises each target on its own OS. Locally, Windows is the verified host; configured CI is not proof that another platform has passed. The archives are local build artifacts, not a published marketplace release. No global Claude configuration or plugin installation is changed by these scripts.
 
-Each ZIP contains `.claude-plugin/plugin.json`, `.lsp.json`, a multi-file executable with the pinned .NET 10.0.12 runtime, documentation, sample SQL, dependency/license inventory, runtime notices and build provenance. SHA-256 sidecars verify archive integrity; they are not publisher signatures. Builds use locked RID dependency graphs and disable trimming, AOT and single-file bundling because ScriptDOM and the LSP framework use reflection. Rebuilding identical source with the same toolchain creates a stable archive; the source revision and dirty-source flag are in `build.json`.
+Each ZIP contains `.claude-plugin/plugin.json`, `.lsp.json`, a multi-file executable with the pinned .NET 10.0.13 runtime, documentation, sample SQL, dependency/license inventory, runtime notices and build provenance. SHA-256 sidecars verify archive integrity; they are not publisher signatures. Builds use locked RID dependency graphs and disable trimming, AOT and single-file bundling because ScriptDOM and the LSP framework use reflection. Rebuilding identical source with the same toolchain creates a stable archive; the source revision and dirty-source flag are in `build.json`.
 
 Extract all files, including dotfiles. Keep the directory together. On Windows:
 
 ```powershell
-Get-FileHash ./sqlscriptdom-lsp-0.5.0-win-x64.zip -Algorithm SHA256
-Expand-Archive ./sqlscriptdom-lsp-0.5.0-win-x64.zip -DestinationPath 'C:/Tools/SQL LSP'
+Get-FileHash ./sqlscriptdom-lsp-0.6.0-win-x64.zip -Algorithm SHA256
+Expand-Archive ./sqlscriptdom-lsp-0.6.0-win-x64.zip -DestinationPath 'C:/Tools/SQL LSP'
 claude plugin validate 'C:/Tools/SQL LSP' --strict
 cd 'C:/Tools/SQL LSP/samples/sql-workspace'
 claude --plugin-dir 'C:/Tools/SQL LSP'
@@ -28,8 +28,8 @@ claude --plugin-dir 'C:/Tools/SQL LSP'
 On Linux/macOS (choose the matching ZIP):
 
 ```sh
-sha256sum sqlscriptdom-lsp-0.5.0-linux-x64.zip   # macOS: shasum -a 256 ...
-unzip sqlscriptdom-lsp-0.5.0-linux-x64.zip -d "$HOME/tools/sqlscriptdom-lsp"
+sha256sum sqlscriptdom-lsp-0.6.0-linux-x64.zip   # macOS: shasum -a 256 ...
+unzip sqlscriptdom-lsp-0.6.0-linux-x64.zip -d "$HOME/tools/sqlscriptdom-lsp"
 chmod +x "$HOME/tools/sqlscriptdom-lsp/server/sqlscriptdom-lsp"
 cd "$HOME/tools/sqlscriptdom-lsp/samples/sql-workspace"
 claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp"

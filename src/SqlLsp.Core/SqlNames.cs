@@ -25,7 +25,7 @@ public sealed record ResolutionOptions(bool CaseSensitive = true, string? Defaul
 
 public enum SqlReferenceKind { Procedure, Relation, Table, Function, Variable, Alias, Dynamic }
 public enum ResolutionStatus { Resolved, Ambiguous, Unresolved, Unsupported }
-public sealed record SqlLocalDefinition(string Name, SqlObjectKind Kind, TextRange Range, bool IsAmbiguous = false);
+public sealed record SqlLocalDefinition(string Name, SqlObjectKind Kind, TextRange Range, bool IsAmbiguous = false, string? DeclaredType = null);
 public sealed record SqlStaticReference(QualifiedSqlName? Name, string RawName, SqlReferenceKind Kind,
     TextRange Range, string? Database, SqlLocalDefinition? LocalTarget = null, string? UnsupportedReason = null);
 public sealed record SqlSemanticDocument(ImmutableArray<SqlStaticReference> References, ImmutableArray<SqlLocalDefinition> Locals);

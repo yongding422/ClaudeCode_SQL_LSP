@@ -110,7 +110,7 @@ internal sealed class LspClient : IAsyncDisposable
     }
 
     public async Task<JsonElement> InitializeAsync(string? rootUri = null, object? initializationOptions = null,
-        bool hierarchical = true, string[]? workspaceFolderUris = null) => await RequestAsync("initialize", new
+        bool hierarchical = true, string[]? workspaceFolderUris = null, string[]? hoverFormats = null) => await RequestAsync("initialize", new
         {
             processId = (int?)null,
             rootUri,
@@ -122,7 +122,8 @@ internal sealed class LspClient : IAsyncDisposable
                 {
                     documentSymbol = new { hierarchicalDocumentSymbolSupport = hierarchical },
                     definition = new { dynamicRegistration = false, linkSupport = false },
-                    references = new { dynamicRegistration = false }
+                    references = new { dynamicRegistration = false },
+                    hover = new { dynamicRegistration = false, contentFormat = hoverFormats ?? new[] { "plaintext", "markdown" } }
                 },
                 workspace = new { symbol = new { dynamicRegistration = false }, didChangeWatchedFiles = new { dynamicRegistration = false } }
             },

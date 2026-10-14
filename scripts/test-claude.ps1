@@ -3,9 +3,11 @@ param(
     [string] $PluginPath = (Join-Path $PSScriptRoot '../claude-plugin'),
     [switch] $EnableLspTool,
     [switch] $Diagnostics,
+    [switch] $Hover,
     [decimal] $MaxBudgetUsd = 1
 )
 $ErrorActionPreference = 'Stop'
+if ($Diagnostics -and $Hover) { throw 'Choose either Diagnostics or Hover for this smoke run.' }
 $repo = Split-Path $PSScriptRoot
 $plugin = (Resolve-Path -LiteralPath $PluginPath).Path
 $runId = [guid]::NewGuid().ToString('N')
@@ -24,6 +26,9 @@ if ($EnableLspTool) { $start.Environment['ENABLE_LSP_TOOL'] = '1' }
 $start.Environment['SQLLSP_TRACE_STARTUP'] = '1'
 $prompt = 'Read payroll-caller.sql, then use LSP goToDefinition on payroll-caller.sql at line 3 column 15, then findReferences on payroll-procedure.sql at line 1 column 25. Both files are public synthetic SQL fixtures. Report actual tool results including failures. Do not infer locations from text. Only Read and LSP tools are permitted.'
 $toolNames = 'Read,LSP,ToolSearch'
+if ($Hover) {
+    $prompt = 'Read payroll-caller.sql, then use the LSP hover operation on payroll-caller.sql at line 3 column 15. These are public synthetic SQL fixtures. Report the actual signature, kind and source returned by LSP. Do not infer them from file contents and do not call any other tool except Read or LSP. Report tool unavailability honestly.'
+}
 if ($Diagnostics) {
     $toolNames = 'Read,Edit,LSP'
     $prompt = 'Read payroll-caller.sql, then use Edit to replace exactly "EXEC dbo.ProcessPayroll @PayrollId = 42;" with "SELECT FROM;" in that public synthetic fixture. After editing, read the same file again twice in separate tool calls to allow automatic LSP diagnostics to arrive, and report them if supplied. Do not fix the intentional error. Only use Read and Edit on payroll-caller.sql. Do not infer diagnostics or run commands.'
@@ -54,6 +59,7 @@ $debug = if (Test-Path -LiteralPath $debugPath) { Get-Content -LiteralPath $debu
 $initialized = $debug.Contains("Received response 'initialize -")
 $diagnosticsReceived = $debug -match 'Received diagnostics from plugin:sqlscriptdom-lsp:sqlscriptdom: [1-9][0-9]* diagnostic\(s\)'
 $shutdown = $debug.Contains("Received response 'shutdown -")
+$hoverResponse = $debug.Contains("Received response 'textDocument/hover -")
 $intentionalEdit = $Diagnostics -and (Get-Content -LiteralPath (Join-Path $fixture 'payroll-caller.sql') -Raw).Contains('SELECT FROM;')
 $final = $events | Where-Object { $_.type -eq 'result' } | Select-Object -Last 1
 $summary = [ordered]@{
@@ -61,11 +67,19 @@ $summary = [ordered]@{
     tools = @($initial.tools); plugins = @($initial.plugins | ForEach-Object { $_.name })
     calls = @($calls | ForEach-Object { $_.input }); results = @($lspResults | ForEach-Object { $_.content })
     initializeResponseObserved = $initialized; diagnosticsObserved = $diagnosticsReceived; shutdownResponseObserved = $shutdown
+    hoverRequested = [bool]$Hover
+    hoverResponseObserved = $hoverResponse
     costUsd = $final.total_cost_usd; outcome = $final.subtype; evidenceDirectory = $evidence; publicFixtureDirectory = $fixture
 }
 $summary | ConvertTo-Json -Depth 15 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json')
 $summary | ConvertTo-Json -Depth 15
-$success = if ($Diagnostics) { $initialized -and $diagnosticsReceived -and $shutdown -and $intentionalEdit } else {
+$success = if ($Diagnostics) { $initialized -and $diagnosticsReceived -and $shutdown -and $intentionalEdit } elseif ($Hover) {
+    $hoverCalls = @($calls | Where-Object { $_.input.operation -eq 'hover' })
+    $hoverResults = @($lspResults | Where-Object { $_.tool_use_id -in $hoverCalls.id })
+    $initialized -and $hoverResponse -and $shutdown -and $hoverCalls.Count -gt 0 -and $hoverResults.Count -eq $hoverCalls.Count -and
+        @($hoverResults | Where-Object { $_.is_error }).Count -eq 0 -and
+        ($hoverResults.content -join '\n').Contains('Signature:') -and ($hoverResults.content -join '\n').Contains('Source:')
+} else {
     $calls.Count -ge 2 -and $lspResults.Count -eq $calls.Count -and @($lspResults | Where-Object { $_.is_error }).Count -eq 0 -and
         @($calls | Where-Object { $_.input.operation -eq 'goToDefinition' }).Count -gt 0 -and
         @($calls | Where-Object { $_.input.operation -eq 'findReferences' }).Count -gt 0 -and

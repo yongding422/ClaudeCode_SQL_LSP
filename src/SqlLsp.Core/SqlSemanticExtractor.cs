@@ -53,7 +53,7 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         var outer = lexical.ToArray();
         lexical.Clear(); // Stored modules cannot capture variables declared in their creation batch.
         lexical.Push(new(options.Comparer));
-        foreach (var parameter in parameters) Local(parameter.VariableName.Value, SqlObjectKind.Parameter, parameter.VariableName);
+        foreach (var parameter in parameters) Local(parameter.VariableName.Value, SqlObjectKind.Parameter, parameter.VariableName, SqlSymbolDisplay.TypeText(parameter.DataType, source));
         node.AcceptChildren(this);
         lexical.Pop();
         foreach (var scope in outer.Reverse()) lexical.Push(scope);
@@ -61,13 +61,13 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
 
     public override void ExplicitVisit(DeclareVariableElement node)
     {
-        Local(node.VariableName.Value, SqlObjectKind.Variable, node.VariableName);
+        Local(node.VariableName.Value, SqlObjectKind.Variable, node.VariableName, SqlSymbolDisplay.TypeText(node.DataType, source));
         node.Value?.Accept(this);
     }
 
     public override void ExplicitVisit(DeclareTableVariableStatement node)
     {
-        Local(node.Body.VariableName.Value, SqlObjectKind.Variable, node.Body.VariableName);
+        Local(node.Body.VariableName.Value, SqlObjectKind.Variable, node.Body.VariableName, "TABLE (column types not inferred)");
         node.Body.Definition.Accept(this);
     }
 
@@ -250,9 +250,9 @@ internal sealed class SqlSemanticExtractor(SourceText source, ResolutionOptions 
         return null;
     }
 
-    private void Local(string name, SqlObjectKind kind, TSqlFragment node)
+    private void Local(string name, SqlObjectKind kind, TSqlFragment node, string? declaredType = null)
     {
-        var definition = new SqlLocalDefinition(name, kind, source.Range(node.StartOffset, node.FragmentLength));
+        var definition = new SqlLocalDefinition(name, kind, source.Range(node.StartOffset, node.FragmentLength), DeclaredType: declaredType);
         if (lexical.Peek().ContainsKey(name)) definition = definition with { IsAmbiguous = true };
         lexical.Peek()[name] = definition;
         locals.Add(definition);

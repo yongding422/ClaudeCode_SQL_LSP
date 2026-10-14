@@ -1,0 +1,23 @@
+{
+  "verifiedLocalDate": "2026-10-13",
+  "verifiedUtcDate": "2026-10-14",
+  "claudeVersion": "2.1.201",
+  "pluginVersion": "0.6.0",
+  "platform": "Windows x64",
+  "fixture": "three public payroll SQL files outside the repository",
+  "compatibilityEnvironmentFlag": true,
+  "serverRuntime": "10.0.13",
+  "pkcsPackage": "9.0.21",
+  "initialToolList": ["Read"],
+  "pluginRecognized": true,
+  "initializeResponseObserved": true,
+  "lspToolCall": { "operation": "hover", "file": "payroll-caller.sql", "line": 3, "character": 15 },
+  "hoverRequestObserved": true,
+  "hoverResponseObserved": true,
+  "hoverResponseMilliseconds": 146,
+  "hoverResult": { "kind": "Procedure", "signature": "[dbo].[ProcessPayroll] (@PayrollId int)", "source": "Workspace" },
+  "shutdownResponseObserved": true,
+  "processExitCode": 0,
+  "costUsd": 0.052019,
+  "note": "Final patched apphost hover succeeded with the child-only compatibility flag. An earlier default-flags session also succeeded, while another session exposed no LSP tool. Initial enumeration alone did not predict actual deferred tool use; availability is not guaranteed in every session."
+}

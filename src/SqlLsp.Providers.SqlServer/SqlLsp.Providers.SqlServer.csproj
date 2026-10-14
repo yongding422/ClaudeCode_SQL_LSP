@@ -3,5 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../SqlLsp.Core/SqlLsp.Core.csproj" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <!-- Override SqlClient's affected transitive PKCS pin; October 2026 security fixes. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 </Project>
