@@ -199,3 +199,11 @@ Proposed next work, to be scoped around SQL code search:
 4. Profile indexing and startup variability, then improve reliability and performance on larger SQL workspaces.
 
 These are roadmap priorities, not claims of implemented features or a new completed milestone. The original implementation specification remains the historical baseline.
+
+## Distribution update — macOS and GitHub marketplace (2026-10-13)
+
+Plugin 0.6.1 adds Intel Mac packaging alongside Apple Silicon, Windows x64 and Linux x64. Remaining M6 work stays deferred; this update supports distribution and SQL search/navigation usage.
+
+[Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165) passed all nine jobs. Default suites passed 170 tests per Windows/Linux/macOS ARM64 host, with 12 deliberate skips; the owned Linux SQL Server fixture passed all 33 provider tests including 11 live cases. All four native packaged apphosts passed 54 wire and 22 deterministic provider tests. Both Mac architectures additionally passed the wire suite after native `unzip` extraction, preserving executable modes and handling spaces/Chinese paths. Formatting and marketplace integrity tests passed on all default hosts. [Evidence](evidence/macos-ci.json) records counts and limits.
+
+The GitHub catalog is generated from those exact clean-source CI ZIPs, with platform-specific manifest names and checksum pins. Strict catalog validation passed using isolated Claude Code 2.1.224, the minimum documented version for archive sources. [Publishing instructions](publishing.md) and [macOS usage](macos.md) describe installation. A separate manual workflow tests actual marketplace installation and runs the installed apphost's wire suite in isolated Claude configurations; these tests make no model calls and do not establish Mac Claude hover/navigation behavior.

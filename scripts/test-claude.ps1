@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 if ($Diagnostics -and $Hover) { throw 'Choose either Diagnostics or Hover for this smoke run.' }
 $repo = Split-Path $PSScriptRoot
 $plugin = (Resolve-Path -LiteralPath $PluginPath).Path
+$pluginName = (Get-Content -LiteralPath (Join-Path $plugin '.claude-plugin/plugin.json') -Raw | ConvertFrom-Json).name
 $runId = [guid]::NewGuid().ToString('N')
 $fixture = Join-Path ([System.IO.Path]::GetTempPath()) ('sql-lsp-claude-' + $runId)
 $evidence = Join-Path $repo ('artifacts/claude-smoke-' + $runId)
@@ -57,7 +58,8 @@ $lspResults = @($results | Where-Object { $_.tool_use_id -in $calls.id })
 $debugPath = Join-Path $evidence 'debug.log'
 $debug = if (Test-Path -LiteralPath $debugPath) { Get-Content -LiteralPath $debugPath -Raw } else { '' }
 $initialized = $debug.Contains("Received response 'initialize -")
-$diagnosticsReceived = $debug -match 'Received diagnostics from plugin:sqlscriptdom-lsp:sqlscriptdom: [1-9][0-9]* diagnostic\(s\)'
+$diagnosticPrefix = [regex]::Escape("Received diagnostics from plugin:$($pluginName):sqlscriptdom: ")
+$diagnosticsReceived = $debug -match ($diagnosticPrefix + '[1-9][0-9]* diagnostic\(s\)')
 $shutdown = $debug.Contains("Received response 'shutdown -")
 $hoverResponse = $debug.Contains("Received response 'textDocument/hover -")
 $intentionalEdit = $Diagnostics -and (Get-Content -LiteralPath (Join-Path $fixture 'payroll-caller.sql') -Raw).Contains('SELECT FROM;')

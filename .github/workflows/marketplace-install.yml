@@ -1,0 +1,31 @@
+name: marketplace-install
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-15
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: dotnet restore --locked-mode
+      - run: dotnet build --no-restore -c Release
+      - shell: pwsh
+        run: ./scripts/test-marketplace-install.ps1 -Runtime '${{ matrix.rid }}'

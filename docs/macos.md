@@ -2,7 +2,7 @@
 
 The self-contained packages target Apple Silicon (`osx-arm64`) and Intel (`osx-x64`). No .NET installation or SQL Server is required for offline SQL search. Building packages from source requires PowerShell 7 and .NET SDK 10.0.401; using a package requires neither.
 
-Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Package builds and Windows regression tests are separate from native Mac execution: the CI matrix runs native wire/catalog tests on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel). Actual Claude sessions on Mac still need separate evidence.
+Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Native wire/catalog tests passed on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel): each ran 54 wire tests against both Unix unzip and .NET ZipFile extraction, plus 22 deterministic provider tests. See [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165) and [recorded counts](evidence/macos-ci.json). Actual Claude model tool calls on Mac still need separate evidence.
 
 ## Install a local ZIP
 
