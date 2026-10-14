@@ -1,6 +1,6 @@
 # macOS and Claude Code
 
-Release [0.7.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.7.0) includes both LSP and read-only MCP analysis plus the explanation skill. [Marketplace install CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38574241007) passed on Apple Silicon and Intel Mac, with 60 LSP and 8 MCP tests per installed package. These tests prove native installation/protocol behavior; Mac model tool calls remain unverified. See [procedure-analysis usage](procedure-analysis.md).
+Release [0.8.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.8.0) adds structural branch/error/transaction maps to both LSP and read-only MCP analysis plus the explanation skill. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38647456391) passed on Apple Silicon and Intel Mac, with 60 LSP and 10 MCP tests after native unzip, plus 26 deterministic provider tests in package checks. Native protocol tests and model behavior are separate; Mac model tool calls remain unverified. See [procedure-analysis usage](procedure-analysis.md) and [marketplace installation evidence](milestones.md).
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
@@ -90,7 +90,7 @@ cd "$HOME/projects/your-sql-project"
 claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp-0.6.2"
 ```
 
-Claude decides how to expose LSP operations. Windows has actual client evidence for navigation/hover/call hierarchy and the 0.7.0 analysis workflow. Mac model calls still need separate evidence. The 0.7.0 implementation includes read-only MCP tools and an explain-procedure skill; see [usage and coverage](procedure-analysis.md).
+Claude decides how to expose LSP operations. Windows has actual client evidence for navigation/hover/call hierarchy and the 0.8.0 analysis workflow. Mac model calls still need separate evidence. The plugin includes read-only MCP tools and an explain-procedure skill; see [usage and coverage](procedure-analysis.md).
 
 ## Build and verify on a Mac
 

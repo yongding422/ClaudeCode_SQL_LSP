@@ -1,0 +1,42 @@
+{
+  "pluginVersion": "0.8.0",
+  "claudeVersion": "2.1.224",
+  "platform": "Windows x64",
+  "sourceCommit": "3e3606376974d74dfa270925d2e1570910fcea97",
+  "dirtySource": false,
+  "serverRuntime": "10.0.13",
+  "modelObserved": "deepseek-v4-pro",
+  "fixture": "Public samples/understanding-evaluation/modules.sql copied into a fresh SQL-only workspace",
+  "prompt": "Explain dbo.ProcessPayroll and how Ohio is handled; direct/transitive effects, citations and unknowns.",
+  "skillExplicitlyRequested": false,
+  "skillCalls": 1,
+  "pluginMcpAutoloadConnected": true,
+  "discoveryCalls": 1,
+  "analysisCalls": 1,
+  "sourceReads": 1,
+  "verifiedToolResultFacts": {
+    "entryPoint": "dbo.ProcessPayroll",
+    "predicatePreview": "@State = 'OH'",
+    "thenParentIsIf": true,
+    "calleeCallContextIncludesThen": true,
+    "callee": "dbo.ApplyOhioRules",
+    "directInsert": "dbo.PayrollAudit",
+    "calleeUpdate": "dbo.Payroll",
+    "dynamicInvocationIssue": "call-unsupported"
+  },
+  "failedToolAttempts": 0,
+  "exitCode": 0,
+  "reportedCostUsd": 0.116997,
+  "answerReview": {
+    "reviewScope": "Capability smoke; no representative accuracy scoring",
+    "argumentPropagationLabeledSourceReasoning": true,
+    "dynamicTargetLabeledUnverified": true,
+    "observedOverstatement": "The model used unconditional/runs unconditionally for statements outside the IF, despite report and skill guidance that empty context is not an execution guarantee. Tool facts were verified; this phrasing must not be treated as an analyzer conclusion."
+  },
+  "limits": [
+    "Windows actual-client evidence only; Mac model calls remain unverified.",
+    "Automatic skill selection and model adherence to report limitations are not guaranteed.",
+    "No SQL Server was contacted and no analyzed SQL was executed.",
+    "This smoke is not a comparative benchmark or proof of answer correctness."
+  ]
+}
