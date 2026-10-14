@@ -1,0 +1,30 @@
+{
+  "pluginVersion": "0.6.2",
+  "sourceCommit": "4e7389be78864b32cb280a7474ec34715d0f4173",
+  "nativeBuildTestRun": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38510961317",
+  "nativeBuildTestConclusion": "success",
+  "nativeBuildTestJobs": 9,
+  "offlineFunctionalPassedPerHost": 185,
+  "offlineSkippedPerHost": 13,
+  "corePassed": 102,
+  "wirePassedPerNativePackage": 60,
+  "deterministicProviderPassedPerNativePackage": 23,
+  "ownedSqlServerProviderPassed": 35,
+  "liveSqlServerCases": 12,
+  "platforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+  "runtime": "10.0.13",
+  "pkcsVersion": "9.0.21",
+  "release": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.2",
+  "publishedDigestsMatchCatalog": true,
+  "marketplaceInstallation": {
+    "run": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38511900535",
+    "conclusion": "success",
+    "claudeVersion": "2.1.224",
+    "platforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+    "wirePassedPerInstalledApphost": 60,
+    "benchmarkSkippedPerApphost": 1,
+    "isolatedClaudeConfigurations": true,
+    "modelCalls": 0
+  },
+  "limits": ["The benchmark remains separately opt-in.", "Native LSP tests are not Mac model tool-call evidence.", "Static call graphs remain partial."]
+}

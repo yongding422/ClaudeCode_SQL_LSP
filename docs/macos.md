@@ -49,9 +49,9 @@ For complex procedure questions, see [the automatic investigation workflow and m
 
 ## Verification and compatibility
 
-[Marketplace installation verification](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077) passed on both Mac architectures with Claude Code 2.1.224, followed by 54 real LSP tests against each installed apphost. User Claude settings were isolated and no model calls were made.
+[Marketplace installation verification for 0.6.2](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38511900535) passed on both Mac architectures with Claude Code 2.1.224, followed by 60 real LSP tests against each installed apphost, including prepare/incoming/outgoing calls. User Claude settings were isolated and these tests made no model calls.
 
-Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Native wire/catalog tests passed on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel): each ran 54 wire tests against both Unix unzip and .NET ZipFile extraction, plus 22 deterministic provider tests. See [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165) and [recorded counts](evidence/macos-ci.json). Actual Claude model tool calls on Mac still need separate evidence.
+Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Version 0.6.2 native wire/catalog tests passed on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel): each ran 60 wire tests against both Unix unzip and .NET ZipFile extraction, plus 23 deterministic provider tests. See [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38510961317) and [recorded counts](evidence/call-hierarchy-ci.json). Actual Claude model tool calls on Mac still need separate evidence.
 
 ## Optional: install a local ZIP
 
