@@ -26,7 +26,7 @@ Native Linux and Mac package tests must run on their corresponding CI runners. C
 
 Test the actual install on a current Claude client, from an isolated configuration, before calling marketplace installation verified. Actual publication also requires authenticated GitHub access and green native package CI. A draft release can hold assets for review but its URLs are not usable for public installation.
 
-## Install release 0.6.2
+## Install the published release
 
 With Claude Code 2.1.224 or later:
 

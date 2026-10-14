@@ -63,7 +63,7 @@ The server advertises incremental text synchronization, document symbols, defini
 
 ## Install the Claude Code plugin
 
-Release [0.6.2](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.2) is available through this repository's GitHub marketplace. Use Claude Code **2.1.224 or later** for archive installs; check `claude --version` and use `claude update` if needed. On an Apple Silicon Mac:
+Install the [published release](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/latest) through this repository's GitHub marketplace. Use Claude Code **2.1.224 or later** for archive installs; check `claude --version` and use `claude update` if needed. On an Apple Silicon Mac:
 
 ```sh
 claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
@@ -85,7 +85,7 @@ Build a self-contained package with PowerShell 7 and the pinned SDK. Supported p
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract `artifacts/packages/sqlscriptdom-lsp-0.6.2-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract your local `artifacts/packages/sqlscriptdom-lsp-0.7.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
