@@ -1,6 +1,27 @@
 # Installation and demonstrations
 
-## Packaged executable
+## Install from the GitHub marketplace
+
+Use Claude Code **2.1.224 or later**. Claude downloads the plugin package automatically; you do not need to download/extract a ZIP or install .NET.
+
+```sh
+claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+```
+
+Install one entry for your computer:
+
+| Computer | Install command |
+| --- | --- |
+| Apple Silicon Mac | `claude plugin install sqlscriptdom-lsp-osx-arm64@sqlscriptdom-lsp-marketplace` |
+| Intel Mac | `claude plugin install sqlscriptdom-lsp-osx-x64@sqlscriptdom-lsp-marketplace` |
+| Windows x64 | `claude plugin install sqlscriptdom-lsp-win-x64@sqlscriptdom-lsp-marketplace` |
+| Linux x64 | `claude plugin install sqlscriptdom-lsp-linux-x64@sqlscriptdom-lsp-marketplace` |
+
+Start a fresh `claude` session from your SQL project. No `--plugin-dir` flag is required. See [Mac usage](macos.md) for SQL search examples. Inside Claude, `/plugin marketplace add yongding422/ClaudeCode_SQL_LSP` adds the marketplace, and `/plugin` opens the plugin browser.
+
+## Optional: build and install a local package
+
+The remaining package commands are for source developers and manual installation. Marketplace users can skip them.
 
 Build from this repository with PowerShell 7 and .NET SDK 10.0.401:
 

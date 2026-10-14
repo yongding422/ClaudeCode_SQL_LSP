@@ -1,14 +1,57 @@
 # macOS and Claude Code
 
-The self-contained packages target Apple Silicon (`osx-arm64`) and Intel (`osx-x64`). No .NET installation or SQL Server is required for offline SQL search. Building packages from source requires PowerShell 7 and .NET SDK 10.0.401; using a package requires neither.
+Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
+
+## Install from the marketplace
+
+Use Claude Code **2.1.224 or later**. Check `claude --version`; if needed, run `claude update`.
+
+In Terminal, add the marketplace once:
+
+```sh
+claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+```
+
+On an **Apple Silicon Mac** (Apple M-series chip):
+
+```sh
+claude plugin install sqlscriptdom-lsp-osx-arm64@sqlscriptdom-lsp-marketplace
+```
+
+On an **Intel Mac**:
+
+```sh
+claude plugin install sqlscriptdom-lsp-osx-x64@sqlscriptdom-lsp-marketplace
+```
+
+Install only the entry for your Mac. Then start a fresh Claude session from your SQL project:
+
+```sh
+cd "$HOME/projects/your-sql-project"
+claude
+```
+
+The plugin stays installed for later sessions. A `--plugin-dir` flag is not needed for a marketplace installation.
+
+You can also add the marketplace from inside Claude with `/plugin marketplace add yongding422/ClaudeCode_SQL_LSP`, then open `/plugin` and select the matching Mac entry in Discover.
+
+## Use SQL search/navigation
+
+Ask Claude about an object in your SQL project, for example:
+
+> Find the definition of dbo.ProcessPayroll and its static references using LSP. Show actual file paths and lines, and report unavailable tools explicitly.
+
+Replace `dbo.ProcessPayroll` with an object in your project. No manual server launch is required.
+
+## Verification and compatibility
 
 [Marketplace installation verification](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38501092077) passed on both Mac architectures with Claude Code 2.1.224, followed by 54 real LSP tests against each installed apphost. User Claude settings were isolated and no model calls were made.
 
 Use a macOS version supported by the bundled .NET 10 runtime: currently macOS 14, 15 or 26, according to [Microsoft's support table](https://learn.microsoft.com/en-us/dotnet/core/install/macos). Native wire/catalog tests passed on `macos-15` (Apple Silicon) and `macos-15-intel` (Intel): each ran 54 wire tests against both Unix unzip and .NET ZipFile extraction, plus 22 deterministic provider tests. See [native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38500332165) and [recorded counts](evidence/macos-ci.json). Actual Claude model tool calls on Mac still need separate evidence.
 
-## Install a local ZIP
+## Optional: install a local ZIP
 
-Copy the matching ZIP and its `.sha256` sidecar from [release 0.6.1](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1) onto your Mac, or use a trusted local build from `artifacts/packages`. Use a fresh destination directory; keep the entire extracted package together. Marketplace installation is also available; see [the install commands](publishing.md#install-release-061).
+This alternative is for testing a local build or using an older Claude client. Normal marketplace users can skip this section. Copy the matching ZIP and its `.sha256` sidecar from [release 0.6.1](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.6.1) onto your Mac, or use a trusted local build from `artifacts/packages`. Use a fresh destination directory; keep the entire extracted package together.
 
 In Terminal on Apple Silicon:
 
@@ -24,7 +67,7 @@ claude --plugin-dir "$HOME/tools/sqlscriptdom-lsp-0.6.1"
 
 On an Intel Mac, replace `osx-arm64` with `osx-x64` in both archive commands. An Intel shell reports `x86_64` from `uname -m`; a native Apple Silicon shell reports `arm64`. A shell running under Rosetta can also report `x86_64` on Apple Silicon: use the Apple chip shown in About This Mac and prefer the native ARM64 package. Package manifests launch their bundled executable directly with `--stdio`, including paths containing spaces; there is no shell pipeline or build output in the LSP connection.
 
-## Use SQL search/navigation
+### Local sample demonstration
 
 In the sample session, ask:
 
@@ -34,7 +77,7 @@ Then try:
 
 > Use LSP goToDefinition on payroll-caller.sql at line 3, column 15, then findReferences on the returned declaration. Show the actual file paths and lines. Report tool unavailability explicitly.
 
-For your repository, start Claude from the physical directory containing the SQL project:
+For this optional local ZIP installation, start Claude from the physical directory containing your SQL project:
 
 ```sh
 cd "$HOME/projects/your-sql-project"
