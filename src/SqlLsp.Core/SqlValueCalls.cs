@@ -44,8 +44,9 @@ internal sealed partial class SqlValueFlow
         var inputFacts = new Dictionary<ExecuteParameter, string?>();
         foreach (var argument in arguments.Take(64))
             inputFacts[argument] = Observe(SqlValueFactKind.CallArgument, "ExecInput", argument, null,
-                argument.ParameterValue is DefaultLiteral ? null : argument.ParameterValue,
-                "Explicit EXEC input before any copy-back; binding and runtime value are separate.");
+                argument.ParameterValue is DefaultLiteral || (plan.Error != null && argument.ParameterValue is not VariableReference) ? null : argument.ParameterValue,
+                plan.Error == null ? "Explicit EXEC input before any copy-back; binding and runtime value are separate." :
+                    "Opaque EXEC input: variable dependencies only; literal payload/default text is not exported.", plan.Error == null);
         var outputs = new Dictionary<ExecuteParameter, string?>();
         var copied = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var argument in arguments.Where(a => a.IsOutput).Take(64))

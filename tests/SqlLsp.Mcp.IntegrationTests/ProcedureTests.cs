@@ -105,7 +105,8 @@ public class ProcedureTests
     public async Task Discovery_and_real_analysis_publish_readonly_tools_and_visible_coverage()
     {
         await using var client = await McpClient.Start("-- 😀 中文\r\nCREATE PROC dbo.P @state varchar(2) AS BEGIN " +
-            "SELECT * FROM dbo.A WHERE state=@state; INSERT dbo.B SELECT * FROM dbo.A; EXEC(N'PRIVATE_SQL_CANARY'); END;\nGO\n" +
+            "SELECT * FROM dbo.A WHERE state=@state; INSERT dbo.B SELECT * FROM dbo.A; EXEC(N'PRIVATE_SQL_CANARY'); " +
+            "EXEC sys.sp_executesql N'PRIVATE_SQL_CANARY',N'@p varchar(2)',@p=@state; END;\nGO\n" +
             "CREATE TABLE dbo.A(state varchar(2));\nGO\nCREATE TABLE dbo.B(state varchar(2));");
         var tools = (await client.Call("tools/list", new { })).GetProperty("result").GetProperty("tools");
         Assert.Equal(2, tools.GetArrayLength());

@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory)] [string] $PluginPath,
     [string] $ClaudeExecutable,
     [switch] $InvokeSkill,
+    [ValidateRange(5, 300)] [int] $TimeoutSeconds = 90,
     [decimal] $MaxBudgetUsd = 1
 )
 $ErrorActionPreference = 'Stop'
@@ -37,7 +38,8 @@ foreach ($argument in $arguments) { $start.ArgumentList.Add($argument) }
 $process = [System.Diagnostics.Process]::Start($start)
 $output = $process.StandardOutput.ReadToEndAsync()
 $errors = $process.StandardError.ReadToEndAsync()
-if (-not $process.WaitForExit(55000)) { $process.Kill($true); $process.WaitForExit() }
+$timedOut = -not $process.WaitForExit($TimeoutSeconds * 1000)
+if ($timedOut) { $process.Kill($true); $process.WaitForExit() }
 $output.Result | Set-Content -LiteralPath (Join-Path $evidence 'session.jsonl')
 $errors.Result | Set-Content -LiteralPath (Join-Path $evidence 'stderr.log')
 $events = @($output.Result -split '\r?\n' | Where-Object { $_.Trim() } | ForEach-Object { $_ | ConvertFrom-Json })
@@ -70,6 +72,7 @@ $final = $events | Where-Object { $_.type -eq 'result' } | Select-Object -Last 1
 $skillCalls = @($calls | Where-Object { $_.name -eq 'Skill' })
 $summary = [ordered]@{
     claudeVersion = (& $claudeCommand --version); exitCode = $process.ExitCode; pluginName = $name
+    timedOut = $timedOut; timeoutSeconds = $TimeoutSeconds
     discoveryCalls = $discoveryCalls.Count; analysisCalls = $analysisCalls.Count; successfulAnalysisResults = $successful.Count
     requiredFlowEvidence = 'Exact OH predicate, Then parent and callee call context in actual MCP tool result'
     requiredValueEvidence = 'Resolved EXEC formal binding linked to the callee WHERE variable identity in actual MCP tool result'
@@ -80,4 +83,4 @@ $summary = [ordered]@{
 $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $evidence 'summary.json')
 $summary | ConvertTo-Json -Depth 12
 if ($process.ExitCode -ne 0 -or $discoveryCalls.Count -lt 1 -or $analysisCalls.Count -lt 1 -or $successful.Count -lt 1 -or
-    ($InvokeSkill -and $skillCalls.Count -lt 1)) { throw 'Claude smoke did not demonstrate the analysis workflow. Inspect local tool events; model prose is not proof.' }
+    ($InvokeSkill -and $skillCalls.Count -lt 1)) { throw 'Claude smoke did not complete successfully with verified analysis tool evidence. Inspect local events and timeout metadata; model prose is not proof.' }

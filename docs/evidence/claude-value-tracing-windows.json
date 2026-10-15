@@ -1,0 +1,46 @@
+{
+  "pluginVersion": "0.9.0",
+  "claudeVersion": "2.1.224",
+  "platform": "Windows x64",
+  "serverPackageSourceCommit": "165c8c36e43d12f2519759abc221baf36f060ce2",
+  "captureStage": "Pre-release candidate; before the final opaque-literal preview filter and internal-ID presentation guidance",
+  "packageDirtySource": false,
+  "serverRuntime": "10.0.13",
+  "modelObserved": "deepseek-v4-pro",
+  "fixture": "Public samples/understanding-evaluation/modules.sql copied into a fresh SQL-only workspace",
+  "skillExplicitlyRequested": false,
+  "skillCalls": 1,
+  "discoveryCalls": 1,
+  "analysisCalls": 1,
+  "sourceReads": 1,
+  "verifiedToolResultFacts": {
+    "caller": "dbo.ProcessPayroll",
+    "callerVariable": "@State",
+    "callerSourceKind": "ParameterInput",
+    "callerSourcesComplete": true,
+    "callee": "dbo.ApplyOhioRules",
+    "bindingStatus": "Resolved",
+    "formalParameter": "@State",
+    "calleeWhereUsesSameFormalIdentity": true,
+    "ohioPredicateAndThenContextVerified": true,
+    "dynamicInvocationRemainsUnknown": true
+  },
+  "attempts": [
+    { "timeoutSeconds": 55, "timedOut": true, "exitCode": -1, "verifiedAnalysisResults": 1, "toolFailures": 0, "outcome": "terminated-before-final-result", "reportedCostUsd": null },
+    { "timeoutSeconds": 90, "timedOut": false, "exitCode": 0, "verifiedAnalysisResults": 1, "toolFailures": 0, "outcome": "success", "clientReportedDurationMs": 53402, "reportedCostUsd": 0.162851 }
+  ],
+  "verificationHarnessChange": "The first client received valid tool results but exceeded the 55-second harness limit. The harness now exposes a bounded configurable timeout and explicit timeout metadata; the retry used the same server package with a 90-second limit.",
+  "answerReview": {
+    "scope": "Authored capability spot review; not independent or representative accuracy scoring",
+    "observedOverstatement": "The model still used Unconditional/always for effects outside the IF despite explicit report/skill guidance. This is model wording, not an analyzer execution guarantee.",
+    "calleeUpdateCitation": "The retry cited the public fixture's UPDATE at its correct line 12. This single observation is not a citation accuracy score."
+  },
+  "limits": [
+    "Verified source definitions and formal/filter identity links do not prove concrete values, SQL conversions, successful execution or complete runtime paths.",
+    "Automatic skill selection and adherence to limitations remain model behavior.",
+    "The first timeout is retained; its cost/usage are unknown rather than zero.",
+    "Windows actual-model evidence only; Mac model calls remain unverified.",
+    "No SQL Server was contacted and no analyzed SQL was executed.",
+    "Tool use does not establish answer correctness or superiority over Grep/Read."
+  ]
+}

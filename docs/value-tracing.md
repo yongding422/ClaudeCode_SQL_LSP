@@ -31,6 +31,8 @@ SELECT assignment can retain a previous value on zero rows and has unspecified r
 
 EXEC named/positional arguments bind only to a uniquely selected procedure with an available parsed signature. Named order, duplicates, excess arguments, required omissions, DEFAULT availability and OUTPUT formal/caller-variable requirements are checked. Invalid argument lists publish **no partial verified formal bindings**. Hidden/encrypted metadata display text is not parsed as a signature; hybrid selection and catalog-renamed identities remain authoritative.
 
+Opaque EXEC argument facts retain direct variable dependencies but suppress literal payload/default previews. Dynamic SQL is not parsed or inferred from an exported argument string. Ordinary declaration/assignment/default source previews remain part of this explicitly requested analysis; they are not telemetry records.
+
 All explicit call inputs observe the pre-call state. An OUTPUT formal is also an input. Copy-back and EXEC return status get separate unknown definitions; aliasing multiple OUTPUT arguments does not select the last textual argument as a known value. Callee exit definitions, successful execution, actual values and SQL conversions remain unproven. Omitted/explicit DEFAULT observations point to the callee's original default expression, which is separate from its symbolic entry input.
 
 WHERE, HAVING, JOIN, IF/WHILE and CASE facts expose bound variable reads, not bound columns, predicate truth or runtime row contents. Global variables, function argument boundaries, temp/table-variable value contents and full column lineage remain outside this increment. Do not compose uncertain or unrelated branch edges into a proven end-to-end path.

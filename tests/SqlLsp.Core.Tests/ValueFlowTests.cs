@@ -317,4 +317,18 @@ public class ValueFlowTests
         Assert.False(Values(Report("LoopRoute").Modules[0]).Facts.Single(f => f.Role == "While").Inputs[0].SourcesComplete);
         Assert.Contains(Values(Report("OutputRoute").Modules[0]).Facts, f => f.Kind == SqlValueFactKind.CallReturn && f.Status == ResolutionStatus.Unsupported);
     }
+
+    [Fact]
+    public async Task Opaque_exec_suppresses_payload_previews_but_preserves_explicit_variable_dependencies()
+    {
+        var (_, _, report) = await Analyze("EXEC sys.sp_executesql N'PRIVATE_SQL_CANARY',N'@p varchar(2)',@p=@State; IF @State='OH' RETURN;");
+        var flow = Values(report.Modules[0]);
+        Assert.DoesNotContain("PRIVATE_SQL_CANARY", System.Text.Json.JsonSerializer.Serialize(flow));
+        Assert.Empty(flow.Calls[0].Bindings);
+        var input = Assert.Single(flow.Facts, f => f.Kind == SqlValueFactKind.CallArgument && f.Expression?.Kind == "Variable");
+        Assert.Equal("@State", Assert.Single(input.Inputs).Name);
+        Assert.Equal(ResolutionStatus.Unsupported, input.Status);
+        Assert.False(flow.Facts.Single(f => f.Role == "If").Inputs[0].SourcesComplete);
+        CheckReferences(flow);
+    }
 }

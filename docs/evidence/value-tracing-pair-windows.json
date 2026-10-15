@@ -1,0 +1,36 @@
+{
+  "pluginVersion": "0.9.0",
+  "serverPackageSourceCommit": "165c8c36e43d12f2519759abc221baf36f060ce2",
+  "captureStage": "Pre-release candidate; before the final opaque-literal preview filter and internal-ID presentation guidance",
+  "cliVersion": "2.1.224",
+  "platform": "Windows x64",
+  "modelRequested": "deepseek-v4-pro",
+  "modelObservedBothArms": "deepseek-v4-pro",
+  "task": "value-branch-rename",
+  "fixture": "Public samples/value-tracing-evaluation/modules.sql, copied SQL-only into a fresh workspace per arm",
+  "repeats": 1,
+  "order": ["plugin", "grep"],
+  "startCondition": "Fresh client processes; OS/model caches uncontrolled",
+  "timeoutSecondsPerArm": 120,
+  "results": [
+    { "arm": "plugin", "elapsedMs": 45892, "uncachedInputTokens": 17218, "cacheReadTokens": 38912, "cacheWriteTokens": 0, "outputTokens": 2715, "reportedCostUsd": 0.180301, "readCalls": 1, "grepCalls": 0, "mcpCalls": 4, "skillCalls": 1, "toolFailures": 0, "outcome": "success" },
+    { "arm": "grep", "elapsedMs": 34314, "uncachedInputTokens": 4183, "cacheReadTokens": 6784, "cacheWriteTokens": 0, "outputTokens": 1915, "reportedCostUsd": 0.076937, "readCalls": 1, "grepCalls": 1, "mcpCalls": 0, "skillCalls": 0, "toolFailures": 0, "outcome": "success" }
+  ],
+  "authoredSpotReview": {
+    "independentOrBlinded": false,
+    "representativeAccuracyScores": null,
+    "bothMentionedInitializerAndConditionalCAOverride": true,
+    "pluginUsedDefinitionAlternativesAndExplicitDefaultBinding": true,
+    "pluginKeptCalleeInputsSymbolicAndRowsUnknown": true,
+    "observedPluginCitationError": "The plugin answer cited the Employee table definition at line 56; it is at line 57. Protocol/source ranges are zero-based and the model still needs to convert citations correctly.",
+    "observedPluginVerbosity": "The answer exposed internal fact/variable IDs; this is a workflow presentation issue to improve, not additional semantic evidence."
+  },
+  "conclusion": "Pre-release collector/capability smoke only. On this single small public task the candidate plugin was slower and used more input/output tokens and reported cost than Grep/Read. This is not a final-release or general speed, accuracy or value advantage measurement.",
+  "limits": [
+    "Only one of six authored public value tasks was run once; the 30-procedure, three-repeat independent evaluation remains outstanding.",
+    "Reported costs are client data, not guaranteed billing; missing fields are not treated as zero.",
+    "Raw public answers/transcripts were explicitly retained locally and are not published here.",
+    "Strict experiment isolation explicitly enabled only the packaged analysis MCP entry; normal plugin autoload was verified in the separate client smoke.",
+    "No model tool call executed SQL, contacted SQL Server or ran shell commands."
+  ]
+}
