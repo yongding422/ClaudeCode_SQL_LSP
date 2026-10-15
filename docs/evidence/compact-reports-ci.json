@@ -93,13 +93,37 @@
     "catalogZipPinsVerified": 4
   },
   "marketplaceInstallation": {
-    "status": "pending",
-    "platforms": [
-      "win-x64",
-      "linux-x64",
-      "osx-arm64",
-      "osx-x64"
-    ]
+    "status": "passed",
+    "runId": 38676207666,
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38676207666",
+    "catalogCommit": "3315cbe22ad42a4f3ad5ef35bece78e0a3248727",
+    "claudeVersion": "2.1.224",
+    "jobs": [
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      }
+    ],
+    "eachInstalledPackage": {
+      "lspPassed": 60,
+      "mcpPassed": 24,
+      "optionalPerformanceSkipped": 1
+    },
+    "strictValidation": "passed",
+    "executableModeRepairApplied": false,
+    "modelCallsInInstaller": false
   },
   "payloadMeasurement": {
     "scope": "Six public value cases, unfocused compact versus full report from the same packaged source, exact original facts/coverage retained",
@@ -149,5 +173,10 @@
     "Small-fixture payload reductions are not guaranteed for every report and do not establish lower task time or model usage.",
     "Mac model calls remain unverified.",
     "No hooks, analyzed SQL execution or background metrics collector."
-  ]
+  ],
+  "cancelledDuplicateTagBuild": {
+    "runId": 38676003827,
+    "sourceCommit": "99309cf9159345c315afa3bd6d393e9aacfcb256",
+    "reason": "Identical released source had already passed all nine native CI jobs; cancelled duplicate to free installation runners."
+  }
 }

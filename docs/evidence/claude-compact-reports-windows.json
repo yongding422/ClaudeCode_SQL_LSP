@@ -20,6 +20,25 @@
       "failedToolAttempts": 0,
       "costUsd": null,
       "outcome": null
+    },
+    {
+      "exitCode": 0,
+      "timedOut": false,
+      "timeoutSeconds": 240,
+      "discoveryCalls": 1,
+      "analysisCalls": 1,
+      "successfulAnalysisResults": 1,
+      "skillCalls": 1,
+      "failedToolAttempts": 0,
+      "costUsd": 0.130607,
+      "outcome": "success",
+      "durationMs": 130363,
+      "usage": {
+        "input_tokens": 13264,
+        "output_tokens": 1707,
+        "cache_read_input_tokens": 35584,
+        "cache_creation_input_tokens": 0
+      }
     }
   ],
   "verifiedToolFacts": [
@@ -33,10 +52,20 @@
     "warmAnalysis": 5.7316,
     "compactPresentation": 36.0061
   },
-  "retryStatus": "in progress with a 240-second deadline; first timeout retained",
+  "retryStatus": "Completed successfully within the explicit 240-second deadline; original 120-second timeout retained",
   "limits": [
     "The 120-second attempt returned successful tool evidence but no final answer/usage; it is a timeout, not a completed successful explanation.",
     "The separate paired run completed, using strict MCP isolation rather than normal autoload.",
     "Mac model calls remain unverified; protocol/installation success does not guarantee model wording/citations."
-  ]
+  ],
+  "authoredSpotReview": {
+    "independentOrBlinded": false,
+    "updateCitationCorrect": "modules.sql:12",
+    "predicateCitationCheckedAgainstSource": "modules.sql:5:8-21",
+    "callerInputCitationCheckedAgainstSource": "modules.sql:6:42-48",
+    "outsideBranchWordingInsteadOfUnconditional": true,
+    "internalBookkeepingIdsOmittedFromFinalAnswer": true,
+    "dynamicSqlUncertaintyAndRuntimeUnknownsVisible": true,
+    "remainingConcern": "Final only-unresolved-items wording can sound more exhaustive than indexed/static coverage permits; tool/installation checks do not establish explanation correctness."
+  }
 }

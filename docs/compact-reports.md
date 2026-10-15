@@ -2,6 +2,8 @@
 
 Version 0.10.0 adds an optional compact view to `analyze_procedure`. The bundled explanation skill requests it automatically. No new tool, hook, package dependency, database access or SQL execution is introduced. The default remains `detail="full"` for existing clients.
 
+[Native and marketplace evidence](evidence/compact-reports-ci.json) records all nine native jobs and actual installation on all four platforms. [Windows client evidence](evidence/claude-compact-reports-windows.json) retains the 120-second timeout and successful longer retry. [The single paired smoke](evidence/compact-reports-pair-windows.json) still favored Grep/Read in latency and model usage. Smaller serialized reports do not establish a general product advantage.
+
 Use the URI, zero-based selection and revision from `find_procedures`:
 
 ```json

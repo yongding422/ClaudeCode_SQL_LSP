@@ -6,7 +6,9 @@ The report includes [bounded parameter/value dependencies](value-tracing.md), ve
 
 [Release 0.10.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.10.0) is public with four checksum-pinned native packages. [Native source CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38675234892) passed all nine jobs, including both Mac architectures. Update your platform entry through the marketplace, then start a fresh Claude session. [Evidence](evidence/compact-reports-ci.json) separates builds, installation and model behavior.
 
-The [0.10.0 public paired smoke](evidence/compact-reports-pair-windows.json) verified compact analysis and separate timing collection, but the plugin remained slower and used more model tokens than Grep/Read on that single task. A separate normal-autoload session returned the required tool evidence before timing out; it remains recorded. Tool use is not proof of answer accuracy or overall value. Mac model calls remain unverified. Historical 0.9.0 measurements remain in [milestones](milestones.md).
+[Actual marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38676207666) passed on all four platforms with strict validation and 60 LSP + 24 MCP tests per installed package. Mac executable modes survived without repair; no manual ZIP extraction or .NET installation is needed.
+
+The [0.10.0 public paired smoke](evidence/compact-reports-pair-windows.json) verified compact analysis and separate timing collection, but the plugin remained slower and used more model tokens than Grep/Read on that single task. A [normal-autoload retry](evidence/claude-compact-reports-windows.json) completed with correct UPDATE/predicate/argument citations; its earlier timeout remains recorded. Tool use is not proof of answer accuracy or overall value. Mac model calls remain unverified. Historical 0.9.0 measurements remain in [milestones](milestones.md).
 
 After updating your platform's marketplace entry and starting Claude from the SQL repository, ask:
 
