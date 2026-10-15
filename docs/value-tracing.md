@@ -2,6 +2,8 @@
 
 Version 0.9.0 adds `valueFlow` to each module in the existing read-only `analyze_procedure` report. It connects verified parameter/local identities, source definitions, variable reads and EXEC formal arguments. It does **not** evaluate SQL, compute runtime values, type-check/coerce arguments, solve loops or provide full column lineage. No hooks, new dependencies or separate installation are added.
 
+Version 0.10.0 adds an optional [compact presentation](compact-reports.md) with shared evidence, ready-to-cite one-based lines, module references and bounded lexical value focus. The original full DTO below remains the default; Core dependency semantics are unchanged.
+
 Ask Claude:
 
 > Trace @State through this procedure's local assignments and called procedures into conditions and filters. Show exact argument bindings, reassignment alternatives, selected defaults and source lines. Separate possible sources from known runtime values, and report output/loop/dynamic-SQL uncertainty.

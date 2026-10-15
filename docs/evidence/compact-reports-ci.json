@@ -1,0 +1,153 @@
+{
+  "pluginVersion": "0.10.0",
+  "packageSourceCommit": "99309cf9159345c315afa3bd6d393e9aacfcb256",
+  "packageDirtySource": false,
+  "nativeCi": {
+    "runId": 38675234892,
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38675234892",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "sqlserver",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "catalog",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "localFunctionalTests": {
+    "corePassed": 144,
+    "lspPassed": 60,
+    "mcpPassed": 24,
+    "providerCatalogPassed": 41,
+    "totalPassed": 269,
+    "optionalPerformanceSkipped": 1,
+    "externalSqlServerUsed": false,
+    "liveSqlServer": "Owned disposable Docker fixture; removed after testing"
+  },
+  "defaultNativeSuite": {
+    "passed": 256,
+    "skipped": 14,
+    "skipReasons": [
+      "13 opt-in live SQL Server cases",
+      "1 optional performance benchmark"
+    ]
+  },
+  "eachNativePackage": {
+    "lspPassed": 60,
+    "mcpPassed": 24,
+    "deterministicProviderPassed": 28,
+    "liveProviderSkipped": 13,
+    "performanceSkipped": 1
+  },
+  "bothMacNativeUnzipChecks": {
+    "lspPassed": 60,
+    "mcpPassed": 24,
+    "executableModeRepairApplied": false
+  },
+  "metricsCollector": {
+    "windowsPassed": 6,
+    "windowsSymlinkSkipped": 1,
+    "unixPassed": 7
+  },
+  "dependencies": {
+    "lockedRestore": "passed",
+    "newDependencies": false,
+    "audit": "No vulnerable packages reported by configured NuGet sources in eight projects"
+  },
+  "release": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.10.0",
+    "public": true,
+    "uploadedAssets": 8,
+    "allUploadedDigestsVerifiedAgainstCiFiles": true,
+    "catalogZipPinsVerified": 4
+  },
+  "marketplaceInstallation": {
+    "status": "pending",
+    "platforms": [
+      "win-x64",
+      "linux-x64",
+      "osx-arm64",
+      "osx-x64"
+    ]
+  },
+  "payloadMeasurement": {
+    "scope": "Six public value cases, unfocused compact versus full report from the same packaged source, exact original facts/coverage retained",
+    "unit": "UTF-8 report JSON bytes, not model tokens",
+    "cases": [
+      {
+        "module": "DefaultRoute",
+        "fullUtf8Bytes": 24124,
+        "compactUtf8Bytes": 13439,
+        "reductionPercent": 44.3
+      },
+      {
+        "module": "RoutePayroll",
+        "fullUtf8Bytes": 25156,
+        "compactUtf8Bytes": 14910,
+        "reductionPercent": 40.7
+      },
+      {
+        "module": "SelectRetention",
+        "fullUtf8Bytes": 13427,
+        "compactUtf8Bytes": 10028,
+        "reductionPercent": 25.3
+      },
+      {
+        "module": "LoopRoute",
+        "fullUtf8Bytes": 15712,
+        "compactUtf8Bytes": 11226,
+        "reductionPercent": 28.6
+      },
+      {
+        "module": "OutputRoute",
+        "fullUtf8Bytes": 25843,
+        "compactUtf8Bytes": 15521,
+        "reductionPercent": 39.9
+      },
+      {
+        "module": "InvalidRoute",
+        "fullUtf8Bytes": 18360,
+        "compactUtf8Bytes": 11027,
+        "reductionPercent": 39.9
+      }
+    ],
+    "aggregateReductionPercent": 37.9
+  },
+  "limits": [
+    "Native/protocol success does not establish model explanation correctness.",
+    "Small-fixture payload reductions are not guaranteed for every report and do not establish lower task time or model usage.",
+    "Mac model calls remain unverified.",
+    "No hooks, analyzed SQL execution or background metrics collector."
+  ]
+}

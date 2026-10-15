@@ -49,7 +49,7 @@ Both MCP tools include numeric `timings` in the requested response. They are loc
 | `analysisMs` | Module discovery/report analysis for the requested tool. |
 | `presentationMs` | Constructing the compact projection, or selecting the full DTO. |
 
-These intervals exclude process/client startup, final response serialization, transport, model inference and most client work. They must not be presented as full task latency. A watcher can perform parsing outside these intervals; they are request intervals, not total process CPU accounting. Failed requests have no successful timing payload. Multiple processes each have their own cold state; saved/catalog and LSP unsaved snapshots remain independent.
+These intervals exclude process/client startup, final response serialization, transport, model inference and most client work. They must not be presented as full task latency. A watcher can perform parsing outside these intervals; they are request intervals, not total process CPU accounting. Aggregated intervals can overlap across concurrent requests, including queue waits; do not subtract their sum from whole-task time to estimate model time. Failed requests have no successful timing payload. Multiple processes each have their own cold state; saved/catalog and LSP unsaved snapshots remain independent.
 
 The SDK's installed 2.2.0 documentation confirms that type-only `WithTools<T>()` constructs a target per invocation. Version 0.10.0 registers one explicitly owned instance with `WithTools(instance)`, so discovery and analysis reuse the source state and watchers. The host disposes this instance at shutdown. A cold/warm protocol regression and saved-edit revision tests verify reuse and freshness together; there is no permanent analysis-result cache.
 

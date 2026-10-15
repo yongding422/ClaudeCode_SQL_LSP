@@ -1,0 +1,42 @@
+{
+  "pluginVersion": "0.10.0",
+  "packageSourceCommit": "99309cf9159345c315afa3bd6d393e9aacfcb256",
+  "packageDirtySource": false,
+  "platform": "Windows x64",
+  "cliVersion": "2.1.224",
+  "modelObserved": "deepseek-v4-pro",
+  "fixture": "Public samples/understanding-evaluation/modules.sql in fresh SQL-only workspace",
+  "normalPluginMcpAutoload": true,
+  "skillExplicitlyRequested": false,
+  "attempts": [
+    {
+      "exitCode": -1,
+      "timedOut": true,
+      "timeoutSeconds": 120,
+      "discoveryCalls": 1,
+      "analysisCalls": 1,
+      "successfulAnalysisResults": 1,
+      "skillCalls": 1,
+      "failedToolAttempts": 0,
+      "costUsd": null,
+      "outcome": null
+    }
+  ],
+  "verifiedToolFacts": [
+    "Automatic Skill selection, one discovery and one compact analysis request.",
+    "Exact OH predicate and Then/callee call context.",
+    "Resolved caller input/formal binding and callee WHERE variable identity.",
+    "Expanded callee module reference and one-based UPDATE citation modules.sql:12."
+  ],
+  "firstAttemptTimingsMs": {
+    "discoveryInitialization": 514.5064,
+    "warmAnalysis": 5.7316,
+    "compactPresentation": 36.0061
+  },
+  "retryStatus": "in progress with a 240-second deadline; first timeout retained",
+  "limits": [
+    "The 120-second attempt returned successful tool evidence but no final answer/usage; it is a timeout, not a completed successful explanation.",
+    "The separate paired run completed, using strict MCP isolation rather than normal autoload.",
+    "Mac model calls remain unverified; protocol/installation success does not guarantee model wording/citations."
+  ]
+}

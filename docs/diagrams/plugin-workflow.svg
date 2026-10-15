@@ -34,8 +34,8 @@
 
   <path d="M545 335 V370 H345 V409" class="edge"/>
   <path d="M755 335 V370 H955 V409" class="edge"/>
-  <text x="345" y="396" text-anchor="middle" class="small">Procedure understanding</text>
-  <text x="955" y="396" text-anchor="middle" class="small">Navigation when needed</text>
+  <text x="345" y="360" text-anchor="middle" class="small">Procedure understanding</text>
+  <text x="955" y="360" text-anchor="middle" class="small">Navigation when needed</text>
   <rect x="100" y="412" width="490" height="108" rx="12" fill="#e4f3ee" stroke="#8cbaab" class="box"/>
   <text x="345" y="445" text-anchor="middle" class="head">MCP server process</text>
   <text x="345" y="475" text-anchor="middle" class="body">find_procedures → analyze_procedure</text>
