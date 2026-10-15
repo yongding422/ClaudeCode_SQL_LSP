@@ -6,6 +6,7 @@ never inferred from tool counts or a model's assertion that its answer is correc
 import argparse
 import csv
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -46,6 +47,7 @@ def summarize(events):
 
     counts = dict.fromkeys(("lsp", "grep", "read", "glob", "skill", "mcp", "other"), 0)
     failures, missing = 0, 0
+    server_timings, report_bytes = [], []
     for call_id, name in calls.items():
         counts[category(name)] += 1
         result = results.get(call_id)
@@ -53,6 +55,31 @@ def summarize(events):
             missing += 1
         elif result.get("is_error") or "Error performing " in json.dumps(result.get("content", "")):
             failures += 1
+        elif name.startswith("mcp__") and name.endswith(("__find_procedures", "__analyze_procedure")):
+            content = result.get("content", "")
+            texts = [content] if isinstance(content, str) else [b.get("text", "") for b in content
+                    if isinstance(b, dict) and b.get("type") == "text"] if isinstance(content, list) else []
+            for text in texts:
+                try:
+                    payload = json.loads(text)
+                except (ValueError, TypeError):
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                timings = payload.get("timings")
+                if isinstance(timings, dict):
+                    server_timings.append(timings)
+                if name.endswith("__analyze_procedure") and isinstance(payload.get("report"), dict):
+                    # Canonical report bytes, not wire frame size or model token usage. No contents retained.
+                    report_bytes.append(len(json.dumps(payload["report"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+                break
+
+    def timing_sum(field):
+        values = [t[field] for t in server_timings if isinstance(t.get(field), (int, float)) and
+                  not isinstance(t[field], bool) and math.isfinite(t[field]) and t[field] >= 0]
+        return round(sum(values), 3) if values else None
+
+    cold = [t["coldStart"] for t in server_timings if isinstance(t.get("coldStart"), bool)]
     usage = final.get("usage", {}) or {}
     return {**{key + "_calls": value for key, value in counts.items()}, "tool_failures": failures,
             "missing_tool_results": missing, "malformed_events": malformed,
@@ -60,7 +87,12 @@ def summarize(events):
             "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
             "cache_read_tokens": usage.get("cache_read_input_tokens"),
             "cache_write_tokens": usage.get("cache_creation_input_tokens"),
-            "reported_cost_usd": final.get("total_cost_usd")}
+            "reported_cost_usd": final.get("total_cost_usd"), "server_timed_calls": len(server_timings),
+            "server_cold_start_calls": sum(cold) if cold else None,
+            **{"server_" + label + "_ms": timing_sum(field) for label, field in
+               (("queue", "queueMs"), ("initialization", "initializationMs"), ("navigation", "navigationMs"),
+                ("analysis", "analysisMs"), ("presentation", "presentationMs"))},
+            "analysis_reports": len(report_bytes), "analysis_report_utf8_bytes": sum(report_bytes) if report_bytes else None}
 
 
 def copy_sql(source, destination):

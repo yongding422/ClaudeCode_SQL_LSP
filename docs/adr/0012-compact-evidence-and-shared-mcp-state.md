@@ -1,0 +1,13 @@
+# ADR 0012: compact presentation and shared MCP state
+
+Date: 2026-10-15. Prior paired captures showed higher plugin latency/usage, and actual model answers still mis-cited source and overstated execution. Prioritize payload size, usable citations, visible unknowns, reuse and measurement before broader lineage. General IDE work remains deferred.
+
+Keep the Core analysis contract and conservative resolver unchanged. Add an optional MCP `detail="compact"` projection with shared evidence/notes, report-local module references and one-based UTF-16 citation text. Keep the original full view as the default. Optional bounded lexical focus selects connected value details without hiding calls, effects, controls, uncertainty or coverage. It is presentation, not new semantic binding, SQL evaluation or a narrower completeness claim.
+
+Use original locations for every evidence entry, exclusive end coordinates and exact identity/source/revision checks when sharing expanded targets. Preserve all bindings and their source closure. Unsupported/uncertain facts remain even if unrelated to the focus. Source and surrogate truncation bounds remain in Core; response notes preserve their limitations. Existing saved-revision checks apply to both views.
+
+A new cold/warm wire regression exposed that the existing `WithTools<ProcedureTools>()` registration created and disposed a fresh source state for every tool call despite the DI singleton registration. The pinned ModelContextProtocol 2.2.0 XML documentation explicitly documents this behavior and the target-instance overload. Register one explicitly owned `ProcedureTools` instance and dispose it after host shutdown. The existing gate serializes source/report access, and watcher/revision tests verify edits still invalidate saved snapshots. Do not add an unbounded report cache.
+
+Measure queue, initialization, navigation, analysis and presentation separately in tool responses. The external collector correlates successful calls and records numeric aggregates/report byte counts with no SQL or source paths. Request measurements exclude background watcher work, process/client startup, serialization/transport and model latency. There is no remote telemetry, hook, persisted collector or new dependency.
+
+Tests use actual MCP child processes to verify exact citations, Unicode/CRLF coordinates, target reuse, full-view compatibility, focus omission/source closure, unknowns, budgets, stale/ambiguous sources and smaller payloads on the six public cases. Payload bytes, model usage, latency and independently reviewed correctness remain distinct evidence.

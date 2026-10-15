@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.9.0",
-  "description": "T-SQL procedure understanding with bounded value tracing, verified EXEC arguments, reads/writes, control maps, coverage and an explanation skill",
+  "version": "0.10.0",
+  "description": "T-SQL procedure understanding with compact evidence reports, source citations, bounded value tracing, verified EXEC arguments and an explanation skill",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

@@ -8,4 +8,7 @@
     <Compile Include="../TestPaths.cs" Link="TestPaths.cs" />
     <ProjectReference Include="../../src/SqlLsp.Mcp/SqlLsp.Mcp.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../../samples/value-tracing-evaluation/modules.sql" Link="Fixtures/value-tracing.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

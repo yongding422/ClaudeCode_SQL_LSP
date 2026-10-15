@@ -75,6 +75,8 @@ Acceptance: parameter renaming across callees, default/named arguments, output p
 
 ## 5. Search and indexing performance
 
+Implemented in the 0.10.0 source: optional compact evidence/notes, one-based citations, bounded lexical value focus with omissions, module references for callee reuse, and one MCP source state per process instead of per invocation. Full reports and Core semantics remain compatible. Request measurements and payload-size fixtures are documented in [the compact contract](compact-reports.md). Pagination, large-workspace parallel indexing/reverse indexes and a revision-safe report cache remain separate work; this increment does not claim them complete.
+
 Associate literal/text hits with their containing module and semantic dependencies. Grep remains useful for business vocabulary; the analyzer supplies object identity and structural context. Add compact report sections and pagination to avoid repeatedly sending whole modules to Claude.
 
 Profile the current sequential initial scan before changing it. Introduce bounded parallel parsing and incremental reverse indexes where measurement justifies them, preserving atomic snapshot publication and overlay precedence. Cache analysis using source content/revision, dialect, resolution configuration and relevant catalog revisions, not filenames alone.

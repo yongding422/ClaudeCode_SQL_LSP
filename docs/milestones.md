@@ -1,5 +1,13 @@
 # Milestone evidence
 
+## 0.10.0 — compact presentation and shared MCP state (source verification)
+
+- Optional compact reports share exact evidence and explanations, provide one-based UTF-16 file:line citations, reference expanded modules and retain the full DTO by default. Optional bounded lexical value focus retains all calls/effects/controls, argument boundaries, uncertain facts, coverage and limitations with explicit omissions.
+- Corrected MCP SDK registration to reuse one owned source state per process. A new cold/warm regression caught the previous per-invocation construction; saved-edit revision tests pass with watchers retained. No permanent report cache or new dependency.
+- Local locked restore, zero-warning Release build, complete tests with owned disposable SQL Server: **269 passed** (144 Core, 60 LSP, 24 MCP, 41 provider/catalog), **one optional benchmark skipped**. Metrics collector: six passed, one Windows symlink skip. NuGet audit: no reported vulnerable packages in eight projects.
+- Six public cases retain all unfocused facts/coverage with compact payloads smaller than full reports. Bytes are a serialization measurement, not model tokens or independently reviewed answer accuracy.
+- Native release/client checks and publication evidence will be recorded after completion. [Contract](compact-reports.md), [decision](adr/0012-compact-evidence-and-shared-mcp-state.md), [workflow diagram](plugin-workflow.md).
+
 ## M0 — complete (2026-10-11)
 
 - Empty working directory bootstrapped as a Git repository; the full supplied plan preserved at the root.

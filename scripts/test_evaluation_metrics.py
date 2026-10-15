@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 import tempfile
@@ -53,6 +54,41 @@ class MetricsTests(unittest.TestCase):
             except OSError:
                 self.skipTest("Host does not allow creating symbolic links.")
             self.assertEqual(0, evaluation.copy_sql(Path(source), Path(target)))
+
+    def test_server_timings_are_correlated_deduplicated_and_separate_from_task_time(self):
+        def pair(identity, method, payload, blocks=False):
+            text = json.dumps(payload)
+            return [{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": identity, "name": "mcp__plugin_sql__" + method}]}},
+                    {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": identity,
+                       "content": [{"type": "text", "text": text}] if blocks else text}]}}]
+        events = pair("a", "find_procedures", {"timings": {"coldStart": True, "initializationMs": 12, "navigationMs": 8, "analysisMs": 2}})
+        events += pair("b", "analyze_procedure", {"timings": {"coldStart": False, "analysisMs": 3, "presentationMs": .25},
+                       "report": {"private": "SECRET 中文"}}, True)
+        metrics = evaluation.summarize(events + events)
+        self.assertEqual(2, metrics["server_timed_calls"])
+        self.assertEqual(1, metrics["server_cold_start_calls"])
+        self.assertEqual(12, metrics["server_initialization_ms"])
+        self.assertEqual(5, metrics["server_analysis_ms"])
+        self.assertEqual(.25, metrics["server_presentation_ms"])
+        self.assertIsNone(metrics["server_queue_ms"])
+        self.assertEqual(len('{"private":"SECRET 中文"}'.encode("utf-8")), metrics["analysis_report_utf8_bytes"])
+        self.assertNotIn("SECRET", str(metrics))
+
+    def test_missing_old_invalid_failed_and_non_mcp_timings_stay_unknown(self):
+        events = []
+        for identity, name, content, error in [
+                ("old", "mcp__sql__analyze_procedure", '{"report":{}}', False),
+                ("read", "Read", '{"timings":{"analysisMs":999}}', False),
+                ("failed", "mcp__sql__find_procedures", '{"timings":{"analysisMs":999}}', True),
+                ("invalid", "mcp__sql__find_procedures", '{"timings":{"analysisMs":-1,"queueMs":true,"navigationMs":"private","initializationMs":NaN}}', False)]:
+            events += [{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": identity, "name": name}]}},
+                       {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": identity, "content": content, "is_error": error}]}}]
+        metrics = evaluation.summarize(events)
+        self.assertIsNone(metrics["server_analysis_ms"])
+        self.assertIsNone(metrics["server_initialization_ms"])
+        self.assertIsNone(metrics["server_cold_start_calls"])
+        self.assertEqual(1, metrics["analysis_reports"])
+        self.assertIsNone(evaluation.summarize([])["analysis_report_utf8_bytes"])
 
 
 if __name__ == "__main__":
