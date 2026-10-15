@@ -63,3 +63,5 @@ Reports contain SQL-derived names, bounded snippets, source locations and metada
 `cacheValidationMs`, `cacheReadMs` and `cacheWriteMs` join existing timings. A hit's `analysisMs=0` means Core report computation was skipped; parsing, validation, deserialization, projection and transport remain. Small reports can be faster to recompute. Sending the same report again does not automatically save model tokens.
 
 [Local restart evidence](evidence/persistent-cache-windows.json) records eight stored reports then eight hits in a new process. [The study design](evaluation/sql-tool-comparison.md) separates backend work, usage and correctness.
+
+[Release 0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) is public. [Final native and marketplace evidence](evidence/persistent-cache-ci.json) verifies clean package source, four-platform actual installs, checksums and executable modes. These checks do not measure model answer quality or token savings.

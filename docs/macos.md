@@ -1,5 +1,7 @@
 # macOS and Claude Code
 
+[Actual 0.11.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38682159117) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 30 MCP tests on Windows (one Unix-link skip) or 31 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/persistent-cache-ci.json) records source, checksums, native/installation jobs and the corrected initial Linux failure.
+
 Release [0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) adds [optional persistent JSON reports](persistent-analysis-cache.md) for saved-folder/catalog analysis. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38681510692) passed all nine jobs. Both Mac architectures passed 60 LSP and 31 MCP tests after native unzip, plus 29 deterministic provider tests in package checks. No chmod repair was applied in native-unzip checks. Mac model calls remain unverified.
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.

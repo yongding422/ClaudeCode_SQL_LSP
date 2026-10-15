@@ -1,5 +1,7 @@
 # Explain a stored procedure with the plugin
 
+[Actual 0.11.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38682159117) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 30 MCP tests on Windows (one Unix-link skip) or 31 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/persistent-cache-ci.json) records source, checksums, native/installation jobs and the corrected initial Linux failure.
+
 Version 0.11.0 adds [opt-in persistent JSON reports and bulk prebuilding](persistent-analysis-cache.md). The 0.10.0 features remain: [compact reports and direct source citations](compact-reports.md), optional value focus, reuse of expanded callees and per-request initialization/analysis timings. The skill requests compact reports; the original full DTO remains the compatible default. [The workflow diagram](plugin-workflow.md) shows how Claude, MCP, LSP and ScriptDOM work together.
 
 The report includes [bounded parameter/value dependencies](value-tracing.md), verified EXEC bindings, [structural control contexts](control-flow.md), table footprints, coverage issues and bounded callee expansion. Existing LSP navigation and static call hierarchy remain available.

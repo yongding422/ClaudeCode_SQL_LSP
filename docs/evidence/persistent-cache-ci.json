@@ -1,0 +1,193 @@
+{
+  "pluginVersion": "0.11.0",
+  "packageSourceCommit": "24ccd90e6b98220e14260f575da910163dd4f461",
+  "packageDirtySource": false,
+  "nativeCi": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38681510692",
+    "headSha": "24ccd90e6b98220e14260f575da910163dd4f461",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "sqlserver",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "catalog",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "marketplaceInstall": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38682159117",
+    "headSha": "3de6b094b047253c6948ac59c7047484916aef6e",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "localFullSuite": {
+    "passed": 280,
+    "skipped": 2,
+    "core": 147,
+    "lsp": 60,
+    "mcp": 30,
+    "providerCatalog": 43,
+    "ownedLiveSqlServerCases": 14,
+    "externalSqlServerUsed": false
+  },
+  "defaultNativeSuite": {
+    "windowsPassed": 266,
+    "windowsSkipped": 16,
+    "unixPassed": 267,
+    "unixSkipped": 15,
+    "skipReasons": [
+      "14 opt-in SQL Server cases",
+      "1 optional performance case",
+      "Windows only: Unix link case"
+    ]
+  },
+  "nativePackageChecks": {
+    "lspPassed": 60,
+    "windowsMcpPassed": 30,
+    "windowsMcpSkipped": 1,
+    "unixMcpPassed": 31,
+    "deterministicProviderPassed": 29,
+    "liveProviderSkipped": 14,
+    "performanceSkipped": 1
+  },
+  "bothMacNativeUnzipChecks": {
+    "lspPassed": 60,
+    "mcpPassed": 31,
+    "executableModeRepairApplied": false
+  },
+  "actualMarketplaceChecks": {
+    "strictValidation": true,
+    "lspPassedPerPlatform": 60,
+    "windowsMcpPassed": 30,
+    "windowsMcpSkipped": 1,
+    "unixMcpPassed": 31,
+    "performanceSkipped": 1,
+    "macExecutableModeRepairApplied": false,
+    "cliVersion": "2.1.224",
+    "modelCallsMade": false
+  },
+  "dependencies": {
+    "newDependencies": false,
+    "lockedRestore": "passed",
+    "audit": "No vulnerable packages reported in eight projects",
+    "runtime": "10.0.13",
+    "mcpSdk": "2.2.0"
+  },
+  "metricsCollector": {
+    "windowsPassed": 7,
+    "windowsSkipped": 1,
+    "unixPassed": 8
+  },
+  "release": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0",
+    "public": true,
+    "assetsMatchCiAndCatalog": true,
+    "assets": [
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-linux-x64.zip",
+        "sha256": "cf7d86d66baa097db2d1ee9566d885d4d3b9c9981b3c980ad0c0c4eeda16df37",
+        "bytes": 90595437
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-linux-x64.zip.sha256",
+        "sha256": "ebe9b7a57bfec8cac5e53f59dfee13b9e30f669ae7ae42c97232c19e59990d4a",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-osx-arm64.zip",
+        "sha256": "80eea541e20018348712766e7c5814abd0a7cfe07677a6e13aaffa98296a9e55",
+        "bytes": 83774103
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-osx-arm64.zip.sha256",
+        "sha256": "5f433222b0a5403fbdd0012aa9f0f4abe5e37ccc0431ef889f4de3a45605f355",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-osx-x64.zip",
+        "sha256": "11c7c811a3578d4c9f65e05f797f48c4fc84e4e5afae89074043920272e16753",
+        "bytes": 88491476
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-osx-x64.zip.sha256",
+        "sha256": "810c356dad553e9d46e13f4ba76aabb81b3ad1dd674e0370e700912527639dc9",
+        "bytes": 102
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-win-x64.zip",
+        "sha256": "baa0fa3cfc7ad36e98576835d49a0a441878a357d64cf37e3abfdc8d35970626",
+        "bytes": 91157387
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.11.0-win-x64.zip.sha256",
+        "sha256": "d5e09a628ad9f9cb2bcd885232669a59687942bb9f36e03e4461270cb4a1b0fa",
+        "bytes": 103
+      }
+    ]
+  },
+  "initialCandidateFailure": {
+    "runId": 38680607489,
+    "commit": "138e848e1a6b076fc713d4d7689d8db8502d1228",
+    "cause": "Unix OriginalString paths decoded as relative URIs; compact cached presentation failed",
+    "resolution": "Absolute URI converter plus native-path assertions; Linux reproduction and 178 Core/MCP tests passed locally; final native CI all green"
+  },
+  "cancelledDuplicateTagBuild": {
+    "runId": 38682112819,
+    "sourceCommit": "24ccd90e6b98220e14260f575da910163dd4f461",
+    "reason": "Identical released source already passed all nine native jobs; cancelled redundant rebuild to free marketplace-install runners"
+  },
+  "limits": [
+    "Report cache does not restore ScriptDOM ASTs/navigation index or eliminate source acquisition/parsing",
+    "No model-token or task-latency improvement established",
+    "No codebase-memory runtime comparison or independent answer grading performed",
+    "No hooks or remote telemetry; analyzed SQL never executed"
+  ]
+}

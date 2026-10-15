@@ -1,7 +1,7 @@
 {
   "pluginVersion": "0.11.0",
   "platform": "Windows x64",
-  "sourceState": "Uncommitted candidate; native/release verification recorded separately",
+  "sourceState": "Initial candidate timing capture, before Unix URI correction; final native/release evidence is separate",
   "fixture": "Public value-tracing fixture; same absolute workspace and executable; two fresh prebuild CLI processes",
   "runs": [
     {
@@ -58,5 +58,6 @@
     "No model calls/tokens, blind scoring or codebase-memory runtime comparison measured",
     "Zero Core analysis time does not mean zero validation/deserialization/startup cost"
   ],
-  "measurementSourceCommit": "138e848e1a6b076fc713d4d7689d8db8502d1228"
+  "measurementSourceCommit": "138e848e1a6b076fc713d4d7689d8db8502d1228",
+  "finalNativeEvidence": "persistent-cache-ci.json"
 }
