@@ -25,6 +25,7 @@ $start.RedirectStandardError = $true
 $start.Environment['CLAUDE_CONFIG_DIR'] = Join-Path $evidence 'isolated-config'
 $start.Environment['ENABLE_LSP_TOOL'] = '1'
 $start.Environment.Remove('SQLLSP_MCP_CONFIG') | Out-Null
+$start.Environment.Remove('SQLLSP_ANALYSIS_CACHE_DIR') | Out-Null
 $prompt = 'Explain dbo.ProcessPayroll and how Ohio is handled. Identify direct and possible transitive table reads/writes and called procedures. Explain the Ohio guard, cite source lines, and report dependencies that cannot be verified. Do not execute SQL or run shell commands. Report tool failures honestly.'
 if ($InvokeSkill) { $prompt = "Use the $($name):explain-procedure skill for this task. " + $prompt }
 $tools = 'Read,Grep,Glob,LSP,Skill,ToolSearch'

@@ -1,0 +1,24 @@
+{
+  "pluginVersion": "0.11.0",
+  "platform": "Windows x64",
+  "sourceState": "Uncommitted candidate; native/release verification recorded separately",
+  "fixture": "Public value-tracing fixture; same absolute workspace and executable; two fresh prebuild CLI processes",
+  "runs": [
+    { "attempt": 1, "exitCode": 0, "totalModules": 8, "stored": 8, "hits": 0, "elapsedMs": 922.78, "initializationMs": 357.4171, "navigationMs": 10.1912, "analysisMs": 64.858, "cacheValidationMs": 100.8424, "cacheReadMs": 13.8017, "cacheWriteMs": 122.3629 },
+    { "attempt": 2, "exitCode": 0, "totalModules": 8, "stored": 0, "hits": 8, "elapsedMs": 841.5155, "initializationMs": 387.4134, "navigationMs": 10.6813, "analysisMs": 0, "cacheValidationMs": 127.6125, "cacheReadMs": 158.2341, "cacheWriteMs": 0 }
+  ],
+  "verification": {
+    "corePassed": 147, "lspPassed": 60, "mcpPassed": 30, "providerPassed": 43, "totalPassed": 280,
+    "skipped": ["Optional performance benchmark", "Unix symlink case on Windows"],
+    "liveDatabase": "Owned disposable SQL Server; 14 live cases including MCP restart reuse; removed after tests",
+    "lockedRestore": "passed", "build": "passed; zero warnings/errors", "format": "passed",
+    "dependencyAudit": "No vulnerable packages reported in eight projects",
+    "metricsCollector": "7 passed; Unix link case skipped on Windows"
+  },
+  "limitations": [
+    "One ordered pair; OS cache uncontrolled; no cache-disabled baseline or latency distribution",
+    "Source acquisition/parsing still occurred in both processes",
+    "No model calls/tokens, blind scoring or codebase-memory runtime comparison measured",
+    "Zero Core analysis time does not mean zero validation/deserialization/startup cost"
+  ]
+}

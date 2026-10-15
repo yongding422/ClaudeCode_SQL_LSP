@@ -179,8 +179,9 @@ public sealed class SqlServerCatalogReader(Func<string, string?>? secrets = null
 }
 
 // SqlString honors SQL LCID, case/accent/kana/width and binary flags without culture-global state.
-public sealed class CatalogIdentifierComparer(int lcid, int style, string collation) : StringComparer
+public sealed class CatalogIdentifierComparer(int lcid, int style, string collation) : StringComparer, ISqlComparerIdentity
 {
+    public string ComparisonIdentity => $"SqlString:{lcid}:{style}:{collation}:{System.Globalization.CultureInfo.GetCultureInfo(lcid).CompareInfo.Version.FullVersion}:{System.Globalization.CultureInfo.GetCultureInfo(lcid).CompareInfo.Version.SortId}";
     private readonly SqlCompareOptions options = collation.Contains("_BIN2", StringComparison.OrdinalIgnoreCase)
         ? SqlCompareOptions.BinarySort2 : collation.Contains("_BIN", StringComparison.OrdinalIgnoreCase)
         ? SqlCompareOptions.BinarySort :

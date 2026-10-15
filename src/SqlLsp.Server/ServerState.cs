@@ -29,6 +29,35 @@ public sealed class ServerState : IAsyncDisposable
     private readonly CancellationTokenSource lifetime = new();
     public bool IsReadOnlySnapshot(Uri uri) => databases.Values.Any(d => d.Files?.Owns(uri) == true);
 
+    // Called only for explicitly enabled report persistence, after NavigationAsync validates current sources.
+    // No connection string values; include permissions/coverage and comparison metadata, omit capture time.
+    public string AnalysisCacheCatalogStamp() => System.Text.Json.JsonSerializer.Serialize(databases.OrderBy(p => p.Key, StringComparer.Ordinal).Select(pair => new
+    {
+        pair.Key,
+        catalog = pair.Value.Current == null ? null : new
+        {
+            pair.Value.Current.Catalog.Database,
+            pair.Value.Current.Catalog.Collation,
+            pair.Value.Current.Catalog.ServerVersion,
+            pair.Value.Current.Catalog.DefaultSchema,
+            pair.Value.Current.Catalog.Status,
+            pair.Value.Current.Catalog.Coverage,
+            objects = pair.Value.Current.Catalog.Objects.OrderBy(o => o.ObjectId).Select(o => new
+            {
+                o.ObjectId,
+                o.Schema,
+                o.Name,
+                o.Kind,
+                o.DefinitionTruncated,
+                o.QuotedIdentifier,
+                o.Columns,
+                o.Parameters,
+                o.Dependencies,
+                bodyAvailable = o.Definition != null
+            })
+        }
+    }));
+
     public void FailInitialization()
     {
         ConfigurationError = "Workspace initialization failed; details suppressed. Restart with an accessible workspace.";

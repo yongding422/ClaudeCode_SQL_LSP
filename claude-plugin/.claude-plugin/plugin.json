@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.10.0",
-  "description": "T-SQL procedure understanding with compact evidence reports, source citations, bounded value tracing, verified EXEC arguments and an explanation skill",
+  "version": "0.11.0",
+  "description": "T-SQL procedure understanding with reusable on-disk reports, compact evidence, source citations, bounded value tracing and verified EXEC arguments",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }

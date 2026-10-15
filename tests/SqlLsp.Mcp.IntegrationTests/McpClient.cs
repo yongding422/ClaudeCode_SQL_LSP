@@ -12,11 +12,12 @@ internal sealed class McpClient : IAsyncDisposable
     private readonly Task reader;
     private readonly Task<string> stderr;
     private int id;
+    private readonly bool preserveWorkspace;
     public string Root { get; } = Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
     public string SourceFile => Path.Combine(Root, "modules.sql");
-    private McpClient(Process process, string root)
+    private McpClient(Process process, string root, bool preserveWorkspace)
     {
-        this.process = process; Root = root;
+        this.process = process; Root = root; this.preserveWorkspace = preserveWorkspace;
         stderr = process.StandardError.ReadToEndAsync();
         reader = Task.Run(async () =>
         {
@@ -32,11 +33,35 @@ internal sealed class McpClient : IAsyncDisposable
             catch (Exception error) { messages.Writer.TryComplete(error); }
         });
     }
-    public static async Task<McpClient> Start(string sql, string? configuration = null)
+    public static async Task<McpClient> Start(string sql, string? configuration = null, string? cacheDirectory = null,
+        string? rootDirectory = null, bool preserveWorkspace = false)
     {
-        var root = Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
+        var root = rootDirectory ?? Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         await File.WriteAllTextAsync(Path.Combine(root, "modules.sql"), sql);
+        var info = Command(root);
+        info.ArgumentList.Add("--stdio");
+        if (cacheDirectory != null) { info.ArgumentList.Add("--cache-directory"); info.ArgumentList.Add(cacheDirectory); }
+        if (configuration != null)
+        {
+            var config = Path.Combine(root, "config.json");
+            await File.WriteAllTextAsync(config, configuration);
+            info.ArgumentList.Add("--config"); info.ArgumentList.Add(config);
+        }
+        var process = Process.Start(info)!;
+        var client = new McpClient(process, root, preserveWorkspace);
+        try
+        {
+            var response = await client.Call("initialize", new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "independent-wire-tests", version = "1" } });
+            Assert.True(response.GetProperty("result").GetProperty("capabilities").TryGetProperty("tools", out _));
+            await client.Notify("notifications/initialized", new { });
+            return client;
+        }
+        catch { await client.DisposeAsync(); throw; }
+    }
+
+    internal static ProcessStartInfo Command(string root)
+    {
         var exe = Environment.GetEnvironmentVariable("SQLLSP_TEST_MCP_EXE");
         var info = new ProcessStartInfo(exe ?? "dotnet")
         {
@@ -55,24 +80,9 @@ internal sealed class McpClient : IAsyncDisposable
             var configurationName = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
             info.ArgumentList.Add(Path.Combine(repo!.FullName, "src", "SqlLsp.Mcp", "bin", configurationName, "net10.0", "sqlscriptdom-mcp.dll"));
         }
-        info.ArgumentList.Add("--stdio");
-        if (configuration != null)
-        {
-            var config = Path.Combine(root, "config.json");
-            await File.WriteAllTextAsync(config, configuration);
-            info.ArgumentList.Add("--config"); info.ArgumentList.Add(config);
-        }
         info.Environment.Remove("SQLLSP_MCP_CONFIG");
-        var process = Process.Start(info)!;
-        var client = new McpClient(process, root);
-        try
-        {
-            var response = await client.Call("initialize", new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "independent-wire-tests", version = "1" } });
-            Assert.True(response.GetProperty("result").GetProperty("capabilities").TryGetProperty("tools", out _));
-            await client.Notify("notifications/initialized", new { });
-            return client;
-        }
-        catch { await client.DisposeAsync(); throw; }
+        info.Environment.Remove("SQLLSP_ANALYSIS_CACHE_DIR");
+        return info;
     }
     public Task<JsonElement> Tool(string name, object arguments) => Call("tools/call", new { name, arguments });
     public async Task<JsonElement> Call(string method, object parameters)
@@ -97,7 +107,7 @@ internal sealed class McpClient : IAsyncDisposable
         Assert.False(result.TryGetProperty("isError", out var error) && error.GetBoolean(), result.ToString());
         var content = result.GetProperty("content")[0].GetProperty("text").GetString();
         using var document = JsonDocument.Parse(content!);
-        Assert.Equal(document.RootElement.ToString(), result.GetProperty("structuredContent").ToString());
+        Assert.True(JsonElement.DeepEquals(document.RootElement, result.GetProperty("structuredContent")), "Structured and text JSON must have equal values, allowing equivalent Unicode/date escaping.");
         return document.RootElement.Clone();
     }
     public async ValueTask DisposeAsync()
@@ -111,6 +121,6 @@ internal sealed class McpClient : IAsyncDisposable
         Assert.DoesNotContain("PRIVATE_SQL_CANARY", error);
         Assert.Equal(0, process.ExitCode);
         process.Dispose();
-        Directory.Delete(Root, true);
+        if (!preserveWorkspace) Directory.Delete(Root, true);
     }
 }

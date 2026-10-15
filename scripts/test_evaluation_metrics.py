@@ -90,6 +90,20 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(1, metrics["analysis_reports"])
         self.assertIsNone(evaluation.summarize([])["analysis_report_utf8_bytes"])
 
+    def test_analysis_cache_counters_and_io_intervals_do_not_retain_cache_paths(self):
+        payload = {"report": {}, "cache": {"enabled": True, "status": "Hit", "file": "/private/SECRET/report.json"},
+                   "timings": {"analysisMs": 0, "cacheValidationMs": 12, "cacheReadMs": 3, "cacheWriteMs": 0}}
+        events = [{"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__sql__analyze_procedure"}]}},
+                  {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": json.dumps(payload)}]}}]
+        metrics = evaluation.summarize(events)
+        self.assertEqual(1, metrics["analysis_cache_hits"])
+        self.assertEqual(1, metrics["analysis_cache_enabled_calls"])
+        self.assertEqual(0, metrics["server_analysis_ms"])
+        self.assertEqual(12, metrics["server_cache_validation_ms"])
+        self.assertEqual(3, metrics["server_cache_read_ms"])
+        self.assertNotIn("SECRET", str(metrics))
+        self.assertIsNone(evaluation.summarize([])["analysis_cache_hits"])
+
 
 if __name__ == "__main__":
     unittest.main()

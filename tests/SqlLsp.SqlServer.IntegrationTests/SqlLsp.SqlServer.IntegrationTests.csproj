@@ -10,5 +10,7 @@
     <ProjectReference Include="../../src/SqlLsp.Providers.SqlServer/SqlLsp.Providers.SqlServer.csproj" />
     <ProjectReference Include="../../src/SqlLsp.Server/SqlLsp.Server.csproj" ReferenceOutputAssembly="false" />
     <Compile Include="../SqlLsp.Server.IntegrationTests/LspClient.cs" Link="LspClient.cs" />
+    <Compile Include="../SqlLsp.Mcp.IntegrationTests/McpClient.cs" Link="McpClient.cs" />
+    <ProjectReference Include="../../src/SqlLsp.Mcp/SqlLsp.Mcp.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

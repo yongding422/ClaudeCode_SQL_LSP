@@ -47,7 +47,7 @@ def summarize(events):
 
     counts = dict.fromkeys(("lsp", "grep", "read", "glob", "skill", "mcp", "other"), 0)
     failures, missing = 0, 0
-    server_timings, report_bytes = [], []
+    server_timings, report_bytes, analysis_caches = [], [], []
     for call_id, name in calls.items():
         counts[category(name)] += 1
         result = results.get(call_id)
@@ -72,6 +72,9 @@ def summarize(events):
                 if name.endswith("__analyze_procedure") and isinstance(payload.get("report"), dict):
                     # Canonical report bytes, not wire frame size or model token usage. No contents retained.
                     report_bytes.append(len(json.dumps(payload["report"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+                    cache = payload.get("cache")
+                    if isinstance(cache, dict) and isinstance(cache.get("enabled"), bool):
+                        analysis_caches.append((cache["enabled"], cache.get("status")))
                 break
 
     def timing_sum(field):
@@ -91,7 +94,10 @@ def summarize(events):
             "server_cold_start_calls": sum(cold) if cold else None,
             **{"server_" + label + "_ms": timing_sum(field) for label, field in
                (("queue", "queueMs"), ("initialization", "initializationMs"), ("navigation", "navigationMs"),
-                ("analysis", "analysisMs"), ("presentation", "presentationMs"))},
+                ("analysis", "analysisMs"), ("presentation", "presentationMs"),
+                ("cache_validation", "cacheValidationMs"), ("cache_read", "cacheReadMs"), ("cache_write", "cacheWriteMs"))},
+            "analysis_cache_enabled_calls": sum(enabled for enabled, _ in analysis_caches) if analysis_caches else None,
+            "analysis_cache_hits": sum(status == "Hit" for _, status in analysis_caches) if analysis_caches else None,
             "analysis_reports": len(report_bytes), "analysis_report_utf8_bytes": sum(report_bytes) if report_bytes else None}
 
 
@@ -149,6 +155,7 @@ def run_one(args, task, arm, repeat, index):
         env = os.environ.copy()
         env["CLAUDE_CONFIG_DIR"] = str(destination / "isolated-config")
         env.pop("SQLLSP_MCP_CONFIG", None)  # Frozen offline experiment; no accidental online profile.
+        env.pop("SQLLSP_ANALYSIS_CACHE_DIR", None)  # A normal cold experiment must not inherit a local report cache.
         env["ENABLE_LSP_TOOL"] = "1"
         start = time.perf_counter()
         raw, stderr, timed_out = "", "", False

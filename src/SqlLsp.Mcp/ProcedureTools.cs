@@ -11,22 +11,29 @@ using SqlLsp.Server;
 
 namespace SqlLsp.Mcp;
 
-public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFile)
+public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFile, string? CacheDirectory = null, bool BuildCache = false)
 {
     public static McpLaunchOptions Parse(string[] args)
     {
         var workspace = Directory.GetCurrentDirectory();
         var config = Environment.GetEnvironmentVariable("SQLLSP_MCP_CONFIG");
+        var cache = Environment.GetEnvironmentVariable("SQLLSP_ANALYSIS_CACHE_DIR");
+        var build = false;
         for (var i = 0; i < args.Length; i++)
         {
             if (args[i] == "--stdio") continue;
+            if (args[i] == "--build-cache") { build = true; continue; }
             if (args[i] == "--workspace" && i + 1 < args.Length) workspace = args[++i];
             else if (args[i] == "--config" && i + 1 < args.Length) config = args[++i];
+            else if (args[i] == "--cache-directory" && i + 1 < args.Length) cache = args[++i];
             else throw new ArgumentException("Unknown/missing argument.");
         }
         workspace = Path.GetFullPath(workspace);
         if (!Directory.Exists(workspace)) throw new ArgumentException("Workspace must exist.");
-        return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config));
+        cache = string.IsNullOrWhiteSpace(cache) ? null : cache;
+        if (cache != null && !Path.IsPathFullyQualified(cache)) throw new ArgumentException("Cache directory must be absolute.");
+        if (build && (cache == null || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Build-cache requires a cache directory and cannot use stdio mode.");
+        return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build);
     }
 }
 
@@ -35,6 +42,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
 {
     private readonly SemaphoreSlim gate = new(1);
     private ServerState? state;
+    private string configurationStamp = "{}";
+    private readonly PersistentAnalysisCache? cache = launch.CacheDirectory == null ? null : new(launch.CacheDirectory);
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -65,7 +74,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 };
             }).ToArray();
             timings.AnalysisMs = timer.Elapsed.TotalMilliseconds;
-            return Result(new
+            return Task.FromResult(Result(new
             {
                 source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
                 indexedDocuments = index.DocumentCount,
@@ -75,7 +84,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 modules,
                 totalMatches = symbols.Length,
                 truncated = symbols.Length > maxResults
-            });
+            }));
         }, cancellationToken);
     }
 
@@ -94,12 +103,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             detail is not ("full" or "compact") || focus is { Length: > 8 } ||
             focus?.Any(f => string.IsNullOrWhiteSpace(f) || f.Length > 64) == true || (detail == "full" && focus is { Length: > 0 }))
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
-        return await WithIndex((index, timings) =>
+        return await WithIndex(async (index, timings) =>
         {
+            var context = CacheContext(index, timings, cancellationToken);
+            var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
+            var report = analyzed.Report;
             var timer = Stopwatch.StartNew();
-            var report = index.AnalyzeProcedure(uri, new(line, character), cancellationToken, maxDepth, maxModules, expectedRevision);
-            timings.AnalysisMs = timer.Elapsed.TotalMilliseconds;
-            timer.Restart();
             var presented = detail == "compact" ? new CompactProcedureReport(report, launch.Workspace, focus ?? [], cancellationToken).Create() : (object)report;
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
             return Result(new
@@ -108,10 +117,82 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 indexedDocuments = index.DocumentCount,
                 sourceStatuses = state!.SourceStatuses,
                 timings,
+                cache = analyzed.Use,
                 report = presented,
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).ToArray()
             });
         }, cancellationToken);
+    }
+
+    // Explicit CLI prewarm only; not a third MCP tool. One validated source snapshot, at most 256 modules.
+    public Task<CallToolResult> BuildCache(CancellationToken token) => WithIndex(async (index, timings) =>
+    {
+        var context = CacheContext(index, timings, token);
+        var symbols = index.Symbols.Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
+            .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
+        var entries = new List<(SqlObjectIdentity Identity, ResolutionStatus Status, AnalysisCacheUse Cache)>();
+        foreach (var symbol in symbols.Take(256))
+        {
+            token.ThrowIfCancellationRequested();
+            var result = await AnalyzeCached(index, context, symbol.Target.Uri, symbol.Target.Range.Start, 2, 20, null, timings, token);
+            entries.Add((symbol.Identity, result.Report.Status, result.Use));
+        }
+        return Result(new
+        {
+            source = "Saved workspace/catalog snapshots; no analyzed SQL executed.",
+            indexedDocuments = index.DocumentCount,
+            sourceStatuses = state!.SourceStatuses,
+            sourceIssues = index.SourceParseIssues(token),
+            timings,
+            sourcesAvailable = !state.SourceStatuses.Any(s => s.Contains(": Unavailable", StringComparison.Ordinal)),
+            entries = entries.Select(e => new
+            {
+                e.Identity,
+                e.Status,
+                cache = e.Cache,
+                retained = e.Cache.Status is "Stored" or "Hit" && e.Cache.File != null && File.Exists(e.Cache.File)
+            }).ToArray(),
+            totalModules = symbols.Length,
+            truncated = symbols.Length > 256,
+            retention = "At most 256 reports / 128 MiB, 8 MiB per report. Older reports may be evicted; retained is checked at summary creation."
+        });
+    }, token);
+
+    private SqlAnalysisCacheContext? CacheContext(SqlNavigationIndex index, RequestTimings timings, CancellationToken token)
+    {
+        if (cache == null) return null;
+        var timer = Stopwatch.StartNew();
+        try
+        {
+            return index.CreateAnalysisCacheContext(configurationStamp + state!.AnalysisCacheCatalogStamp() +
+                typeof(ProcedureTools).Module.ModuleVersionId + typeof(ServerState).Module.ModuleVersionId, token);
+        }
+        catch (InvalidOperationException) { return null; }
+        finally { timings.CacheValidationMs = timer.Elapsed.TotalMilliseconds; }
+    }
+
+    private async Task<(SqlProcedureReport Report, AnalysisCacheUse Use)> AnalyzeCached(SqlNavigationIndex index, SqlAnalysisCacheContext? context,
+        Uri uri, TextPosition position, int depth, int modules, string? expectedRevision, RequestTimings timings, CancellationToken token)
+    {
+        SqlProcedureReport Fresh()
+        {
+            var timer = Stopwatch.StartNew();
+            var result = index.AnalyzeProcedure(uri, position, token, depth, modules, expectedRevision);
+            timings.AnalysisMs += timer.Elapsed.TotalMilliseconds;
+            return result;
+        }
+        if (cache == null || context == null) return (Fresh(), new(cache != null, cache == null ? "Disabled" : "UnsupportedSourceContext"));
+        var key = context.RequestKey(uri, position, depth, modules);
+        var timer = Stopwatch.StartNew();
+        var cached = await cache.ReadAsync(context, key, token);
+        timings.CacheReadMs += timer.Elapsed.TotalMilliseconds;
+        if (cached.Report != null && (expectedRevision == null || cached.Report.Modules[0].Revision == expectedRevision)) return (cached.Report, cached.Use);
+        var report = Fresh();
+        if (report.Status != ResolutionStatus.Resolved) return (report, new(true, "NotStored", cached.Use.File));
+        timer.Restart();
+        var use = await cache.WriteAsync(context, key, report, token);
+        timings.CacheWriteMs += timer.Elapsed.TotalMilliseconds;
+        return (report, use);
     }
 
     private sealed class RequestTimings
@@ -122,9 +203,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         public double NavigationMs { get; set; }
         public double AnalysisMs { get; set; }
         public double PresentationMs { get; set; }
+        public double CacheValidationMs { get; set; }
+        public double CacheReadMs { get; set; }
+        public double CacheWriteMs { get; set; }
     }
 
-    private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, CallToolResult> action, CancellationToken token)
+    private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token)
     {
         var timer = Stopwatch.StartNew();
         await gate.WaitAsync(token);
@@ -144,6 +228,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                         options = JObject.Parse(await File.ReadAllTextAsync(launch.ConfigurationFile, token));
                     }
                     var config = ServerConfiguration.Parse(options);
+                    configurationStamp = options?.ToString(Newtonsoft.Json.Formatting.None) ?? "{}";
                     var rootPath = launch.Workspace.EndsWith(Path.DirectorySeparatorChar) ? launch.Workspace : launch.Workspace + Path.DirectorySeparatorChar;
                     await candidate.InitializeSourcesAsync(config, [new Uri(rootPath)], token);
                     if ((config.Mode != "online" || config.ScanInOnline) && candidate.Files?.Roots.Count != 1)
@@ -156,7 +241,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             timer.Restart();
             var index = await state.NavigationAsync(token);
             timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
-            return action(index, timings);
+            return await action(index, timings);
         }
         catch (OperationCanceledException) { throw; }
         catch (McpException) { throw; }

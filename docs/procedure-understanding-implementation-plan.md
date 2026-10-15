@@ -96,3 +96,7 @@ Acceptance: capture tests include startup failure/retry, timeout, missing usage 
 ## First deliverable
 
 Ship increments 1 and 2 as the smallest useful procedure-understanding release: verified read/write footprints, visible unknowns, a structured read-only report and a bundled explanation workflow. Establish the benchmark baseline during that work. Add flow and value tracing in subsequent independently tested increments. Run relevant core/protocol/provider tests and native packaging checks before each release; use deterministic providers and owned disposable SQL Server fixtures while no approved external test server is available.
+
+## 0.11.0 follow-up
+
+[Persistent reports](persistent-analysis-cache.md) now implement bounded opt-in JSON reuse after full source validation, not AST/navigation-index restoration. Bulk prebuild and cache intervals are tested. [The comparison study](evaluation/sql-tool-comparison.md) defines four arms to separate SQL analysis from LSP and verifies codebase-memory's parser/graph design. Competitor execution, reviewed representative tasks, blind grading and the larger paired study remain outstanding.
