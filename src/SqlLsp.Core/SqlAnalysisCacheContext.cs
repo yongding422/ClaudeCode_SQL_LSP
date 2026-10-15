@@ -19,8 +19,17 @@ public sealed class SqlAnalysisCacheContext(string fingerprint, ImmutableArray<S
     public ImmutableArray<SqlAnalysisCacheSource> Sources { get; } = sources;
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
-        Converters = { new JsonStringEnumConverter() }
+        Converters = { new JsonStringEnumConverter(), new AbsoluteSourceUriConverter() }
     };
+
+    // Uri's default JSON converter treats Unix OriginalString paths as relative.
+    // Source anchors are absolute even when their original spelling is /folder/file.sql.
+    private sealed class AbsoluteSourceUriConverter : JsonConverter<Uri>
+    {
+        public override Uri Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            new(reader.GetString() ?? throw new JsonException("Missing source URI."), UriKind.Absolute);
+        public override void Write(Utf8JsonWriter writer, Uri value, JsonSerializerOptions options) => writer.WriteStringValue(value.OriginalString);
+    }
 
     public string RequestKey(Uri uri, TextPosition position, int maxDepth, int maxModules) => Hash(JsonSerializer.Serialize(new
     {
