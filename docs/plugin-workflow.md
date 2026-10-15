@@ -29,3 +29,5 @@ The two processes share implementation code, not live snapshots. MCP analyzes sa
 For an Ohio question, the usual explanation workflow is one discovery request and one bounded analysis request. Claude can reuse expanded callee facts, follow the OH predicate and argument bindings, and read relevant source. This is guidance rather than a fixed tool-call guarantee. The model writes the final explanation; successful analysis does not guarantee correct prose or citations.
 
 The [compact report](compact-reports.md) shares source evidence and exposes ready-to-cite lines. An external, explicitly run [evaluation runner](procedure-analysis.md#measure-against-grepread) can collect request timings separately from task latency, tool calls, model usage and independently reviewed accuracy. There is no background metric collector.
+
+Version 0.11.0 optionally saves canonical MCP reports as [private JSON files](persistent-analysis-cache.md). The MCP process validates the current loaded source context before reuse; LSP remains independent. The report cache does not restore the AST/navigation index.

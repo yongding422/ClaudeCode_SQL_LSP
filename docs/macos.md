@@ -1,8 +1,6 @@
 # macOS and Claude Code
 
-Release [0.10.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.10.0) adds compact evidence, direct source citations and shared MCP source state. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38675234892) passed on Apple Silicon and Intel Mac, with 60 LSP and 24 MCP tests after native unzip, plus 28 deterministic provider tests in package checks. Native protocol tests and model behavior are separate; Mac model tool calls remain unverified. See [compact usage](compact-reports.md), [the workflow diagram](plugin-workflow.md) and [marketplace evidence](evidence/compact-reports-ci.json).
-
-[Actual 0.10.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38676207666) passed on both Mac architectures, Windows and Linux, with strict validation and **60 LSP + 24 MCP tests** per installed package. Executable modes survived without repair. Update through the marketplace; no separate ZIP extraction is required.
+Release [0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) adds [optional persistent JSON reports](persistent-analysis-cache.md) for saved-folder/catalog analysis. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38681510692) passed all nine jobs. Both Mac architectures passed 60 LSP and 31 MCP tests after native unzip, plus 29 deterministic provider tests in package checks. No chmod repair was applied in native-unzip checks. Mac model calls remain unverified.
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
@@ -125,3 +123,5 @@ This can spend up to $1 and fails unless it observes actual hover and transport 
 | Plugin registered but LSP unavailable | Restart a fresh Claude session and inspect client diagnostics. Registration alone does not prove a callable LSP tool. See [client evidence](claude-verification.md). |
 
 For marketplace installation, see [publishing and installation](publishing.md).
+
+To reuse reports across sessions, set SQLLSP_ANALYSIS_CACHE_DIR to an absolute private directory before launching Claude. See [Mac commands, prebuilding and cache limits](persistent-analysis-cache.md). Persistence does not eliminate source acquisition/parsing or guarantee fewer model tokens.

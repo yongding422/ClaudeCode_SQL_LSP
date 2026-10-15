@@ -6,7 +6,9 @@ Research checked 2026-10-15. **No general speed or model-token advantage has bee
 
 This research uses **DeusData/codebase-memory-mcp**, pinned source `8df0639c6268afe9888979e72b9797aa2cc1de7c`. The user's installed repository/version is unconfirmed and its MCP tools/binary are unavailable in this session. These are source observations, not a runtime comparison or exhaustive negative feature audit.
 
-Codebase-memory is **not a plain-text-only SQL index**: it uses Tree-sitter parsing and a persistent SQLite graph exposed through MCP, alongside text/source search. It also describes hybrid semantic resolution for selected languages, so saying it never uses LSP is too broad. [Project documentation](https://github.com/DeusData/codebase-memory-mcp/tree/8df0639c6268afe9888979e72b9797aa2cc1de7c)
+Codebase-memory is **not a plain-text-only SQL index**: it uses Tree-sitter parsing and a persistent SQLite graph exposed through MCP, alongside text/source search. [Project documentation](https://github.com/DeusData/codebase-memory-mcp/tree/8df0639c6268afe9888979e72b9797aa2cc1de7c)
+
+Its selected-language resolvers also use the name “LSP.” For example, the inspected Python API walks Tree-sitter nodes with an internal type/scope registry. That internal semantic analysis should not be confused with a client-facing LSP protocol process, and it is not evidence of SQL language-server support. [Internal Python resolver API](https://github.com/DeusData/codebase-memory-mcp/blob/8df0639c6268afe9888979e72b9797aa2cc1de7c/internal/cbm/lsp/py_lsp.h)
 
 The inspected SQL registration recognizes procedure/function declarations, tables/views, invocation nodes, columns and IF/CASE branch node types. [Language registration source](https://github.com/DeusData/codebase-memory-mcp/blob/8df0639c6268afe9888979e72b9797aa2cc1de7c/internal/cbm/lang_specs.c)
 
@@ -77,3 +79,9 @@ Compute reduction as `1 - tool / baseline` for an explicitly defined, consistent
 The [existing runner](../../scripts/evaluate-understanding.py) captures plugin versus Grep/Read events, timings and optional answers. The 0.11.0 collector adds cache intervals and enabled/hit counts without cache paths. **It does not yet implement** the codebase-memory arm, LSP ablation, clustered confidence intervals or blind grading. Those are the next experiment changes after fixing the competitor build and reviewed dataset. No three-tool runtime benchmark was conducted here.
 
 Collection remains local and aggregate-only by default. Transcripts/answers/SQL/paths require explicit project approval. Controlled runs need no hooks or background telemetry. The plugin measures backend work; only the client can capture model usage and complete task time.
+
+## Product direction
+
+For this project's stored-procedure understanding goal, prioritize the MCP reports and their SQL evidence. Keep existing LSP navigation available, with general M6 editor work deferred. LSP is useful when the task needs live buffers; it is not a prerequisite for folder/catalog analysis or persistence.
+
+The next performance work should follow profiling on large SQL repositories: incremental persistent semantic indexes and smaller task-specific retrieval may matter more than additional LSP methods. The current report cache still hashes the loaded source context and reparses at restart. Include tool-schema/skill overhead and any duplicated LSP/MCP indexing in measured costs. Verify exact T-SQL coverage in the installed codebase-memory build before claiming a competitive feature advantage. Its broader application graph and this SQL-specific engine may be complementary.
