@@ -1,6 +1,6 @@
 # Plan to close the procedure-understanding gaps
 
-Status: increments 1 and 2 shipped in 0.7.0; increment 3 is implemented in 0.8.0 source as a structural map with explicit reachability/transaction limits. See [usage and boundaries](procedure-analysis.md), [control-flow contract](control-flow.md) and milestone release evidence. Subsequent increments remain proposed. This extends the [assessment](stored-procedure-understanding.md) around understanding complex stored procedures. Version 0.6.2 supplies static call hierarchy. Completion, semantic coloring, rename and other general M6 editor enhancements remain deferred.
+Status: increments 1 and 2 shipped in 0.7.0, increment 3 in 0.8.0. Version 0.9.0 implements the bounded parameter/local/EXEC slice of increment 4; temp/table-variable contents and full column lineage remain later work. See [usage and boundaries](procedure-analysis.md), [control-flow](control-flow.md), [value dependencies](value-tracing.md) and milestone release evidence. Subsequent increments remain proposed. This extends the [assessment](stored-procedure-understanding.md) around understanding complex stored procedures. Version 0.6.2 supplies static call hierarchy. Completion, semantic coloring, rename and other general M6 editor enhancements remain deferred.
 
 ## Architecture
 
@@ -66,6 +66,8 @@ Extract nested IF/ELSE, CASE, WHILE, TRY/CATCH, RETURN, THROW/RAISERROR and tran
 Acceptance: nested branches, early returns, loops, transaction/savepoint paths and catch/rethrow fixtures. A business-rule query must identify the predicate guarding an effect and the evidence location, or explicitly say the relationship is unresolved.
 
 ## 4. Parameter and value tracing
+
+The 0.9.0 bounded slice tracks supported local definitions/alternatives, variable reads in conditions/filters and whole-signature EXEC bindings, with defaults and OUTPUT/return boundaries kept distinct. It does not infer concrete values, type/coercion validity, callee exit definitions or correlated runtime paths. SELECT/loop/error/jump uncertainty is explicit. [ADR 0011](adr/0011-bounded-value-dependencies.md) and [six public evaluation tasks](evaluation/value-tracing-gold.md) record the contract and authored assertions; independent review and representative paired comparisons remain outstanding.
 
 Start with bounded tracing of module parameters, local assignments and EXEC arguments. Map named/positional arguments only when the target signature and argument binding are verified. Then add supported temp-table/table-variable propagation. Treat full column lineage as a separate later expansion, not a prerequisite for the first useful release.
 

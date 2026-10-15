@@ -55,8 +55,12 @@ $successful = @($analysisResults | Where-Object {
         $ohio = @($entry.controlFlow.nodes | Where-Object { $_.kind -eq 'If' -and $_.predicate.preview -eq "@State = 'OH'" })
         $call = $entry.calls | Where-Object { $_.target.identity.name -eq 'ApplyOhioRules' }
         $then = @($entry.controlFlow.nodes | Where-Object { $_.kind -eq 'Then' -and $_.parentId -in $ohio.id -and $_.id -in $call.flowContext })
+        $valueCall = @($entry.valueFlow.calls | Where-Object { $_.target.identity.name -eq 'ApplyOhioRules' -and $_.bindingStatus -eq 'Resolved' })
+        $binding = @($valueCall.bindings | Where-Object { $_.parameterName -eq '@State' })
+        $where = @($callee.valueFlow.facts | Where-Object { $_.role -eq 'Where' -and @($_.inputs | Where-Object { $_.variableId -in $binding.parameterVariableId }).Count -eq 1 })
         return $data.report.status -eq 'Resolved' -and
             $ohio.Count -eq 1 -and $then.Count -eq 1 -and -not $entry.controlFlow.truncated -and
+            $valueCall.Count -eq 1 -and $binding.Count -eq 1 -and $where.Count -eq 1 -and
             @($entry.accesses | Where-Object { $_.operation -eq 'Insert' -and $_.target.identity.name -eq 'PayrollAudit' }).Count -eq 1 -and
             @($callee.accesses | Where-Object { $_.operation -eq 'Update' -and $_.target.identity.name -eq 'Payroll' }).Count -eq 1 -and
             @($entry.issues | Where-Object { $_.code -eq 'call-unsupported' }).Count -eq 1
@@ -68,6 +72,7 @@ $summary = [ordered]@{
     claudeVersion = (& $claudeCommand --version); exitCode = $process.ExitCode; pluginName = $name
     discoveryCalls = $discoveryCalls.Count; analysisCalls = $analysisCalls.Count; successfulAnalysisResults = $successful.Count
     requiredFlowEvidence = 'Exact OH predicate, Then parent and callee call context in actual MCP tool result'
+    requiredValueEvidence = 'Resolved EXEC formal binding linked to the callee WHERE variable identity in actual MCP tool result'
     skillRequested = [bool]$InvokeSkill; skillCalls = $skillCalls.Count
     toolNames = @($calls | ForEach-Object { $_.name }); failedToolAttempts = @($results | Where-Object { $_.is_error }).Count
     costUsd = $final.total_cost_usd; outcome = $final.subtype; evidenceDirectory = $evidence

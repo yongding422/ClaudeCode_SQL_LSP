@@ -1,0 +1,8 @@
+[
+  { "id": "value-branch-rename", "question": "Explain how dbo.RoutePayroll passes State through Region into dbo.ApplyRegion and its filter. Account for reassignment and the override branch. Cite source lines and distinguish possible definitions from proven values or paths." },
+  { "id": "value-defaults", "question": "Explain the parameter bindings for both calls in dbo.DefaultRoute, including explicit DEFAULT versus omitted parameters. Cite source lines. Do not assume a callee default applies to every caller." },
+  { "id": "value-output-boundary", "question": "Trace the inputs, output variable and return status in dbo.OutputRoute and dbo.Calculate. Distinguish pre-call inputs, possible OUTPUT copy-back and RETURN 42. Which post-call values can the analyzer actually establish? Cite source lines and unknowns." },
+  { "id": "value-select-retention", "question": "Explain possible sources of Result at the IF in dbo.SelectRetention. Include zero-row retention, multiple-row uncertainty and evidence lines. Do not claim a deterministic row result or unconditional execution." },
+  { "id": "value-loop-backedge", "question": "Explain variable provenance inside and after the loop in dbo.LoopRoute. Account for possible earlier iterations and BREAK. Distinguish source observations from loop solving or known runtime values; cite source lines." },
+  { "id": "value-invalid-binding", "question": "Inspect dbo.InvalidRoute. Can its named argument be verified against dbo.ApplyRegion? Identify the mismatch and any unknowns without inventing a successful parameter mapping. Cite source lines." }
+]

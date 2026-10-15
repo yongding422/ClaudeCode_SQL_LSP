@@ -9,6 +9,39 @@ public class CatalogProcedureAnalysisTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public async Task Value_binding_uses_the_selected_hybrid_source_signature_and_authoritative_renamed_identity(bool preferWorkspace)
+    {
+        using var storage = new CatalogDocuments();
+        var catalog = ProviderTests.Snapshot with
+        {
+            Objects = ProviderTests.Snapshot.Objects.Select(o => o.ObjectId == 1
+            ? o with { Definition = "CREATE PROC dbo.OldName @DatabaseParam int,@Mode int=7 AS IF @DatabaseParam>0 RETURN;" } : o).ToImmutableArray()
+        };
+        var snapshot = await storage.BuildAsync(catalog, new(), CancellationToken.None);
+        var uri = new Uri("file:///workspace/value.sql");
+        var name = preferWorkspace ? "@LocalParam" : "@DatabaseParam";
+        var rules = new ResolutionOptions(CaseSensitive: false, DefaultDatabase: "Fixture", DefaultSchema: "dbo");
+        var local = new DocumentSnapshot(uri, null, SqlSourceKind.Workspace,
+            await new SqlParser(new(), rules).ParseAsync(new SourceText("CREATE PROC dbo.P @n int AS EXEC dbo.CurrentName " + name + "=@n;\nGO\n" +
+                "CREATE PROC dbo.CurrentName @LocalParam int,@Mode int=9 AS IF @LocalParam>0 RETURN;"), CancellationToken.None));
+        var policy = new SqlHybridPolicy([new("fixture", "Fixture", rules)], [new("workspace", ["fixture"], "fixture")], preferWorkspace);
+        var index = new SqlNavigationIndex(snapshot.Documents.Add(local), u => u == uri ? "workspace" : "fixture", rules, snapshot.Symbols, hybrid: policy);
+        var report = index.AnalyzeProcedure(uri, new(0, 16), CancellationToken.None);
+        var call = Assert.Single(report.Modules[0].ValueFlow!.Calls);
+        Assert.Equal(ResolutionStatus.Resolved, call.BindingStatus);
+        Assert.Equal(preferWorkspace ? SqlSourceKind.Workspace : SqlSourceKind.Database, call.Target!.SourceKind);
+        Assert.Equal("CurrentName", call.Target.Identity!.Name);
+        Assert.Equal(name, call.Bindings[0].ParameterName);
+        Assert.Equal(call.Target.Uri, call.Bindings[0].Parameter.Uri);
+        Assert.Equal(report.Modules[1].Id, call.TargetModuleId);
+        Assert.Equal(report.Modules[1].Revision, call.TargetRevision);
+        var selectedDefault = report.Modules[0].ValueFlow!.Facts.Single(f => f.Id == call.Bindings[1].InputFactId);
+        Assert.Equal(preferWorkspace ? "9" : "7", selectedDefault.Expression!.Preview);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public async Task Hybrid_operation_targets_follow_selected_source_and_preserve_workspace_module_provenance(bool preferWorkspace)
     {
         using var storage = new CatalogDocuments();
@@ -52,6 +85,11 @@ public class CatalogProcedureAnalysisTests
         Assert.False(hidden.BodyAvailable);
         Assert.False(Assert.IsType<SqlControlFlowSummary>(hidden.ControlFlow).BodyAvailable);
         Assert.Empty(hidden.ControlFlow!.Nodes);
+        Assert.False(Assert.IsType<SqlValueFlowSummary>(hidden.ValueFlow).BodyAvailable);
+        Assert.Empty(hidden.ValueFlow!.Variables);
+        var unknown = Assert.Single(report.Modules[0].ValueFlow!.Calls);
+        Assert.Equal(ResolutionStatus.Unsupported, unknown.BindingStatus);
+        Assert.Empty(unknown.Bindings);
         Assert.Contains(hidden.Issues, i => i.Code == "body-unavailable");
         Assert.Empty(hidden.Accesses);
         Assert.NotNull(hidden.CapturedAt);
@@ -84,5 +122,14 @@ public class LiveProcedureAnalysisTests(SqlServerFixture fixture)
         Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.Then && write.FlowContext.Contains(n.Id));
         Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.SaveTransaction && n.Subject!.Preview == "beforeWrite");
         Assert.Contains(flow.Nodes, n => n.Kind == SqlFlowKind.Throw);
+        var valueProc = snapshot.Symbols.Single(s => s.Identity.Name == "ValueCaller");
+        var valueReport = index.AnalyzeProcedure(valueProc.Target.Uri, valueProc.Target.Range.Start, CancellationToken.None);
+        var valueCall = Assert.Single(valueReport.Modules[0].ValueFlow!.Calls);
+        Assert.Equal(ResolutionStatus.Resolved, valueCall.BindingStatus);
+        Assert.Equal("@Region", valueCall.Bindings[0].ParameterName);
+        Assert.Equal(SqlArgumentMode.OmittedDefault, valueCall.Bindings[1].Mode);
+        Assert.True(valueCall.Bindings[2].Output);
+        Assert.NotNull(valueCall.Bindings[2].OutputFactId);
+        Assert.Equal(valueReport.Modules[1].Id, valueCall.TargetModuleId);
     }
 }

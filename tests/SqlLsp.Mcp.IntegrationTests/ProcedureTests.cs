@@ -5,6 +5,47 @@ namespace SqlLsp.Mcp.IntegrationTests;
 public class ProcedureTests
 {
     [Fact]
+    public async Task Value_bindings_and_definition_links_survive_the_wire_without_shared_callee_substitution()
+    {
+        await using var client = await McpClient.Start("-- 😀\r\nCREATE PROC dbo.P @State varchar(2) AS BEGIN DECLARE @local varchar(2)=@State; " +
+            "EXEC dbo.Q @Region=@local; SET @local='CA'; EXEC dbo.Q @Region=@local; END;\nGO\n" +
+            "CREATE PROC dbo.Q @Region varchar(2),@Mode int=7 AS SELECT * FROM dbo.A WHERE StateCode=@Region;\nGO\nCREATE TABLE dbo.A(StateCode varchar(2));");
+        var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.P" })).GetProperty("modules")[0];
+        var modules = McpClient.Data(await Analyze(client, selected)).GetProperty("report").GetProperty("modules");
+        var flow = modules[0].GetProperty("valueFlow");
+        var facts = flow.GetProperty("facts").EnumerateArray().ToArray();
+        var calls = flow.GetProperty("calls").EnumerateArray().ToArray();
+        Assert.Equal(2, calls.Length);
+        Assert.All(calls, c => Assert.Equal("Resolved", c.GetProperty("bindingStatus").GetString()));
+        Assert.Equal(modules[1].GetProperty("id").GetString(), calls[0].GetProperty("targetModuleId").GetString());
+        var firstInput = facts.Single(f => f.GetProperty("id").GetString() == calls[0].GetProperty("bindings")[0].GetProperty("inputFactId").GetString());
+        var declarationId = firstInput.GetProperty("inputs")[0].GetProperty("sourceFacts")[0].GetString();
+        Assert.Equal("Declaration", facts.Single(f => f.GetProperty("id").GetString() == declarationId).GetProperty("kind").GetString());
+        var secondInput = facts.Single(f => f.GetProperty("id").GetString() == calls[1].GetProperty("bindings")[0].GetProperty("inputFactId").GetString());
+        var assignmentId = secondInput.GetProperty("inputs")[0].GetProperty("sourceFacts")[0].GetString();
+        Assert.Equal("'CA'", facts.Single(f => f.GetProperty("id").GetString() == assignmentId).GetProperty("expression").GetProperty("preview").GetString());
+        Assert.Equal("OmittedDefault", calls[0].GetProperty("bindings")[1].GetProperty("mode").GetString());
+        var callee = modules[1].GetProperty("valueFlow");
+        var where = Assert.Single(callee.GetProperty("facts").EnumerateArray(), f => f.GetProperty("role").GetString() == "Where");
+        Assert.Equal(calls[0].GetProperty("bindings")[0].GetProperty("parameterVariableId").GetString(), where.GetProperty("inputs")[0].GetProperty("variableId").GetString());
+        Assert.True(where.GetProperty("inputs")[0].GetProperty("sourcesComplete").GetBoolean());
+        Assert.NotEmpty(callee.GetProperty("limitations").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Invalid_value_binding_and_select_unknowns_are_explicit_in_mcp_results()
+    {
+        await using var client = await McpClient.Start("CREATE PROC dbo.P @n int AS BEGIN SELECT @n=1; EXEC dbo.Q @Wrong=@n; IF @n=2 RETURN; END;\nGO\nCREATE PROC dbo.Q @Right int AS SELECT 1;");
+        var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "P" })).GetProperty("modules")[0];
+        var flow = McpClient.Data(await Analyze(client, selected)).GetProperty("report").GetProperty("modules")[0].GetProperty("valueFlow");
+        Assert.Equal("Unsupported", flow.GetProperty("calls")[0].GetProperty("bindingStatus").GetString());
+        Assert.Empty(flow.GetProperty("calls")[0].GetProperty("bindings").EnumerateArray());
+        Assert.Contains(flow.GetProperty("issues").EnumerateArray(), i => i.GetProperty("code").GetString() == "value-call-binding");
+        var use = Assert.Single(flow.GetProperty("facts").EnumerateArray(), f => f.GetProperty("role").GetString() == "If");
+        Assert.False(use.GetProperty("inputs")[0].GetProperty("sourcesComplete").GetBoolean());
+    }
+
+    [Fact]
     public async Task Structural_flow_survives_the_wire_and_guards_calls_without_claiming_transaction_outcomes()
     {
         await using var client = await McpClient.Start("-- 😀 中文\r\nCREATE PROC dbo.P @state varchar(2) AS BEGIN\r\n" +

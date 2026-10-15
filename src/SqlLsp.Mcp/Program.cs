@@ -11,7 +11,7 @@ try
     builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
     builder.Services.AddSingleton(launch);
     builder.Services.AddSingleton<ProcedureTools>();
-    builder.Services.AddMcpServer(options => options.ServerInfo = new() { Name = "sqlscriptdom-analysis", Version = "0.8.0" })
+    builder.Services.AddMcpServer(options => options.ServerInfo = new() { Name = "sqlscriptdom-analysis", Version = "0.9.0" })
         .WithStdioServerTransport().WithTools<ProcedureTools>();
     await builder.Build().RunAsync();
 }
