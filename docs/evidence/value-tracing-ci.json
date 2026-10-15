@@ -1,0 +1,34 @@
+{
+  "version": "0.9.0",
+  "publishedRelease": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.9.0",
+  "packageSourceCommit": "04fd9958a457a64c7b6143288565cf76686a98e1",
+  "nativeBuildWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38660971941",
+  "nativeBuildJobsSucceeded": 9,
+  "defaultFunctionalPassedPerOs": 244,
+  "defaultSkippedPerOs": 14,
+  "localLiveFunctionalPassed": 257,
+  "counts": { "core": 144, "lspProcess": 60, "mcpProcess": 12, "providerDeterministic": 28, "providerLive": 13 },
+  "packagePlatforms": ["win-x64", "linux-x64", "osx-arm64", "osx-x64"],
+  "packageTestsPerPlatform": { "lspPassed": 60, "mcpPassed": 12, "providerDeterministicPassed": 28 },
+  "macNativeUnzipTestsPerArchitecture": { "lspPassed": 60, "mcpPassed": 12 },
+  "bothApphostArchitecturesAndUnixModesVerified": true,
+  "publishedAssetsMatchCatalogDigests": true,
+  "opaqueExecLiteralPreviewRegressionVerifiedInCoreAndMcp": true,
+  "marketplaceInstallWorkflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38662042608",
+  "marketplaceInstallStatus": "success",
+  "marketplaceInstallJobsSucceeded": 4,
+  "installedTestsPerPlatform": { "lspPassed": 60, "mcpPassed": 12, "performanceBenchmarkSkipped": 1 },
+  "duplicateTagBuild": {
+    "workflow": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38661947675",
+    "conclusion": "cancelled",
+    "reason": "Publishing the tag retriggered the identical source already verified by final native CI. The duplicate was cancelled to prioritize actual installation verification."
+  },
+  "limits": [
+    "Source definitions and formal mappings do not prove runtime values, SQL conversions, correlated paths, callee exit states or full column lineage.",
+    "MCP uses saved/catalog snapshots independently from unsaved LSP buffers.",
+    "Native package/installation tests do not establish Mac model tool behavior.",
+    "Windows final-package tool results are verified, but model wording/citation errors and an earlier candidate timeout remain recorded.",
+    "Six public authored tasks still need independent review and representative three-repeat evaluation; the one paired capture used a pre-release candidate.",
+    "Superiority over Grep/Read remains unproven."
+  ]
+}

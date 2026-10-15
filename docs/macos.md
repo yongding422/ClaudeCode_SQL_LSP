@@ -2,7 +2,7 @@
 
 Release [0.9.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.9.0) adds bounded parameter/local dependencies and verified EXEC bindings to the read-only analysis and explanation skill. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38660971941) passed on Apple Silicon and Intel Mac, with 60 LSP and 12 MCP tests after native unzip, plus 28 deterministic provider tests in package checks. Native protocol tests and model behavior are separate; Mac model tool calls remain unverified. See [value-tracing usage](value-tracing.md) and [marketplace installation evidence](milestones.md).
 
-The [0.8.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38648254350) is historical evidence, not proof of 0.9.0 installation. Current-version verification is recorded in milestones. Update through the marketplace; no separate ZIP extraction is required.
+[Actual 0.9.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38662042608) passed on both Mac architectures, Windows and Linux, with 60 LSP and 12 MCP tests per installed package. Executable modes survived the Claude archive installer without repair. Update through the marketplace; no separate ZIP extraction is required. [Native evidence](evidence/value-tracing-ci.json) records the exact source and test counts.
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
