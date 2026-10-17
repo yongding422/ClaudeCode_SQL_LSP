@@ -130,7 +130,26 @@ public sealed class ServerState : IAsyncDisposable
         token = request.Token;
         var documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
         if (databases.Count == 0 || configuration == null)
-            return new(documents, uri => Files?.ContextId(uri) ?? uri.AbsoluteUri, Resolution);
+        {
+            // Freeze context/rules with the document generation, so later project edits cannot mutate this index.
+            var contexts = documents.ToDictionary(d => d.Uri, d => Files?.ContextId(d.Uri) ?? d.Uri.AbsoluteUri);
+            var rules = contexts.ToDictionary(p => p.Key, p => Files?.Contexts.Rules(p.Value, Resolution) ?? Resolution);
+            foreach (var removed in boundDocuments.Keys.Except(documents.Select(d => d.Uri)).ToArray()) boundDocuments.Remove(removed);
+            var bound = documents.Select(document =>
+            {
+                var comparison = rules[document.Uri];
+                if (comparison == Resolution) return document;
+                if (!boundDocuments.TryGetValue(document.Uri, out var entry) || !ReferenceEquals(document, entry.Original) || entry.Rules != comparison)
+                {
+                    entry = (document, document with { Parse = SqlParser.Rebind(document.Parse, comparison, token) }, comparison);
+                    boundDocuments[document.Uri] = entry;
+                }
+                return entry.Bound;
+            }).ToImmutableArray();
+            var permitted = Files?.Contexts.ReferenceMappings() ?? [];
+            return new(bound, uri => contexts.GetValueOrDefault(uri) ?? uri.AbsoluteUri, Resolution,
+                resolutionFor: uri => rules.GetValueOrDefault(uri) ?? Resolution, canReference: (from, to) => permitted.Contains((from, to)));
+        }
         await databaseGate.WaitAsync(token);
         try
         {

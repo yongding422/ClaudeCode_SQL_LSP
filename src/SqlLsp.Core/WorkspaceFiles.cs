@@ -6,10 +6,15 @@ public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes
 
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
+    public System.Collections.Immutable.ImmutableArray<OfflineProjectScope> ProjectScopes { get; init; } = [];
+    public bool AutoDetectProjects { get; init; } = true;
     public void Validate()
     {
         if (MaxFileSizeBytes is < 1 or > 16_777_216)
             throw new ArgumentException("maxFileSizeBytes must be between 1 and 16777216.");
+        if (ProjectScopes.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != ProjectScopes.Length ||
+            ProjectScopes.Any(s => string.IsNullOrWhiteSpace(s.Id) || !s.Root.IsFile || s.Root.Query.Length != 0 || s.Root.Fragment.Length != 0))
+            throw new ArgumentException("Project scopes require unique IDs and absolute physical directory URIs.");
     }
 }
 
@@ -18,15 +23,21 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.OrdinalIgnoreCase)
         { "bin", "obj", "node_modules", ".git" };
     private readonly List<string> roots = new();
+    public WorkspaceContexts Contexts { get; } = new(options.ProjectScopes, options.AutoDetectProjects);
     public IReadOnlyList<string> Roots => roots;
     public string ContextId(Uri uri)
     {
         if (!uri.IsFile) return uri.AbsoluteUri;
         var root = uri.IsFile ? roots.Where(r => IsContained(r, uri.LocalPath)).OrderByDescending(r => r.Length).FirstOrDefault() : null;
-        return root == null ? new Uri(uri, ".").AbsoluteUri : new Uri(root).AbsoluteUri;
+        var fallback = root == null ? new Uri(uri, ".").AbsoluteUri : new Uri(root).AbsoluteUri;
+        return Contexts.Describe(uri, fallback).Id;
     }
 
-    public IEnumerable<Uri> EnumerateUris() => roots.Where(Directory.Exists).SelectMany(Enumerate).Distinct().ToArray();
+    public IEnumerable<Uri> EnumerateUris()
+    {
+        Contexts.Configure(roots.Where(Directory.Exists).SelectMany(r => Enumerate(r, ".sqlproj")));
+        return roots.Where(Directory.Exists).SelectMany(r => Enumerate(r)).Distinct().ToArray();
+    }
 
     public bool CanTraverse(Uri uri) => uri.IsFile && roots.Any(root => IsContained(root, uri.LocalPath) &&
         !Path.GetRelativePath(root, uri.LocalPath).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(ExcludedDirectories.Contains));
@@ -46,12 +57,14 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
             var path = Path.GetFullPath(uri.LocalPath);
             if (Directory.Exists(path) && !HasLinkedAncestor(path)) roots.Add(path);
         }
-        return roots.SelectMany(Enumerate).Distinct().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
+        if (options.ProjectScopes.Any(s => !roots.Any(root => IsContained(root, s.Root.LocalPath)) || HasLinkedAncestor(s.Root.LocalPath)))
+            throw new ArgumentException("Project scopes must remain in initialized physical workspace roots.");
+        return EnumerateUris().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
     }
 
     public bool CanRead(Uri uri)
     {
-        if (!uri.IsFile || !string.Equals(Path.GetExtension(uri.LocalPath), ".sql", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!uri.IsFile || !string.Equals(Path.GetExtension(uri.LocalPath), ".sql", StringComparison.OrdinalIgnoreCase) || !Contexts.Included(uri)) return false;
         var path = Path.GetFullPath(uri.LocalPath);
         foreach (var root in roots)
         {
@@ -111,7 +124,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         catch (UnauthorizedAccessException) { return Excluded("Unreadable"); }
     }
 
-    private static IEnumerable<Uri> Enumerate(string root)
+    private static IEnumerable<Uri> Enumerate(string root, string extension = ".sql")
     {
         var pending = new Stack<string>();
         pending.Push(root);
@@ -129,7 +142,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                 {
                     if (!ExcludedDirectories.Contains(Path.GetFileName(entry))) pending.Push(entry);
                 }
-                else if (string.Equals(Path.GetExtension(entry), ".sql", StringComparison.OrdinalIgnoreCase)) yield return new Uri(entry);
+                else if (string.Equals(Path.GetExtension(entry), extension, StringComparison.OrdinalIgnoreCase)) yield return new Uri(entry);
             }
         }
     }

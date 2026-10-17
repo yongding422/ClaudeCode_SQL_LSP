@@ -65,7 +65,7 @@ public sealed partial class SqlNavigationIndex
             owner = Symbols.FirstOrDefault(s => SameAnchor(s.Target, resolution.Target!) && IsAnalyzable(s));
         }
         if (owner == null) return Empty(ResolutionStatus.Unsupported, "Select a procedure, function or view definition/body.");
-        var rules = hybrid?.RulesFor(owner.Identity.SourceContextId, options) ?? options;
+        var rules = Rules(owner.Target.Uri);
         var duplicates = Symbols.Where(s => s.Target.SourceKind == owner.Target.SourceKind &&
             s.Identity.SourceContextId == owner.Identity.SourceContextId && s.Identity.Kind == owner.Identity.Kind &&
             rules.Comparer.Equals(s.Identity.Server, owner.Identity.Server) && rules.Comparer.Equals(s.Identity.Database, owner.Identity.Database) &&

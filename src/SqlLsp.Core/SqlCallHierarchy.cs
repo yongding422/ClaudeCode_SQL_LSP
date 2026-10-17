@@ -128,7 +128,7 @@ public sealed partial class SqlNavigationIndex
     private bool IsUniqueCallable(IndexedSqlSymbol symbol)
     {
         if (!IsCallable(symbol)) return false;
-        var rules = hybrid?.RulesFor(symbol.Identity.SourceContextId, options) ?? options;
+        var rules = Rules(symbol.Target.Uri);
         var identity = symbol.Identity;
         return Symbols.Where(s => s.Identity.Kind == identity.Kind && s.Identity.SourceContextId == identity.SourceContextId &&
             rules.Comparer.Equals(s.Identity.Server, identity.Server) && rules.Comparer.Equals(s.Identity.Database, identity.Database) &&

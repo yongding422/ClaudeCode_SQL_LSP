@@ -9,6 +9,9 @@ public sealed partial class SqlNavigationIndex
     private readonly Func<Uri, string> context;
     private readonly ResolutionOptions options;
     private readonly SqlHybridPolicy? hybrid;
+    private readonly Func<Uri, ResolutionOptions>? resolutionFor;
+    private readonly Func<string, string, bool>? canReference;
+    private ResolutionOptions Rules(Uri uri) => hybrid?.RulesFor(context(uri), options) ?? resolutionFor?.Invoke(uri) ?? options;
     public ImmutableArray<IndexedSqlSymbol> Symbols { get; }
     public ImmutableArray<SqlDefinitionDrift> Drifts { get; }
     public int DocumentCount => documents.Length;
@@ -18,15 +21,17 @@ public sealed partial class SqlNavigationIndex
             .Select(d => d.Uri.AbsoluteUri + "|" + context(d.Uri) + "|" + AnalysisRevision(d))))));
     private string? generation;
 
-    public (int Count, int Files) ParseIssueCounts(Uri? uri = null)
+    public int DocumentCountFor(string? scopeId, Uri? uri = null) => documents.Count(d => (scopeId == null || context(d.Uri) == scopeId) && (uri == null || d.Uri == uri));
+
+    public (int Count, int Files) ParseIssueCounts(Uri? uri = null, string? scopeId = null)
     {
-        var selected = documents.Where(d => uri == null || d.Uri == uri).ToArray();
+        var selected = documents.Where(d => (uri == null || d.Uri == uri) && (scopeId == null || context(d.Uri) == scopeId)).ToArray();
         return (selected.Sum(d => d.Parse.Diagnostics.Length), selected.Count(d => d.Parse.Diagnostics.Length > 0));
     }
 
-    public IEnumerable<SqlCoverageIssue> ParseIssuePage(Uri? uri, int offset, int limit, CancellationToken token)
+    public IEnumerable<SqlCoverageIssue> ParseIssuePage(Uri? uri, int offset, int limit, CancellationToken token, string? scopeId = null)
     {
-        foreach (var item in documents.Where(d => uri == null || d.Uri == uri).OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
+        foreach (var item in documents.Where(d => (uri == null || d.Uri == uri) && (scopeId == null || context(d.Uri) == scopeId)).OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
             .SelectMany(d => d.Parse.Diagnostics.Select(i => new SqlCoverageIssue("parse-error", i.Message, new(d.Uri, i.Range)))).Skip(offset).Take(limit))
         {
             token.ThrowIfCancellationRequested();
@@ -36,18 +41,21 @@ public sealed partial class SqlNavigationIndex
 
     public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options,
         ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true, SqlHybridPolicy? hybrid = null,
-        bool reportDrift = true, CancellationToken token = default)
+        bool reportDrift = true, CancellationToken token = default, Func<Uri, ResolutionOptions>? resolutionFor = null,
+        Func<string, string, bool>? canReference = null)
     {
         this.documents = documents;
         this.context = context;
         this.options = options;
         this.hybrid = hybrid;
+        this.resolutionFor = resolutionFor;
+        this.canReference = canReference;
         Symbols = (indexDeclarations ? documents.Where(d => d.SourceKind != SqlSourceKind.Database).SelectMany(document => document.Parse.Declarations
             .Where(d => d.IsDefinition && d.QualifiedName != null && !d.QualifiedName.Name.StartsWith('#'))
             .Select(d =>
             {
                 var name = d.QualifiedName!;
-                var rules = hybrid?.RulesFor(context(document.Uri), options) ?? options;
+                var rules = Rules(document.Uri);
                 var identity = new SqlObjectIdentity(context(document.Uri), name.Server,
                     name.Database ?? d.Database ?? rules.DefaultDatabase, name.Schema ?? rules.DefaultSchema, name.Name, d.Kind);
                 var target = new SqlNavigationTarget(document.Uri, d.SelectionRange, identity, document.SourceKind,
@@ -65,17 +73,19 @@ public sealed partial class SqlNavigationIndex
         if (reference.Name is not { } name) return new(ResolutionStatus.Unsupported, [], "This syntax has no supported static object target.");
         if (name.Server != null) return new(ResolutionStatus.Unsupported, [], "Cross-server targets require explicit source mapping.");
         if (hybrid != null) return hybrid.Resolve(Symbols, context(document.Uri), name, reference.Database, reference.Kind, options);
-        var database = name.Database ?? reference.Database ?? options.DefaultDatabase;
-        var schema = name.Schema ?? options.DefaultSchema;
+        var rules = Rules(document.Uri);
+        var database = name.Database ?? reference.Database ?? rules.DefaultDatabase;
+        var schema = name.Schema ?? rules.DefaultSchema;
         IEnumerable<SqlNavigationTarget> Match(string? candidateSchema) => Symbols.Where(symbol =>
-            symbol.Identity.SourceContextId == context(document.Uri) &&
-            options.Comparer.Equals(symbol.Identity.Server, name.Server) &&
-            options.Comparer.Equals(symbol.Identity.Database, database) &&
-            options.Comparer.Equals(symbol.Identity.Name, name.Name) &&
-            (candidateSchema == null || options.Comparer.Equals(symbol.Identity.Schema, candidateSchema)) &&
+            (symbol.Identity.SourceContextId == context(document.Uri) ||
+                name.Database != null && canReference?.Invoke(context(document.Uri), symbol.Identity.SourceContextId) == true) &&
+            rules.Comparer.Equals(symbol.Identity.Server, name.Server) &&
+            rules.Comparer.Equals(symbol.Identity.Database, database) &&
+            rules.Comparer.Equals(symbol.Identity.Name, name.Name) &&
+            (candidateSchema == null || rules.Comparer.Equals(symbol.Identity.Schema, candidateSchema)) &&
             KindMatches(symbol.Identity.Kind, reference.Kind)).Select(symbol => symbol.Target);
         var candidates = Match(schema).Distinct().ToImmutableArray();
-        if (candidates.Length == 0 && name.Schema == null && options.FallbackSchema is { } fallback)
+        if (candidates.Length == 0 && name.Schema == null && rules.FallbackSchema is { } fallback)
             candidates = Match(fallback).Distinct().ToImmutableArray();
         return candidates.Length switch
         {
@@ -167,7 +177,7 @@ public sealed partial class SqlNavigationIndex
         foreach (var symbol in Symbols)
         {
             token.ThrowIfCancellationRequested();
-            if (MatchesQuery(symbol.Declaration.Name, query, hybrid?.RulesFor(symbol.Identity.SourceContextId, options) ?? options)) result.Add(symbol);
+            if (MatchesQuery(symbol.Declaration.Name, query, Rules(symbol.Target.Uri))) result.Add(symbol);
         }
         return result.ToImmutable();
     }

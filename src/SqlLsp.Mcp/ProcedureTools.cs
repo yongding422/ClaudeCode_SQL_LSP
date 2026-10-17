@@ -80,10 +80,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     [Description("Find saved T-SQL modules when their location is unknown. Bounded pages contain identities, revisions and zero-based UTF-16 selections. Reuse nextCursor with identical options. section=issues or files explicitly pages diagnostics/coverage; documentUri restricts to one file. Known files can be analyzed directly. No SQL execution.")]
     public async Task<CallToolResult> FindProcedures([Description("Name substring; empty lists indexed modules.")] string query = "",
         [Description("Maximum entries per page, 1..100; byte budget may return fewer.")] int maxResults = 30,
-        CancellationToken cancellationToken = default, string? cursor = null, string section = "modules", string? documentUri = null)
+        CancellationToken cancellationToken = default, string? cursor = null, string section = "modules", string? documentUri = null,
+        [Description("Exact sourceContextId from a previous result; limits modules and issues. File-ledger pages use documentUri instead.")] string? scopeId = null)
     {
         using var observation = metrics.Begin("find_procedures", "discovery", cancellationToken);
         if (query.Length > 256 || maxResults is < 1 or > 100 || section is not ("modules" or "issues" or "files")) throw new McpException("Query/limit/section outside supported bounds.");
+        if (scopeId?.Length > 4096 || section == "files" && scopeId != null) throw new McpException("Invalid scope; file-ledger pages support documentUri only.");
         Uri? file = null;
         if (documentUri != null && (!Uri.TryCreate(documentUri, UriKind.Absolute, out file) || !file.IsFile || file.Query.Length != 0 || file.Fragment.Length != 0))
             throw new McpException("documentUri must be an absolute file URI.");
@@ -91,10 +93,11 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         {
             var timer = Stopwatch.StartNew();
             var generation = index.Generation;
-            var options = JsonSerializer.Serialize(new { query, maxResults, section, documentUri });
+            var options = JsonSerializer.Serialize(new { query, maxResults, section, documentUri, scopeId });
             var offset = discoveryCursors.Decode(cursor, generation, options);
             var symbols = index.Search(query, cancellationToken).Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
                 .Where(s => file == null || s.Target.Uri == file)
+                .Where(s => scopeId == null || s.Identity.SourceContextId == scopeId)
                 .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
             object Module(IndexedSqlSymbol symbol)
             {
@@ -102,6 +105,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 return new
                 {
                     symbol.Identity,
+                    context = state!.Files?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
                     revision = report.Modules.FirstOrDefault()?.Revision,
@@ -109,7 +113,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                     signature = symbol.Declaration.Documentation?.Signature
                 };
             }
-            var counts = index.ParseIssueCounts(file);
+            var counts = index.ParseIssueCounts(file, scopeId);
             var coverage = state!.Documents?.Coverage;
             var total = section == "issues" ? counts.Count : section == "files" ?
                 file == null ? coverage?.Discovered ?? 0 : state.Documents?.CoverageFiles(0, 1, file).Length ?? 0 : symbols.Length;
@@ -122,6 +126,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 source = "Saved snapshots; no LSP unsaved buffers. Coverage is limited to indexed sources.",
                 indexedDocuments = index.DocumentCount,
                 coverage,
+                scope = new { id = scopeId, documentUri, indexedDocuments = index.DocumentCountFor(scopeId, file) },
                 generation,
                 sourceStatuses = state.SourceStatuses.Take(4).Select(s => s.Length <= 256 ? s : s[..256] + "…").ToArray(),
                 sourceStatusCount = state.SourceStatuses.Count(),
@@ -140,7 +145,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 truncationReason = omittedOversized > 0 ? "entry-exceeds-budget" : offset + consumed < total ? "page-or-byte-limit" : null,
                 recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Use a known file URI and selection for direct analysis or inspect the source; omitted count is explicit." : null
             };
-            var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken).Cast<object>() :
+            var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken, scopeId).Cast<object>() :
                 section == "files" ? (state.Documents?.CoverageFiles(offset, maxResults, file) ?? []).Cast<object>() :
                 symbols.Skip(offset).Take(maxResults).Select(Module);
             foreach (var entry in candidates)
@@ -189,6 +194,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
                 indexedDocuments = index.DocumentCount,
                 coverage = state!.Documents?.Coverage,
+                sourceContext = state.Files?.Contexts.Describe(uri, state.Files.ContextId(uri)),
                 sourceStatuses = state!.SourceStatuses,
                 timings,
                 cache = analyzed.Use,
