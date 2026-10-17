@@ -1,17 +1,18 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using ModelContextProtocol;
+using SqlLsp.Core;
 
 namespace SqlLsp.Mcp;
 
 // Bounded process-local evidence expansion. Stored JSON is data, never executable serialization.
 internal sealed class AnalysisPages
 {
-    private sealed record Saved(string Id, string Generation, Uri Uri, JsonElement Data, int Bytes, DateTimeOffset At, Uri? Scope);
+    private sealed record Saved(string Id, string Generation, Uri Uri, JsonElement Data, int Bytes, DateTimeOffset At, Uri? Scope, SqlNavigationTarget? Selection);
     private readonly Dictionary<string, Saved> reports = new(StringComparer.Ordinal);
     private readonly object gate = new();
 
-    public string Register(string generation, Uri uri, object report, Uri? scope = null)
+    public string Register(string generation, Uri uri, object report, Uri? scope = null, SqlNavigationTarget? selection = null)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(report, ProcedureTools.JsonOptions);
         if (bytes.Length > 8 * 1024 * 1024) throw new McpException("Report exceeds the evidence-retention budget. Request one module/depth 0 or a focused compact report.");
@@ -21,13 +22,19 @@ internal sealed class AnalysisPages
         {
             while (reports.Count >= 8 || reports.Values.Sum(r => r.Bytes) + bytes.Length > 8 * 1024 * 1024)
                 reports.Remove(reports.Values.OrderBy(r => r.At).First().Id);
-            reports[id] = new(id, generation, uri, json.RootElement.Clone(), bytes.Length, DateTimeOffset.UtcNow, scope);
+            reports[id] = new(id, generation, uri, json.RootElement.Clone(), bytes.Length, DateTimeOffset.UtcNow, scope, selection);
         }
         return id;
     }
 
     public Uri Source(string reference) => Get(reference, null).Uri;
     public Uri? Scope(string reference) => Get(reference, null).Scope;
+    public void ValidateModule(string reference, Uri uri, TextPosition position, Uri? scope)
+    {
+        var saved = Get(reference, null);
+        if (saved.Selection is not { } selected || selected.Uri != uri || selected.Range.Start != position || saved.Scope != scope)
+            throw new McpException("moduleRef does not identify this report's selected root/scope. Expand using reportRef alone or its matching root moduleRef.");
+    }
     private Saved Get(string reference, string? generation)
     {
         lock (gate)
@@ -63,7 +70,7 @@ internal sealed class AnalysisPages
             reportRef = reference,
             generation,
             status = Property(data, "status"),
-            explanation = "Report exceeds the wire budget. Counts are not empty-effect claims. Expand only relevant sections using reportRef, section and offset; every retained value remains available.",
+            explanation = "Report exceeds the wire budget. Counts are not empty-effect claims. Expand only relevant sections using reportRef, section and offset; moduleRef is unnecessary (only the matching root is accepted). Every retained value remains available.",
             totalModules = modules.Length,
             omittedModuleSummaries = modules.Length - summary.Length,
             moduleSummaries = summary,

@@ -205,15 +205,16 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         [Description("compact (default); full retains original DTO fields. Both use deliberate pages when oversized.")] string detail = "compact",
         [Description("Compact only: up to 8 variable names or expression snippets, each 1..64 characters. Case-insensitive literal substring selection and connected value dependencies; not semantic search. Omitted counts remain visible.")] string[]? focus = null,
         CancellationToken cancellationToken = default, string? declaration = null, string? moduleRef = null,
-        string? reportRef = null, string section = "", int offset = 0, int maxItems = 20,
+        [Description("Expand saved evidence. No selector needed; a redundant matching root moduleRef is accepted.")] string? reportRef = null,
+        [Description("Copy a returned JSON Pointer section; empty selects the report root.")] string section = "", int offset = 0, int maxItems = 20,
         [Description("Physical folder URI explicitly defining this investigation's source boundary. Outside dependencies stay unresolved.")] string? scopeUri = null)
     {
         using var observation = metrics.Begin(reportRef == null ? "analyze_procedure" : "expand_report", detail, cancellationToken);
         ModuleSelection? selectedModule = moduleRef == null ? null : moduleSelections.Get(moduleRef);
         if (selectedModule != null)
         {
-            if (documentUri.Length != 0 && !Uri.TryCreate(documentUri, UriKind.Absolute, out var supplied) || declaration != null || reportRef != null)
-                throw new McpException("Use moduleRef alone, or a file/declaration selection, or reportRef expansion.");
+            if (documentUri.Length != 0 && !Uri.TryCreate(documentUri, UriKind.Absolute, out var supplied) || declaration != null)
+                throw new McpException("Use moduleRef, or a file/declaration selection; report pages need reportRef and section.");
             if (documentUri.Length != 0 && new Uri(documentUri) != selectedModule.Uri) throw new McpException("moduleRef and documentUri disagree.");
             documentUri = selectedModule.Uri.AbsoluteUri;
             line = selectedModule.Position.Line; character = selectedModule.Position.Character;
@@ -223,7 +224,10 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         }
         if (reportRef != null)
         {
-            if (declaration != null || moduleRef != null) throw new McpException("Report expansion cannot include another selector.");
+            if (declaration != null) throw new McpException("Report pages use reportRef and section; omit declaration.");
+            if (selectedModule != null) analysisPages.ValidateModule(reportRef, selectedModule.Uri, selectedModule.Position, selectedModule.Scope);
+            else if (documentUri.Length != 0 && (!Uri.TryCreate(documentUri, UriKind.Absolute, out var supplied) || supplied != analysisPages.Source(reportRef)))
+                throw new McpException("documentUri does not match this report's source. Expand using reportRef and section.");
             documentUri = analysisPages.Source(reportRef).AbsoluteUri;
             if (scopeUri != null && scopeUri != analysisPages.Scope(reportRef)?.AbsoluteUri) throw new McpException("reportRef already binds its source scope.");
             scopeUri = analysisPages.Scope(reportRef)?.AbsoluteUri;
@@ -289,7 +293,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
             var responseValue = Envelope(presented, analyzed.Use);
             if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
-            var reference = analysisPages.Register(generation, uri, presented, root);
+            var reference = analysisPages.Register(generation, uri, presented, root, report.Candidates.Length == 1 ? report.Candidates[0] : null);
             for (var count = Math.Min(8, report.Modules.Length); count >= 0; count--)
             {
                 responseValue = Envelope(analysisPages.Overview(reference, generation, count), analyzed.Use);

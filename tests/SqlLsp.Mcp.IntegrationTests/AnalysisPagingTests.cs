@@ -65,4 +65,34 @@ public class AnalysisPagingTests
         Assert.Contains(full.GetProperty("modules")[0].GetProperty("issues").EnumerateArray(), i => i.GetProperty("code").GetString() == "control-flow-limit");
         Assert.Equal(0, full.GetProperty("modules")[0].GetProperty("definition").GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
     }
+
+    [Fact]
+    public async Task Report_pages_accept_a_redundant_matching_module_but_reject_other_roots_and_stale_sources()
+    {
+        var body = " @n int AS BEGIN " + string.Concat(Enumerable.Repeat("IF @n=0 RETURN; ", 100)) + "END;";
+        await using var client = await McpClient.Start("CREATE PROC dbo.P" + body + "\nGO\nCREATE PROC dbo.Q" + body);
+        var discovery = McpClient.Data(await client.Tool("find_procedures", new { }));
+        var modules = discovery.GetProperty("modules").EnumerateArray().ToArray();
+        var p = modules.Single(m => m.GetProperty("identity").GetProperty("name").GetString() == "P").GetProperty("moduleRef").GetString();
+        var q = modules.Single(m => m.GetProperty("identity").GetProperty("name").GetString() == "Q").GetProperty("moduleRef").GetString();
+        var analyzed = McpClient.Data(await client.Tool("analyze_procedure", new { moduleRef = p, detail = "full" }));
+        var reportRef = analyzed.GetProperty("report").GetProperty("reportRef").GetString();
+        const string section = "/modules/0/controlFlow/nodes";
+        var ordinary = McpClient.Data(await client.Tool("analyze_procedure", new { reportRef, section })).GetProperty("report");
+        var redundant = await client.Tool("analyze_procedure", new { reportRef, section, moduleRef = p });
+        Assert.InRange(Encoding.UTF8.GetByteCount(redundant.GetRawText()), 1, 32768);
+        Assert.True(System.Text.Json.JsonElement.DeepEquals(ordinary, McpClient.Data(redundant).GetProperty("report")));
+        var mismatch = await client.Tool("analyze_procedure", new { reportRef, section, moduleRef = q });
+        Assert.True(mismatch.GetProperty("result").GetProperty("isError").GetBoolean());
+        Assert.Contains("selected root/scope", mismatch.ToString());
+        var otherFile = await client.Tool("analyze_procedure", new { reportRef, section, documentUri = new Uri(Path.Combine(client.Root, "other.sql")).AbsoluteUri });
+        Assert.True(otherFile.GetProperty("result").GetProperty("isError").GetBoolean());
+        await File.AppendAllTextAsync(client.SourceFile, "\n-- changed");
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (McpClient.Data(await client.Tool("find_procedures", new { })).GetProperty("generation").GetString() == discovery.GetProperty("generation").GetString())
+            await Task.Delay(100, deadline.Token);
+        var stale = await client.Tool("analyze_procedure", new { reportRef, section, moduleRef = p });
+        Assert.True(stale.GetProperty("result").GetProperty("isError").GetBoolean());
+        Assert.Contains("stale", stale.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
 }
