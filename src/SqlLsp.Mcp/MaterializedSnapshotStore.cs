@@ -44,7 +44,7 @@ internal sealed class MaterializedSnapshotStore(string directory, string workspa
                 if (decoded.Length + count > MaxDecodedBytes) { Status = "Invalid"; return []; }
                 decoded.Write(buffer, 0, count);
             }
-            var snapshot = JsonSerializer.Deserialize<MaterializedSnapshot>(decoded.GetBuffer().AsSpan(0, (int)decoded.Length), ProcedureTools.JsonOptions);
+            var snapshot = JsonSerializer.Deserialize<MaterializedSnapshot>(decoded.GetBuffer().AsSpan(0, (int)decoded.Length), SqlAnalysisCacheContext.JsonOptions);
             if (snapshot is not { Format: 1 } || snapshot.Configuration != configuration || snapshot.Files.Length > 10000 ||
                 snapshot.Hash != Hash(snapshot.Files) || snapshot.Files.Any(f => !f.Uri.IsFile || f.RawHash.Length != 64 || f.Declarations.IsDefault || f.Diagnostics.IsDefault ||
                     f.Semantics == null || f.Semantics.References.IsDefault || f.Semantics.Locals.IsDefault || f.Declarations.Any(d => d == null) || f.Rules == null))
@@ -61,7 +61,7 @@ internal sealed class MaterializedSnapshotStore(string directory, string workspa
         string? temporary = null;
         try
         {
-            var json = JsonSerializer.SerializeToUtf8Bytes(new MaterializedSnapshot(1, configuration, files, Hash(files)), ProcedureTools.JsonOptions);
+            var json = JsonSerializer.SerializeToUtf8Bytes(new MaterializedSnapshot(1, configuration, files, Hash(files)), SqlAnalysisCacheContext.JsonOptions);
             if (json.Length > MaxDecodedBytes) { Status = "TooLarge"; return; }
             using var encoded = new MemoryStream();
             using (var compressor = new GZipStream(encoded, CompressionLevel.Fastest, leaveOpen: true)) await compressor.WriteAsync(json, token);
@@ -109,7 +109,7 @@ internal sealed class MaterializedSnapshotStore(string directory, string workspa
         }
     }
 
-    private static string Hash(SqlMaterializedFile[] files) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(files, ProcedureTools.JsonOptions)));
+    private static string Hash(SqlMaterializedFile[] files) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(files, SqlAnalysisCacheContext.JsonOptions)));
     private void PrivateRoot()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(root)!);

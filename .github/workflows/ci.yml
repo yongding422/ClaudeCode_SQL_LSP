@@ -3,6 +3,7 @@ on: [push, pull_request]
 jobs:
   offline:
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -20,6 +21,7 @@ jobs:
         run: ./scripts/test-marketplace.ps1
   packages:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest

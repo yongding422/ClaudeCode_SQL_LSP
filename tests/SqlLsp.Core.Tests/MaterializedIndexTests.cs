@@ -5,6 +5,19 @@ namespace SqlLsp.Core.Tests;
 
 public class MaterializedIndexTests
 {
+    [Theory]
+    [InlineData("file:///workspace/p.sql")]
+    [InlineData("/workspace/p.sql")]
+    public void Persisted_URI_converter_preserves_absolute_file_identity_for_native_path_spelling(string spelling)
+    {
+        var uri = new Uri(spelling.StartsWith('/') ? Path.GetFullPath(spelling) : spelling, UriKind.Absolute);
+        var json = JsonSerializer.Serialize(uri, SqlAnalysisCacheContext.JsonOptions);
+        var restored = JsonSerializer.Deserialize<Uri>(json, SqlAnalysisCacheContext.JsonOptions)!;
+        Assert.True(restored.IsAbsoluteUri);
+        Assert.True(restored.IsFile);
+        Assert.Equal(uri.AbsoluteUri, restored.AbsoluteUri);
+        Assert.Equal(json, JsonSerializer.Serialize(restored, SqlAnalysisCacheContext.JsonOptions));
+    }
     [Fact]
     public async Task Real_extracted_facts_roundtrip_without_asts_and_preserve_discovery_and_resolution()
     {
