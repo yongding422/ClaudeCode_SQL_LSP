@@ -4,7 +4,7 @@ using Json.Schema;
 namespace SqlLsp.Mcp;
 
 // Local storage settings only. SQL source/database options remain explicitly selected with --config.
-internal sealed record PluginSettings(string? MetricsDirectory = null, string? CacheDirectory = null)
+internal sealed record PluginSettings(string? MetricsDirectory = null, string? CacheDirectory = null, int DiscoveryMaxBytes = 16384)
 {
     private const string Starter = """
         {
@@ -61,7 +61,8 @@ internal sealed record PluginSettings(string? MetricsDirectory = null, string? C
             var root = document.RootElement;
             if (!Schema.Evaluate(root).IsValid || HasDuplicates(root)) throw new ArgumentException("Invalid plugin settings.");
             var directory = Path.GetDirectoryName(file)!;
-            return new(Storage(root, "metrics", directory), Storage(root, "analysisCache", directory));
+            return new(Storage(root, "metrics", directory), Storage(root, "analysisCache", directory),
+                root.TryGetProperty("responses", out var responses) && responses.TryGetProperty("discoveryMaxBytes", out var budget) ? budget.GetInt32() : 16384);
         }
         catch (FileNotFoundException) when (explicitFile == null) { return new(); }
         catch (JsonException) { throw new ArgumentException("Invalid plugin settings JSON."); }

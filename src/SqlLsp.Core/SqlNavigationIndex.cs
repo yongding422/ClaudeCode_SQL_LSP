@@ -12,6 +12,27 @@ public sealed partial class SqlNavigationIndex
     public ImmutableArray<IndexedSqlSymbol> Symbols { get; }
     public ImmutableArray<SqlDefinitionDrift> Drifts { get; }
     public int DocumentCount => documents.Length;
+    // Content-derived generation: cursors must never survive an edit or a context change.
+    public string Generation => generation ??= Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(string.Join("\n", documents.OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
+            .Select(d => d.Uri.AbsoluteUri + "|" + context(d.Uri) + "|" + AnalysisRevision(d))))));
+    private string? generation;
+
+    public (int Count, int Files) ParseIssueCounts(Uri? uri = null)
+    {
+        var selected = documents.Where(d => uri == null || d.Uri == uri).ToArray();
+        return (selected.Sum(d => d.Parse.Diagnostics.Length), selected.Count(d => d.Parse.Diagnostics.Length > 0));
+    }
+
+    public IEnumerable<SqlCoverageIssue> ParseIssuePage(Uri? uri, int offset, int limit, CancellationToken token)
+    {
+        foreach (var item in documents.Where(d => uri == null || d.Uri == uri).OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
+            .SelectMany(d => d.Parse.Diagnostics.Select(i => new SqlCoverageIssue("parse-error", i.Message, new(d.Uri, i.Range)))).Skip(offset).Take(limit))
+        {
+            token.ThrowIfCancellationRequested();
+            yield return item;
+        }
+    }
 
     public SqlNavigationIndex(ImmutableArray<DocumentSnapshot> documents, Func<Uri, string> context, ResolutionOptions options,
         ImmutableArray<IndexedSqlSymbol> sourceSymbols = default, bool indexDeclarations = true, SqlHybridPolicy? hybrid = null,

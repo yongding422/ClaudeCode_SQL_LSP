@@ -15,6 +15,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
     string? MetricsDirectory = null, bool MetricsSummary = false, string? CompareMetricsDirectory = null, string? EvaluationCsv = null)
 {
     public bool AutoInitializeSettings { get; init; }
+    public int DiscoveryMaxBytes { get; init; } = 16384;
 
     public static McpLaunchOptions Parse(string[] args)
     {
@@ -57,7 +58,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
             metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation)
-        { AutoInitializeSettings = settingsFile == null };
+        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes };
     }
 }
 
@@ -69,24 +70,33 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     private string configurationStamp = "{}";
     private readonly PersistentAnalysisCache? cache = launch.CacheDirectory == null ? null : new(launch.CacheDirectory);
     private readonly PluginMetrics metrics = new(launch.MetricsDirectory);
+    private readonly DiscoveryCursor discoveryCursors = new();
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
     };
 
     [McpServerTool(Name = "find_procedures", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Find indexed T-SQL procedures, functions and views by name. Returns exact source URI, identity, revision and zero-based UTF-16 selection position. Multiple candidates remain visible; choose the correct source/database/schema before analyzing. Does not execute SQL.")]
+    [Description("Find saved T-SQL modules when their location is unknown. Bounded pages contain identities, revisions and zero-based UTF-16 selections. Reuse nextCursor with identical options. section=issues or files explicitly pages diagnostics/coverage; documentUri restricts to one file. Known files can be analyzed directly. No SQL execution.")]
     public async Task<CallToolResult> FindProcedures([Description("Name substring; empty lists indexed modules.")] string query = "",
-        [Description("Maximum results, 1..100.")] int maxResults = 30, CancellationToken cancellationToken = default)
+        [Description("Maximum entries per page, 1..100; byte budget may return fewer.")] int maxResults = 30,
+        CancellationToken cancellationToken = default, string? cursor = null, string section = "modules", string? documentUri = null)
     {
         using var observation = metrics.Begin("find_procedures", "discovery", cancellationToken);
-        if (query.Length > 256 || maxResults is < 1 or > 100) throw new McpException("Query/limit outside supported bounds.");
+        if (query.Length > 256 || maxResults is < 1 or > 100 || section is not ("modules" or "issues" or "files")) throw new McpException("Query/limit/section outside supported bounds.");
+        Uri? file = null;
+        if (documentUri != null && (!Uri.TryCreate(documentUri, UriKind.Absolute, out file) || !file.IsFile || file.Query.Length != 0 || file.Fragment.Length != 0))
+            throw new McpException("documentUri must be an absolute file URI.");
         return observation.Complete(await WithIndex((index, timings) =>
         {
             var timer = Stopwatch.StartNew();
+            var generation = index.Generation;
+            var options = JsonSerializer.Serialize(new { query, maxResults, section, documentUri });
+            var offset = discoveryCursors.Decode(cursor, generation, options);
             var symbols = index.Search(query, cancellationToken).Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
-                .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ToArray();
-            var modules = symbols.Take(maxResults).Select(symbol =>
+                .Where(s => file == null || s.Target.Uri == file)
+                .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
+            object Module(IndexedSqlSymbol symbol)
             {
                 var report = index.AnalyzeProcedure(symbol.Target.Uri, symbol.Target.Range.Start, cancellationToken, 0, 1);
                 return new
@@ -98,19 +108,55 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                     status = report.Status,
                     signature = symbol.Declaration.Documentation?.Signature
                 };
-            }).ToArray();
-            timings.AnalysisMs = timer.Elapsed.TotalMilliseconds;
-            return Task.FromResult(Result(new
+            }
+            var counts = index.ParseIssueCounts(file);
+            var coverage = state!.Documents?.Coverage;
+            var total = section == "issues" ? counts.Count : section == "files" ?
+                file == null ? coverage?.Discovered ?? 0 : state.Documents?.CoverageFiles(0, 1, file).Length ?? 0 : symbols.Length;
+            var entries = new List<object>();
+            var consumed = 0;
+            var omittedOversized = 0;
+            object Payload() => new
             {
-                source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
+                formatVersion = 2,
+                source = "Saved snapshots; no LSP unsaved buffers. Coverage is limited to indexed sources.",
                 indexedDocuments = index.DocumentCount,
-                sourceStatuses = state!.SourceStatuses,
-                sourceIssues = index.SourceParseIssues(cancellationToken),
+                coverage,
+                generation,
+                sourceStatuses = state.SourceStatuses.Take(4).Select(s => s.Length <= 256 ? s : s[..256] + "…").ToArray(),
+                sourceStatusCount = state.SourceStatuses.Count(),
+                sourceIssues = section == "issues" ? entries : new List<object>(),
+                sourceIssueSummary = new { count = counts.Count, affectedFiles = counts.Files, details = "Request section=issues, optionally documentUri, with pagination." },
                 timings,
-                modules,
-                totalMatches = symbols.Length,
-                truncated = symbols.Length > maxResults
-            }));
+                modules = section == "modules" ? entries : new List<object>(),
+                files = section == "files" ? entries : new List<object>(),
+                section,
+                totalMatches = total,
+                returned = entries.Count,
+                omittedOversized,
+                truncated = offset + consumed < total || omittedOversized > 0,
+                hasMore = offset + consumed < total,
+                nextCursor = offset + consumed < total ? discoveryCursors.Encode(generation, options, offset + consumed) : null,
+                truncationReason = omittedOversized > 0 ? "entry-exceeds-budget" : offset + consumed < total ? "page-or-byte-limit" : null,
+                recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Use a known file URI and selection for direct analysis or inspect the source; omitted count is explicit." : null
+            };
+            var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken).Cast<object>() :
+                section == "files" ? (state.Documents?.CoverageFiles(offset, maxResults, file) ?? []).Cast<object>() :
+                symbols.Skip(offset).Take(maxResults).Select(Module);
+            foreach (var entry in candidates)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                entries.Add(entry);
+                consumed++;
+                if (FitsWireBudget(Result(Payload()), launch.DiscoveryMaxBytes)) continue;
+                entries.RemoveAt(entries.Count - 1);
+                if (entries.Count == 0) { omittedOversized++; break; }
+                consumed--;
+                break;
+            }
+            timings.AnalysisMs = timer.Elapsed.TotalMilliseconds;
+            // Timing digits and the SDK envelope need headroom beyond the measured content.
+            return Task.FromResult(Result(Payload()));
         }, cancellationToken));
     }
 
@@ -142,6 +188,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             {
                 source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
                 indexedDocuments = index.DocumentCount,
+                coverage = state!.Documents?.Coverage,
                 sourceStatuses = state!.SourceStatuses,
                 timings,
                 cache = analyzed.Use,
@@ -295,6 +342,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         using var document = JsonDocument.Parse(json);
         return new() { StructuredContent = document.RootElement.Clone(), Content = [new TextContentBlock { Text = json }] };
     }
+
+    private static bool FitsWireBudget(CallToolResult result, int budget) =>
+        JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = long.MaxValue, result }, JsonOptions).Length <= budget - 1024;
 
     public async ValueTask DisposeAsync()
     {

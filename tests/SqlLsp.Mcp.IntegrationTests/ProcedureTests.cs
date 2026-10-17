@@ -95,7 +95,9 @@ public class ProcedureTests
         await using var client = await McpClient.Start("CREATE PROC dbo.P AS SELECT FROM;");
         var discovery = McpClient.Data(await client.Tool("find_procedures", new { }));
         Assert.Empty(discovery.GetProperty("modules").EnumerateArray());
-        Assert.NotEmpty(discovery.GetProperty("sourceIssues").EnumerateArray());
+        Assert.True(discovery.GetProperty("sourceIssueSummary").GetProperty("count").GetInt32() > 0);
+        var issues = McpClient.Data(await client.Tool("find_procedures", new { section = "issues" }));
+        Assert.NotEmpty(issues.GetProperty("sourceIssues").EnumerateArray());
         var report = McpClient.Data(await client.Tool("analyze_procedure", new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = 0, character = 16 })).GetProperty("report");
         Assert.Empty(report.GetProperty("modules").EnumerateArray());
         Assert.Contains(report.GetProperty("expansionIssues").EnumerateArray(), issue => issue.GetProperty("code").GetString() == "parse-error");

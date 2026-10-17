@@ -8,7 +8,13 @@
     "$schema": { "type": "string" },
     "version": { "const": 1 },
     "metrics": { "$ref": "#/$defs/storage" },
-    "analysisCache": { "$ref": "#/$defs/storage" }
+    "analysisCache": { "$ref": "#/$defs/storage" },
+    "responses": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "discoveryMaxBytes": { "type": "integer", "minimum": 8192, "maximum": 16384, "default": 16384 }
+      }
+    }
   },
   "$defs": {
     "storage": {

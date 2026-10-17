@@ -11,11 +11,16 @@ internal sealed record MetricEvent(int Format, string Version, string Build, str
     string Operation, string Detail, string Outcome, string SourceMode, bool? ColdStart, double DurationMs,
     int? IndexedDocuments, long? PayloadUtf8Bytes, long? ReportUtf8Bytes, string? ResolutionStatus,
     int Modules, int Calls, int ResolvedCalls, int Accesses, int ResolvedAccesses, int Issues, int TruncatedModules,
-    int CacheEnabled, Dictionary<string, long> CacheStatuses, Dictionary<string, double> Timings);
+    int CacheEnabled, Dictionary<string, long> CacheStatuses, Dictionary<string, double> Timings)
+{
+    public WorkspaceCoverage? Coverage { get; init; }
+    // Conservative estimated JSON-RPC envelope; actual transport is asserted in integration tests.
+    public long? ResultFrameUtf8Bytes { get; init; }
+}
 
 internal sealed class PluginMetrics(string? directory)
 {
-    internal const string Version = "0.14.0";
+    internal const string Version = "0.15.0-dev.1";
     internal static readonly string[] PhaseNames = ["queueMs", "initializationMs", "navigationMs", "analysisMs", "presentationMs", "cacheValidationMs", "cacheReadMs", "cacheWriteMs"];
     internal static readonly string[] CacheNames = ["Disabled", "Hit", "Stored", "NotStored", "UnavailableOrInvalid", "TooLarge", "UnsupportedSourceContext"];
     private readonly object sync = new();
@@ -30,7 +35,13 @@ internal sealed class PluginMetrics(string? directory)
     {
         private readonly Stopwatch watch = Stopwatch.StartNew();
         private JsonElement? data;
-        public CallToolResult Complete(CallToolResult result) { data = result.StructuredContent; return result; }
+        private long? frameBytes;
+        public CallToolResult Complete(CallToolResult result)
+        {
+            data = result.StructuredContent;
+            frameBytes = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = long.MaxValue, result }, ProcedureTools.JsonOptions).Length;
+            return result;
+        }
         public void Dispose()
         {
             if (owner.store == null) return;
@@ -97,7 +108,12 @@ internal sealed class PluginMetrics(string? directory)
                 payload != null ? "Success" : token.IsCancellationRequested ? "Canceled" : "Error", owner.SourceMode, cold, elapsed,
                 payload is { } item && item.TryGetProperty("indexedDocuments", out var docs) ? docs.GetInt32() : null,
                 payload is { } json ? Encoding.UTF8.GetByteCount(json.GetRawText()) : null,
-                reportBytes, resolution, modules, calls, resolvedCalls, accesses, resolvedAccesses, issues, truncated, cacheEnabled, statuses, timings);
+                reportBytes, resolution, modules, calls, resolvedCalls, accesses, resolvedAccesses, issues, truncated, cacheEnabled, statuses, timings)
+            {
+                Coverage = payload is { } cp && cp.TryGetProperty("coverage", out var cv) && cv.ValueKind == JsonValueKind.Object
+                    ? cv.Deserialize<WorkspaceCoverage>(ProcedureTools.JsonOptions) : null,
+                ResultFrameUtf8Bytes = frameBytes
+            };
             lock (owner.sync)
             {
                 owner.observed++;
