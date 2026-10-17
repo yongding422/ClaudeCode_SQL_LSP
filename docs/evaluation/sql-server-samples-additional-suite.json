@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "source_repository": "https://github.com/microsoft/sql-server-samples",
+  "grading": "Frozen before candidate model runs. New questions on the same selected corpus, not an independent holdout. Implementing-agent source review: each criterion 0/0.5/1, citations 0/0.5/1 and explicit material-unsupported flag; no automatic keyword grades. Both repeats and all failures stay in the denominator. Simple controls H01/H02; structural and uncertainty cases H03/H04/H05/H06. Edited-source freshness uses deterministic integration fixtures, not static model prompts.",
+  "tasks": [
+    {
+      "id": "H01-stock-search-literal",
+      "category": "simple literal control",
+      "question": "In samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/SearchForStockItems.sql, what column is searched, how are the maximum row count and ordering chosen, and what JSON root is returned? Cite the source; do not investigate other similarly named procedures.",
+      "criteria": ["Searches Warehouse.StockItems.SearchDetails using LIKE '%' + @SearchText + '%'.", "SELECT TOP(@MaximumRowsToReturn), ORDER BY StockItemName; FOR JSON AUTO with root StockItems."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/SearchForStockItems.sql", 2, 15]]
+    },
+    {
+      "id": "H02-supplier-search-joins",
+      "category": "simple known source control",
+      "question": "In samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/SearchForSuppliers.sql, identify the three source tables, which joins are inner versus outer, the searched fields, and the JSON root. Does this procedure contain a persistent-table write? Use only its source.",
+      "criteria": ["Purchasing.Suppliers inner joins Application.Cities by DeliveryCityID=CityID; left joins Application.People by PrimaryContactPersonID=PersonID.", "LIKE searches CONCAT(SupplierName, FullName, PreferredName) with spaces and wildcarded @SearchText; JSON AUTO ROOT Suppliers.", "The body selects data and contains no explicit persistent-table DML; this is a source statement, not proof of all implicit engine/runtime effects."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/SearchForSuppliers.sql", 7, 23]]
+    },
+    {
+      "id": "H03-cold-room-history-chain",
+      "category": "multi-file direct and transitive effects",
+      "question": "Under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt, trace DataLoadSimulation.RecordColdRoomTemperatures into PopulateColdRoomTemperatures_temp. Distinguish the caller's DELETE/OUTPUT/INSERT targets from helper effects, map its four arguments, and explain transaction declarations and the temporal-table caveat in source comments. Do not execute SQL or guarantee a runtime row count.",
+      "criteria": ["Caller deletes DataLoadSimulation.ColdRoomTemperatures_temp; deletes Warehouse.ColdRoomTemperatures OUTPUT INTO that staging table; later deletes staging OUTPUT INTO Warehouse.ColdRoomTemperatures_Archive; inserts final readings into Warehouse.ColdRoomTemperatures.", "Helper receives AverageSecondsBetweenReadings, NumberOfSensors, TimeCounter, ArchiveEndTime as AverageSecondsBetweenReadings, NumberOfSensors, TimeCounter, EndTime; reads MAX(staging ID) and inserts staging rows in time/sensor loops.", "Caller explicitly BEGIN TRAN/COMMIT and XACT_ABORT ON; helper declares native compilation and BEGIN ATOMIC SNAPSHOT. Do not assume a separate autonomous helper transaction.", "Caller comments say deployment-only, excluded from regular build, because temporal tables are deactivated/reactivated elsewhere. Table declaration enables SYSTEM_VERSIONING with ColdRoomTemperatures_Archive; source alone cannot prove live deployment/versioning state or row counts."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/DataLoadSimulation/Stored Procedures/RecordColdRoomTemperatures.sql", 1, 82], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/DataLoadSimulation/Stored Procedures/PopulateColdRoomTemperatures_temp.sql", 1, 40], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Warehouse/Tables/ColdRoomTemperatures.sql", 1, 13]]
+    },
+    {
+      "id": "H04-same-name-search-scopes",
+      "category": "same-name modules and view expansion",
+      "question": "In samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt compare Website.SearchForStockItems with WebApi.SearchForStockItems. Keep their identities separate. Explain optional price/tag/group filters, which filters affect the tag counts, and persistent relations behind WebApi.StockItems. Distinguish observed SQL predicates from any assumed runtime data.",
+      "criteria": ["Website takes SearchText/MaximumRowsToReturn and reads Warehouse.StockItems.SearchDetails; WebApi takes Name, Tag, MinPrice, MaxPrice, StockGroupID, MaximumRowsToReturn and reads WebApi.StockItems view.", "WebApi CTE uses optional Name and strict greater-than MinPrice/less-than MaxPrice. Its value subquery adds optional Tag via OPENJSON and StockGroupID via Warehouse.StockItemStockGroups; tags aggregation uses the CTE without those latter filters.", "View reads Warehouse.StockItems, StockItemHoldings, Purchasing.Suppliers, Warehouse.Colors, Warehouse.PackageTypes twice; these are transitive view reads, with no explicit persistent writes in either procedure."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/SearchForStockItems.sql", 2, 15], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/WebApi/Stored Procedures/SearchForStockItems.sql", 1, 40], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/WebApi/Views/StockItems.sql", 1, 15]]
+    },
+    {
+      "id": "H05-sensor-error-boundary",
+      "category": "error control and incomplete runtime state",
+      "question": "Inspect Website.RecordVehicleTemperature under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt. Identify its insert and JSON paths, distinguish malformed JSON from zero inserted rows, and explain what the CATCH's THROW/ROLLBACK/RETURN order actually guarantees. Name the third THROW argument correctly and do not infer final transaction state from source order alone.",
+      "criteria": ["INSERT Warehouse.VehicleTemperatures reads $.Recordings; properties rego/sensor/when/temp map to registration/sensor/time/temperature, full element '$' AS JSON is stored with IsCompressed=0 and compressed data NULL.", "ISJSON=0 throws 51000 with state 1 before BEGIN TRY/TRAN; zero inserted rows only prints warnings then reaches COMMIT.", "CATCH prints help then throws 51000 with state 2, so following IF XACT_STATE rollback and RETURN 1 are not executed on that path; RETURN after the early THROW is also unreachable. State is not severity; runtime transaction outcome depends on engine/error/ambient state."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/RecordVehicleTemperature.sql", 18, 59]]
+    },
+    {
+      "id": "H06-security-dynamic-ddl",
+      "category": "dynamic definitions and uncertainty",
+      "question": "Inspect Application.Configuration_ApplyRowLevelSecurity under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt. Explain its dynamic DDL sequence, the created function and policy's filter/block targets, and why an empty extracted static call graph is insufficient to establish no effects. Does installing the function mean immediately invoking it as a stored procedure? Cite source only; do not execute anything.",
+      "criteria": ["Four EXECUTE(@SQL) statements drop policy, drop function, create Application.DetermineCustomerAccess(CityID) table function, then create Application.FilterCustomersBySalesTerritoryRole security policy.", "Policy adds filter predicate on Sales.Customers and block predicate AFTER UPDATE using DeliveryCityID. Function text references Application.Cities and StateProvinces, role membership, login and session context; do not flatten SQL boolean precedence into an invented policy guarantee.", "These are executed dynamic DDL strings, including future function/policy behavior; installing a function is not a direct procedure invocation. Missing extracted static calls cannot prove absent schema/security/runtime effects."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Application/Stored Procedures/Configuration_ApplyRowLevelSecurity.sql", 2, 55]]
+    }
+  ]
+}

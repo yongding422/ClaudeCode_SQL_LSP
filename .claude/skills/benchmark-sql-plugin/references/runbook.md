@@ -21,6 +21,8 @@ Default settings can be changed explicitly at preparation (`--repeats`, `--worke
 
 `prepare --workflow prescribed` is the default and preserves the historical instruction. `available` lets the model choose tools; `forced` is a diagnostic analysis-first ablation. Each requires a new study and is recorded as a historical workflow mismatch. See `docs/evaluation/final-candidate-protocol.md` for frozen task groups, remaining holdout limits and no-model reuse probes. Reports distinguish bounded summaries from consumed/expanded body facts.
 
+Use `prepare --suite docs/evaluation/sql-server-samples-additional-suite.json --workflow available` for the separately frozen six-question cohort (24 sessions at two repeats). The default suite stays unchanged. Preparation validates source-backed evidence and freezes a separate rubric hash; its historical comparison must report that rubric/workflow mismatch. Define new gold before running new questions, and report each cohort separately.
+
 ## Review and compare
 
 ```powershell

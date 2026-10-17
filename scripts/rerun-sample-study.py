@@ -132,7 +132,8 @@ def prepare(args):
     artifact, cli = candidate(plugin), client(args.claude)
     if args.repeats < 1 or args.workers < 1 or args.timeout < 1 or not math.isfinite(args.budget) or args.budget <= 0:
         raise ValueError("Repeats/workers/timeout/budget must be positive.")
-    module("prepare-sample-study").prepare(source, SUITE, output)
+    suite = getattr(args, "suite", SUITE).resolve()
+    module("prepare-sample-study").prepare(source, suite, output)
     count = len(read(output / "tasks.json")) * args.repeats * 2
     plan = {"format": "sqlscriptdom-rerun-plan-v1", "prepared_utc": datetime.now(timezone.utc).isoformat(),
             "candidate": artifact, "client": cli, "model": args.model, "effort": "low", "repeats": args.repeats,
@@ -142,6 +143,7 @@ def prepare(args):
             "runner_sha256": digest(REPO / "scripts/evaluate-understanding.py"),
             "controller_sha256": digest(Path(__file__)),
             "historical_baseline": str(BASELINE), "historical_baseline_sha256": digest(BASELINE)}
+    plan["suite"] = {"path": str(suite), "sha256": digest(suite)}
     save_new(output / "rerun-plan.json", plan)
     print(f"Prepared {count} sessions; per-run reported cap ${args.budget:.2f}; no model calls made.")
     print(f"Candidate {artifact['version']}; fingerprint {artifact['fingerprint']}; provider {cli['provider_host']}.")
@@ -236,6 +238,7 @@ def main():
     check.add_argument("--claude")
     prep = commands.add_parser("prepare", help="Freeze corpus, rubric, candidate and run settings; no model calls.")
     prep.add_argument("--source", type=Path, required=True)
+    prep.add_argument("--suite", type=Path, default=SUITE, help="Separately reviewed frozen cohort; default preserves the original 12 tasks.")
     prep.add_argument("--plugin", type=Path, required=True)
     prep.add_argument("--model", required=True)
     prep.add_argument("--output", type=Path, required=True)

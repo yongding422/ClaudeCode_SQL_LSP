@@ -115,6 +115,25 @@ class RerunTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "inventory changed"):
                     rerun.verify_inputs(study, plan)
 
+    def test_custom_cohort_is_frozen_with_identity_and_never_changes_the_default_suite(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            suite = root / "holdout.json"
+            suite.write_text('{"tasks": []}')
+            output = root / "study"
+            output.mkdir()
+            (output / "tasks.json").write_text('[{"id": "holdout", "question": "fresh question"}]')
+            args = SimpleNamespace(source=root / "source", plugin=root / "plugin", output=output, suite=suite,
+                                   claude=None, model="pinned", repeats=2, workers=2, timeout=180, budget=.5)
+            preparation = SimpleNamespace(prepare=lambda source, frozen, destination: self.assertEqual(suite, frozen))
+            default_hash = rerun.digest(rerun.SUITE)
+            with patch.object(rerun, "candidate", return_value={"version": "candidate", "fingerprint": "bits"}), patch.object(rerun, "client", return_value={"provider_host": "test"}), patch.object(rerun, "module", return_value=preparation):
+                rerun.prepare(args)
+            plan = rerun.read(output / "rerun-plan.json")
+            self.assertEqual(4, plan["runs"])
+            self.assertEqual(rerun.digest(suite), plan["suite"]["sha256"])
+            self.assertEqual(default_hash, rerun.digest(rerun.SUITE))
+
 
 if __name__ == "__main__":
     unittest.main()
