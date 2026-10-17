@@ -1,8 +1,8 @@
 # macOS and Claude Code
 
-[Actual 0.12.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38994266071) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 36 MCP tests on Windows (two Unix-link skips) or 38 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/plugin-metrics-ci.json) records exact source, native/installation jobs, dependency checks and all eight release digests. No model calls were made by these checks.
+[Actual 0.13.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39001122394) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 57 MCP tests on Windows (two Unix-link skips) or 59 on Unix, including 21 new project-configuration cases. The optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/plugin-settings-ci.json) records source, native/installation jobs, dependency checks, the corrected initial SSH failure and all eight release digests. No model calls were made.
 
-Release [0.12.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.12.0) adds [inspectable local metrics and comparison commands](plugin-metrics.md), alongside persistent/compact reports. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38993716838) passed all nine jobs. Both Mac architectures passed 60 LSP and 38 MCP tests after native unzip, plus 29 deterministic provider tests in package checks. Executable modes survived native unzip without repair. Mac model calls remain unverified; historical release evidence is in [milestones](milestones.md).
+Release [0.13.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.13.0) adds [project config files](plugin-settings.md) for local metrics and report reuse. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39000161503) passed all nine jobs. Both Mac architectures passed 60 LSP and 59 MCP tests after native unzip, plus 29 deterministic provider tests in package checks. Executable modes survived without repair. Mac model calls remain unverified; historical release evidence is in [milestones](milestones.md).
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.
 
@@ -13,7 +13,7 @@ Use Claude Code **2.1.224 or later**. Check `claude --version`; if needed, run `
 In Terminal, add the marketplace once:
 
 ```sh
-claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+claude plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git
 ```
 
 On an **Apple Silicon Mac** (Apple M-series chip):
@@ -37,7 +37,7 @@ claude
 
 The plugin stays installed for later sessions. A `--plugin-dir` flag is not needed for a marketplace installation.
 
-You can also add the marketplace from inside Claude with `/plugin marketplace add yongding422/ClaudeCode_SQL_LSP`, then open `/plugin` and select the matching Mac entry in Discover.
+You can also add the marketplace from inside Claude with `/plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git`, then open `/plugin` and select the matching Mac entry in Discover.
 
 ## Use SQL search/navigation
 

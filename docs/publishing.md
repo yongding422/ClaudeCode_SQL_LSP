@@ -35,7 +35,7 @@ Test the actual install on a current Claude client, from an isolated configurati
 With Claude Code 2.1.224 or later:
 
 ```sh
-claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+claude plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git
 ```
 
 Install the entry for your computer:

@@ -51,3 +51,7 @@ Summary and prebuild commands use the same project settings:
 ```
 
 Use `mcp/sqlscriptdom-mcp.exe` with PowerShell's call operator on Windows. Set `SQL_PLUGIN_ROOT` to the installed/extracted plugin folder. The first command reads retained metrics without initializing SQL. The second acquires/parses sources and prebuilds bounded reports; enable `analysisCache` first. Explicit source configuration is still required for online/hybrid prebuilds. See [metrics and comparisons](plugin-metrics.md) and [report cache behavior](persistent-analysis-cache.md).
+
+## Release verification
+
+[Actual 0.13.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39001122394) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 57 MCP tests on Windows (two Unix-link skips) or 59 on Unix, including 21 new project-configuration cases. The optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/plugin-settings-ci.json) records source, native/installation jobs, dependency checks, the corrected initial SSH failure and all eight release digests. No model calls were made.

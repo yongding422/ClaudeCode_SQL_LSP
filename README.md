@@ -70,7 +70,7 @@ The server advertises incremental text synchronization, document symbols, defini
 Install the [published release](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/latest) through this repository's GitHub marketplace. Use Claude Code **2.1.224 or later** for archive installs; check `claude --version` and use `claude update` if needed. On an Apple Silicon Mac:
 
 ```sh
-claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+claude plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git
 claude plugin install sqlscriptdom-lsp-osx-arm64@sqlscriptdom-lsp-marketplace
 cd /path/to/your/sql-project
 claude

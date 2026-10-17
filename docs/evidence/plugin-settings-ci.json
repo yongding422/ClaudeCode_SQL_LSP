@@ -1,0 +1,209 @@
+{
+  "pluginVersion": "0.13.0",
+  "packageSourceCommit": "19c4a5ddfcb4217ba6a3bd27ae26c29a05b7d371",
+  "packageDirtySource": false,
+  "nativeCi": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39000161503",
+    "headSha": "19c4a5ddfcb4217ba6a3bd27ae26c29a05b7d371",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "sqlserver",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "catalog",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "marketplaceInstall": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39001122394",
+    "headSha": "6694f409f0c8268e63a555325f3d25e6e49424df",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "configuration": {
+    "automaticFile": "<workspace>/.sqlscriptdom.json",
+    "explicitFlag": "--settings",
+    "schemaVersion": 1,
+    "maximumBytes": 65536,
+    "enabledByDefault": false,
+    "relativePaths": "Relative to settings file directory",
+    "sourceConfigurationStillExplicit": true,
+    "precedence": [
+      "directory command-line flag",
+      "nonblank directory environment variable",
+      "settings file",
+      "disabled"
+    ],
+    "newRealProcessCases": 21
+  },
+  "localDefaultSuite": {
+    "passed": 293,
+    "skipped": 17,
+    "core": 147,
+    "lsp": 60,
+    "mcp": 57,
+    "deterministicProvider": 29
+  },
+  "nativeDefaultSuites": {
+    "windowsPassed": 293,
+    "windowsSkipped": 17,
+    "unixPassed": 295,
+    "unixSkipped": 15
+  },
+  "nativePackageChecks": {
+    "lspPassedPerPlatform": 60,
+    "windowsMcpPassed": 57,
+    "windowsMcpSkipped": 2,
+    "unixMcpPassed": 59,
+    "deterministicProviderPassed": 29,
+    "performanceSkipped": 1,
+    "liveProviderSkipped": 14,
+    "settingsGuideSchemaExampleIncluded": true,
+    "activeSettingsFileIncluded": false
+  },
+  "ownedSqlServerCi": {
+    "passed": 43,
+    "liveCases": 14,
+    "externalServerUsed": false
+  },
+  "actualMarketplaceChecks": {
+    "strictValidation": true,
+    "lspPassedPerPlatform": 60,
+    "windowsMcpPassed": 57,
+    "unixMcpPassed": 59,
+    "macExecutableModeRepairApplied": false,
+    "cliVersion": "2.1.224",
+    "modelCallsMade": false
+  },
+  "dependencies": {
+    "newNuGetDependencies": false,
+    "lockedRestore": "passed",
+    "buildWarnings": 0,
+    "formatVerification": "passed",
+    "audit": "No vulnerable packages reported in eight projects"
+  },
+  "release": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.13.0",
+    "assetsMatchCiAndCatalog": true,
+    "assets": [
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-linux-x64.zip",
+        "sha256": "0dc8023bf4928c836c14e008188055c55e0705f02b14a93946ec25e5c5670aec",
+        "bytes": 90659751
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-linux-x64.zip.sha256",
+        "sha256": "d32d66a348121dab85592acf849042f1e4bdb98c5642d4d3e53eb5aa2a43303d",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-osx-arm64.zip",
+        "sha256": "128973adba8728667b29009fb27fad3f4829ea51dc94c5ca4d2df326412d13fe",
+        "bytes": 83838400
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-osx-arm64.zip.sha256",
+        "sha256": "3d30cf609ddb7ee2e869e944085a23d110632a7f4fa110c10ca996b9f3540080",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-osx-x64.zip",
+        "sha256": "1a8d0836194065b90fbedc9496cb2ae21d2756e0c1469008d2cb84878a25e784",
+        "bytes": 88555813
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-osx-x64.zip.sha256",
+        "sha256": "6b659b292d96e2405b232b755499937b106b6ba7cf8f945957271a5b4aecab12",
+        "bytes": 102
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-win-x64.zip",
+        "sha256": "8a3d665dcb1e509b266c4ea3a99a12d6bca69317ad42b8ef7cb2bff32c8ec850",
+        "bytes": 91221716
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.13.0-win-x64.zip.sha256",
+        "sha256": "4addeed7030652b7118a041269f2ddce4277d1917cd1809e56ed5b6b02ad91a5",
+        "bytes": 103
+      }
+    ]
+  },
+  "cancelledDuplicateTagBuild": {
+    "runId": 39000710016,
+    "sourceCommit": "19c4a5ddfcb4217ba6a3bd27ae26c29a05b7d371",
+    "reason": "Identical released source already passed all nine native CI jobs; freed marketplace-install runners"
+  },
+  "initialMarketplaceAttempt": {
+    "runId": 39000734657,
+    "passedPlatforms": [
+      "win-x64",
+      "linux-x64",
+      "osx-arm64"
+    ],
+    "failedPlatform": "osx-x64",
+    "failure": "Marketplace shorthand selected GitHub SSH; runner had no SSH key",
+    "pluginExecutionReachedOnFailedPlatform": false,
+    "fix": "Installer harness uses explicit public HTTPS repository URL",
+    "releasedAssetsRebuilt": false
+  },
+  "cancelledRedundantFollowupBuilds": {
+    "runIds": [
+      39000734440,
+      39001122502
+    ],
+    "reason": "Catalog/docs and HTTPS installer-harness commits do not alter released code; release source passed all nine native jobs. Changed installer harness is verified by the final four-platform marketplace workflow; freed queued Intel Mac runners."
+  },
+  "limits": [
+    "Local settings affect MCP storage only; SQL source options and LSP initialization remain independent",
+    "Changes require restarting the MCP process",
+    "No model performance or token-saving claim"
+  ]
+}
