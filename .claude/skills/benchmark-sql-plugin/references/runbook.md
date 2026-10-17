@@ -19,6 +19,8 @@ These Python commands also work on macOS/Linux with their native artifact and ab
 
 Default settings can be changed explicitly at preparation (`--repeats`, `--workers`, `--timeout`, `--budget`), but differences are part of the experiment. A client-reported budget cap is not an independent guarantee of provider billing. Preflight requires no model call; an authorized full run uses up to 48 sessions by default. Do not change credential/configuration values to match the historical provider without the user's direction.
 
+`prepare --workflow prescribed` is the default and preserves the historical instruction. `available` lets the model choose tools; `forced` is a diagnostic analysis-first ablation. Each requires a new study and is recorded as a historical workflow mismatch. See `docs/evaluation/final-candidate-protocol.md` for frozen task groups, remaining holdout limits and no-model reuse probes. Reports distinguish bounded summaries from consumed/expanded body facts.
+
 ## Review and compare
 
 ```powershell

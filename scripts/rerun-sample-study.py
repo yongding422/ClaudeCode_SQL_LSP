@@ -136,7 +136,7 @@ def prepare(args):
     count = len(read(output / "tasks.json")) * args.repeats * 2
     plan = {"format": "sqlscriptdom-rerun-plan-v1", "prepared_utc": datetime.now(timezone.utc).isoformat(),
             "candidate": artifact, "client": cli, "model": args.model, "effort": "low", "repeats": args.repeats,
-            "workers": args.workers, "timeout": args.timeout, "budget": args.budget, "seed": 42,
+            "workers": args.workers, "timeout": args.timeout, "budget": args.budget, "seed": 42, "workflow": getattr(args, "workflow", "prescribed"),
             "order": "baseline-first", "mode": "cold-fresh-client; persisted analysis cache disabled",
             "runs": count, "maximum_client_reported_budget_usd": count * args.budget,
             "runner_sha256": digest(REPO / "scripts/evaluate-understanding.py"),
@@ -155,7 +155,7 @@ def run_command(study, plan):
             "--claude", plan["client"]["executable"], "--effort", plan["effort"],
             "--repeats", str(plan["repeats"]), "--workers", str(plan["workers"]),
             "--timeout", str(plan["timeout"]), "--budget", str(plan["budget"]),
-            "--seed", str(plan["seed"]), "--order", plan["order"], "--restricted",
+            "--seed", str(plan["seed"]), "--order", plan["order"], "--workflow", plan.get("workflow", "prescribed"), "--restricted",
             "--keep-answers", "--keep-transcripts", "--output", str(study / "runs")]
 
 
@@ -194,6 +194,7 @@ def compare(baseline, current, manifest, plan):
                   "rubric_sha256": manifest["rubric_sha256"] == baseline["rubric_sha256"]}
     for key in ("model", "provider_host", "effort", "repeats", "workers", "order", "restricted", "timeout_seconds", "reported_budget_per_run_usd", "cli_version"):
         dimensions[key] = current["experiment"].get(key) == baseline["experiment"].get(key)
+    dimensions["workflow"] = current["experiment"].get("workflow", "prescribed") == baseline["experiment"].get("workflow", "prescribed")
     rows = []
     fields = ("mean_elapsed_ms", "reported_total_input_tokens_mean", "input_tokens_mean", "output_tokens_mean",
               "mean_factual_score", "mean_citation_score", "strict_passes", "tool_failures", "oversized_tool_results")
@@ -241,6 +242,7 @@ def main():
     prep.add_argument("--claude")
     prep.add_argument("--repeats", type=int, default=2)
     prep.add_argument("--workers", type=int, default=2)
+    prep.add_argument("--workflow", choices=("prescribed", "available", "forced"), default="prescribed")
     prep.add_argument("--timeout", type=int, default=180)
     prep.add_argument("--budget", type=float, default=.50)
     execute = commands.add_parser("run", help="Execute prepared paid client sessions, or validate with --dry-run.")

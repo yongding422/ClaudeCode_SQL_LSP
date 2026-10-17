@@ -157,9 +157,11 @@ def run_one(args, task, arm, repeat, index):
             command[command.index("--mcp-config") + 1] = json.dumps({"mcpServers": {f"plugin:{manifest['name']}:sqlscriptdom-analysis": server}})
         else:
             command += ["--disable-slash-commands"]
-        workflow = ("Use the SQL plugin's find_procedures and analyze_procedure tools for relevant modules first; "
-                    "use Read/Grep/Glob to verify or fill gaps. " if arm == "plugin" else
-                    "Use Read/Grep/Glob to investigate the SQL source. ")
+        mode = getattr(args, "workflow", "prescribed")
+        workflow = ("Use Read/Grep/Glob to investigate the SQL source. " if arm == "grep" else
+                    "Choose the most useful available tools for this SQL question; plugin use is optional. " if mode == "available" else
+                    "Call SQL plugin analysis for a relevant module before answering; use file tools to verify or fill gaps. " if mode == "forced" else
+                    "Use the SQL plugin's find_procedures and analyze_procedure tools for relevant modules first; use Read/Grep/Glob to verify or fill gaps. ")
         command += [task["question"] + "\n" + workflow +
                     "Answer in at most 450 words with file:line citations, direct versus transitive effects where relevant, "
                     "and explicit unknowns. Do not execute SQL or run shell commands. Report tool failures honestly."]
@@ -249,6 +251,7 @@ def main():
     parser.add_argument("--order", choices=("random", "baseline-first"), default="random")
     parser.add_argument("--arms", nargs="+", choices=("grep", "plugin"), default=["grep", "plugin"])
     parser.add_argument("--workers", type=int, default=1, help="Bounded concurrent clients; phases never overlap in baseline-first mode.")
+    parser.add_argument("--workflow", choices=("prescribed", "available", "forced"), default="prescribed", help="Separate labeled routing experiment; prescribed preserves the original instruction.")
     parser.add_argument("--restricted", action="store_true", help="Require a Claude CLI supporting workspace-confined file tools.")
     parser.add_argument("--budget", type=float, default=0.50, help="Reported USD limit per run, not guaranteed subscription billing.")
     parser.add_argument("--timeout", type=int, default=120)
@@ -277,7 +280,7 @@ def main():
     (args.output / "experiment.json").write_text(json.dumps({
         "model": args.model, "provider_host": urlparse(os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")).hostname,
         "effort": args.effort, "cli_version": args.cli_version, "plugin_version": args.plugin_version,
-        "repeats": args.repeats, "seed": args.seed, "order": args.order, "workers": args.workers,
+        "repeats": args.repeats, "seed": args.seed, "order": args.order, "workers": args.workers, "workflow": args.workflow,
         "restricted": args.restricted, "timeout_seconds": args.timeout, "reported_budget_per_run_usd": args.budget,
         "schedule": [{"index": i, "task_id": task["id"], "arm": arm, "repeat": repeat}
                      for i, (task, arm, repeat) in enumerate(schedule, 1)]}, indent=2), encoding="utf-8")

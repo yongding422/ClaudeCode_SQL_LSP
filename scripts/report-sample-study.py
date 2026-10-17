@@ -15,6 +15,7 @@ def blocks(event):
 
 def analysis_statuses(events):
     statuses = []
+    references = {}
     for event in events:
         for block in blocks(event):
             if block.get("type") != "tool_result":
@@ -28,7 +29,20 @@ def analysis_statuses(events):
                 except (ValueError, TypeError):
                     continue
                 if isinstance(payload, dict) and isinstance(payload.get("report"), dict):
-                    statuses.append(payload["report"].get("status", "unknown"))
+                    report = payload["report"]
+                    kind = report.get("format")
+                    if kind == "paged-report-v1":
+                        status = report.get("status", "unknown")
+                        references[report.get("reportRef")] = status
+                        statuses.append("Paged" + status)
+                    elif kind == "report-page-v1":
+                        body_values = any(item.get("path", "").startswith("/modules/") and "value" in item and
+                                          any(field in item.get("path", "") for field in ("/calls", "/accesses", "/controlFlow", "/valueFlow", "/observations"))
+                                          for item in report.get("items", []) if isinstance(item, dict))
+                        if body_values:
+                            statuses.append("Expanded" + references.get(report.get("reportRef"), "unknown"))
+                    elif kind != "report-text-page-v1":
+                        statuses.append(report.get("status", "unknown"))
                     break
     return statuses
 
@@ -64,7 +78,8 @@ def aggregate(rows):
               "oversized_tool_results": sum(row["oversized_tool_results"] for row in rows),
               "runs_with_mcp_calls": sum(row["mcp_calls"] > 0 for row in rows),
               "runs_with_analysis_reports": sum(row["analysis_reports"] > 0 for row in rows),
-              "runs_with_supported_analysis": sum(any(status in ("Resolved", "Partial") for status in row.get("analysis_statuses", [])) for row in rows)}
+              "runs_with_supported_analysis": sum(any(status in ("Resolved", "Partial", "ExpandedResolved", "ExpandedPartial") for status in row.get("analysis_statuses", [])) for row in rows),
+              "runs_with_paged_summary": sum(any(status.startswith("Paged") for status in row.get("analysis_statuses", [])) for row in rows)}
     for key in ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens", "reported_total_input_tokens", "reported_cost_usd"):
         known = [row[key] for row in rows if row.get(key) is not None]
         result[key + "_known_runs"] = len(known)
@@ -138,7 +153,8 @@ def report(study, grades_path):
                ("Mean reported output tokens", "output_tokens_mean", "{:,.0f}"),
                ("Client-reported cost total (USD)", "reported_cost_usd_sum", "{:.4f}"),
                ("Tool failures", "tool_failures", "{}"), ("Oversized tool results", "oversized_tool_results", "{}"),
-               ("Sessions invoking SQL MCP", "runs_with_mcp_calls", "{}"), ("Sessions with an inline analysis report", "runs_with_analysis_reports", "{}")]
+               ("Sessions invoking SQL MCP", "runs_with_mcp_calls", "{}"), ("Sessions receiving analysis JSON (may include summary/pages)", "runs_with_analysis_reports", "{}"),
+               ("Sessions receiving a bounded summary", "runs_with_paged_summary", "{}")]
     metrics.append(("Sessions with Resolved/Partial analysis (not Unresolved)", "runs_with_supported_analysis", "{}"))
     for label, key, formatting in metrics:
         values = [grouped[arm][key] for arm in ("grep", "plugin")]
