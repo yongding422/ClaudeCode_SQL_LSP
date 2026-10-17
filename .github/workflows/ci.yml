@@ -15,7 +15,7 @@ jobs:
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --no-restore --configuration Release
       - run: dotnet format --no-restore --verify-no-changes
-      - run: python scripts/test_evaluation_metrics.py
+      - run: python -m unittest discover -s scripts -p "test_*.py" -v
       - shell: pwsh
         run: ./scripts/test-marketplace.ps1
   packages:
