@@ -1,5 +1,7 @@
 # macOS and Claude Code
 
+[Actual 0.12.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38994266071) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 36 MCP tests on Windows (two Unix-link skips) or 38 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/plugin-metrics-ci.json) records exact source, native/installation jobs, dependency checks and all eight release digests. No model calls were made by these checks.
+
 Release [0.12.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.12.0) adds [inspectable local metrics and comparison commands](plugin-metrics.md), alongside persistent/compact reports. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38993716838) passed all nine jobs. Both Mac architectures passed 60 LSP and 38 MCP tests after native unzip, plus 29 deterministic provider tests in package checks. Executable modes survived native unzip without repair. Mac model calls remain unverified; historical release evidence is in [milestones](milestones.md).
 
 Install this plugin through the GitHub marketplace. Claude downloads and installs the matching package automatically. You do not need to download a ZIP, install .NET, or configure SQL Server for offline SQL search.

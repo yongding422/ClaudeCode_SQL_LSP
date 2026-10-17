@@ -1,5 +1,7 @@
 # Explain a stored procedure with the plugin
 
+[Actual 0.12.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38994266071) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 36 MCP tests on Windows (two Unix-link skips) or 38 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/plugin-metrics-ci.json) records exact source, native/installation jobs, dependency checks and all eight release digests. No model calls were made by these checks.
+
 
 Version 0.12.0 adds [inspectable local metrics and comparison commands](plugin-metrics.md), alongside [opt-in persistent JSON reports and bulk prebuilding](persistent-analysis-cache.md). The 0.10.0 features remain: [compact reports and direct source citations](compact-reports.md), optional value focus, reuse of expanded callees and per-request initialization/analysis timings. The skill requests compact reports; the original full DTO remains the compatible default. [The workflow diagram](plugin-workflow.md) shows how Claude, MCP, LSP and ScriptDOM work together.
 

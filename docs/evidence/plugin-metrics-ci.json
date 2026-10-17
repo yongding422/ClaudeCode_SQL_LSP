@@ -1,0 +1,199 @@
+{
+  "pluginVersion": "0.12.0",
+  "packageSourceCommit": "443a12250225a60ac38fa5176ae8496d318e1bbe",
+  "packageDirtySource": false,
+  "nativeCi": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38993716838",
+    "headSha": "443a12250225a60ac38fa5176ae8496d318e1bbe",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "sqlserver",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "catalog",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "marketplaceInstall": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38994266071",
+    "headSha": "d525f0ebbd27b4e907c82eb70395bc2d72fec2c8",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "localDefaultSuite": {
+    "passed": 272,
+    "skipped": 17,
+    "core": 147,
+    "lsp": 60,
+    "mcp": 36,
+    "deterministicProvider": 29,
+    "scope": "Main feature candidate; final storage-collision fix also passed 6 targeted Windows metrics tests, with 1 Unix skip. Exact final-source full suites passed in native CI."
+  },
+  "localLiveAttempt": {
+    "result": "14 live cases failed during shared fixture initialization because the Docker Desktop daemon pipe was unavailable",
+    "applicationCaseExecution": "Fixture startup failed before cases ran",
+    "externalSqlServerUsed": false,
+    "finalCiLiveGate": "passed all 43 provider/catalog cases, including 14 owned-container live cases"
+  },
+  "defaultNativeSuites": {
+    "windowsPassed": 272,
+    "windowsSkipped": 17,
+    "unixPassed": 274,
+    "unixSkipped": 15,
+    "skipReasons": [
+      "14 opt-in SQL Server cases",
+      "1 optional performance case",
+      "Windows only: 2 Unix link cases"
+    ]
+  },
+  "nativePackageChecks": {
+    "lspPassed": 60,
+    "windowsMcpPassed": 36,
+    "windowsMcpSkipped": 2,
+    "unixMcpPassed": 38,
+    "deterministicProviderPassed": 29,
+    "liveProviderSkipped": 14,
+    "performanceSkipped": 1,
+    "bundledEvaluator": true
+  },
+  "bothMacNativeUnzipChecks": {
+    "lspPassed": 60,
+    "mcpPassed": 38,
+    "executableModeRepairApplied": false
+  },
+  "actualMarketplaceChecks": {
+    "strictValidation": true,
+    "lspPassedPerPlatform": 60,
+    "windowsMcpPassed": 36,
+    "windowsMcpSkipped": 2,
+    "unixMcpPassed": 38,
+    "performanceSkipped": 1,
+    "macExecutableModeRepairApplied": false,
+    "cliVersion": "2.1.224",
+    "modelCallsMade": false
+  },
+  "metricsIntegrationCases": {
+    "windowsPassed": 6,
+    "windowsSkipped": 1,
+    "unixPassed": 7
+  },
+  "dependencies": {
+    "newNuGetDependencies": false,
+    "lockedRestore": "passed",
+    "audit": "No vulnerable packages reported in eight projects",
+    "runtime": "10.0.13",
+    "mcpSdk": "2.2.0",
+    "evaluatorCsvParser": "Built-in Microsoft.VisualBasic.FileIO.TextFieldParser; compiled/native tested"
+  },
+  "release": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.12.0",
+    "public": true,
+    "assetsMatchCiAndCatalog": true,
+    "assets": [
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-linux-x64.zip",
+        "sha256": "7c3b9eb754e0b5651da48e734803a41cae1a041a78caa9daa95e9dd015d3e0bd",
+        "bytes": 90648999
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-linux-x64.zip.sha256",
+        "sha256": "41d0cc745d164563f9228a1bb54f64222f717c3efdb5a64f72408ecef0d2671b",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-osx-arm64.zip",
+        "sha256": "d249ae00ffcda7a13564523c3415115a74ca80fc93ad07539678ebbadd4b93e6",
+        "bytes": 83827700
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-osx-arm64.zip.sha256",
+        "sha256": "399c25a6fb6eb8d5de74dcb6b7ef234f0c5f2b11d28051045f24023f79d8995c",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-osx-x64.zip",
+        "sha256": "3152cdbb8eb9a584c348b98ac6d3288e5471b07eaf4c2b1749868db1b51dc804",
+        "bytes": 88545058
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-osx-x64.zip.sha256",
+        "sha256": "6089d230e403e7225c8839e3b65a3ca437fdcbe05cca247122a91dd781290f51",
+        "bytes": 102
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-win-x64.zip",
+        "sha256": "64bd78d09fbd498abd553ee31d87abbeabcdbd307737a3f0886e3a7d7ee4cef9",
+        "bytes": 91210971
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.12.0-win-x64.zip.sha256",
+        "sha256": "18c78c0a5eea70bfbb2c313a4fa2c2894c25ea8751e5ac397a0f4ed7739ea850",
+        "bytes": 103
+      }
+    ]
+  },
+  "smokeEvidence": {
+    "realMcpRequests": "plugin-metrics-public-smoke.json",
+    "existingClientCsvReprocessed": "plugin-metrics-comparison-smoke.json"
+  },
+  "cancelledDuplicateTagBuild": {
+    "runId": 38994229090,
+    "sourceCommit": "443a12250225a60ac38fa5176ae8496d318e1bbe",
+    "reason": "Identical released source already passed all nine native CI jobs; cancelled duplicate to free marketplace-install runners"
+  },
+  "limits": [
+    "Backend observations are retained-window measurements, not lifetime totals or model tokens",
+    "Metric reads do not initialize SQL; recording is opt-in and MCP-only",
+    "No new model benchmark, independent scoring or superiority claim",
+    "Grep/codebase-memory/LSP ablation capture beyond the existing paired runner remains future work",
+    "No hooks or remote telemetry"
+  ]
+}
