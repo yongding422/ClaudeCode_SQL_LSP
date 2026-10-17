@@ -26,6 +26,8 @@ Use a separate directory for each project/experiment condition. Ask procedure qu
 
 `get_metrics()` defaults to the latest 1,024 completed requests in the current MCP process. `get_metrics(includePreviousSessions=true)` reads retained files across processes. It does not initialize SQL, query a database, or count itself. `observedInProcess` and `persistenceWriteFailures` expose collection/recording state. If disabled, it returns `enabled=false` and no invented measurements. Restart Claude after changing the directory or disabling the environment variable. Collection cannot reconstruct earlier sessions.
 
+Start the CLI from the shell where you set the variable. If your environment deliberately enables `CLAUDE_CODE_MCP_ALLOWLIST_ENV=1`, shell variables are not inherited by stdio MCP servers; provide the metrics variable through the server's explicit environment configuration or use `--metrics-directory` in an explicit server launch instead. Keep the configured environment policy. [Official Claude environment reference](https://code.claude.com/docs/en/env-vars)
+
 ## What is measured
 
 | Measurement | Meaning |

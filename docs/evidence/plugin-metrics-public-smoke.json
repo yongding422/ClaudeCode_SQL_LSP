@@ -1,0 +1,287 @@
+{
+  "pluginVersion": "0.12.0",
+  "codeCorrespondsToCommit": "9adf04aa26095138905965c983f9c8d949a3723a",
+  "build": "Local candidate; final native/release proof recorded separately",
+  "scope": "Actual stdio MCP requests on the public value-tracing fixture, no model calls",
+  "summary": {
+    "enabled": true,
+    "scope": "Retained files in the configured metrics directory",
+    "observedInProcess": 3,
+    "persistenceWriteFailures": 0,
+    "report": {
+      "format": "sqlscriptdom-metrics-summary-v1",
+      "storageStatus": "Ready",
+      "ignoredRecords": 0,
+      "windowLimited": false,
+      "requests": 3,
+      "sessions": 1,
+      "versions": [
+        "0.12.0"
+      ],
+      "builds": [
+        "18ff570c115b4d9a9578de242d95c6a7"
+      ],
+      "sourceModes": {
+        "offline": 3
+      },
+      "firstAt": "2026-10-17T02:05:26.2912458+00:00",
+      "lastAt": "2026-10-17T02:05:26.6120676+00:00",
+      "groups": [
+        {
+          "key": "analyze_procedure:warm",
+          "requests": 2,
+          "successfulRequests": 2,
+          "errors": 0,
+          "canceled": 0,
+          "details": {
+            "full": 1,
+            "compact": 1
+          },
+          "meanMs": 120.08535,
+          "p50Ms": 91.4859,
+          "p95Ms": 148.6848,
+          "phases": {
+            "queueMs": {
+              "measuredRequests": 2,
+              "totalMs": 0.0038
+            },
+            "initializationMs": {
+              "measuredRequests": 2,
+              "totalMs": 0.0002
+            },
+            "navigationMs": {
+              "measuredRequests": 2,
+              "totalMs": 1.9624000000000001
+            },
+            "analysisMs": {
+              "measuredRequests": 2,
+              "totalMs": 7.0809
+            },
+            "presentationMs": {
+              "measuredRequests": 2,
+              "totalMs": 27.7734
+            },
+            "cacheValidationMs": {
+              "measuredRequests": 2,
+              "totalMs": 51.1081
+            },
+            "cacheReadMs": {
+              "measuredRequests": 2,
+              "totalMs": 52.3572
+            },
+            "cacheWriteMs": {
+              "measuredRequests": 2,
+              "totalMs": 64.1661
+            }
+          },
+          "reports": 2,
+          "meanReportUtf8Bytes": 19096.5,
+          "totalPayloadUtf8Bytes": 39451,
+          "cacheEnabledReports": 2,
+          "cacheHits": 1,
+          "cacheHitRate": 0.5,
+          "cacheStatuses": {
+            "Stored": 1,
+            "Hit": 1
+          },
+          "resolutions": {
+            "Resolved": 2
+          },
+          "latestIndexedDocuments": 1,
+          "reportedModules": 4,
+          "reportedCalls": 2,
+          "resolvedCalls": 2,
+          "reportedAccesses": 2,
+          "resolvedAccesses": 2,
+          "issueOccurrences": 0,
+          "truncatedModules": 0
+        },
+        {
+          "key": "find_procedures:cold",
+          "requests": 1,
+          "successfulRequests": 1,
+          "errors": 0,
+          "canceled": 0,
+          "details": {
+            "discovery": 1
+          },
+          "meanMs": 440.3236,
+          "p50Ms": 440.3236,
+          "p95Ms": 440.3236,
+          "phases": {
+            "queueMs": {
+              "measuredRequests": 1,
+              "totalMs": 0.0633
+            },
+            "initializationMs": {
+              "measuredRequests": 1,
+              "totalMs": 316.2485
+            },
+            "navigationMs": {
+              "measuredRequests": 1,
+              "totalMs": 8.7058
+            },
+            "analysisMs": {
+              "measuredRequests": 1,
+              "totalMs": 48.0315
+            },
+            "presentationMs": {
+              "measuredRequests": 1,
+              "totalMs": 0
+            },
+            "cacheValidationMs": {
+              "measuredRequests": 1,
+              "totalMs": 0
+            },
+            "cacheReadMs": {
+              "measuredRequests": 1,
+              "totalMs": 0
+            },
+            "cacheWriteMs": {
+              "measuredRequests": 1,
+              "totalMs": 0
+            }
+          },
+          "reports": 0,
+          "meanReportUtf8Bytes": null,
+          "totalPayloadUtf8Bytes": 1222,
+          "cacheEnabledReports": 0,
+          "cacheHits": 0,
+          "cacheHitRate": null,
+          "cacheStatuses": {},
+          "resolutions": {},
+          "latestIndexedDocuments": 1,
+          "reportedModules": 0,
+          "reportedCalls": 0,
+          "resolvedCalls": 0,
+          "reportedAccesses": 0,
+          "resolvedAccesses": 0,
+          "issueOccurrences": 0,
+          "truncatedModules": 0
+        }
+      ],
+      "modelTokens": null,
+      "finalAnswerCorrectness": null,
+      "limitations": "Retained observations only, not lifetime totals. Per-request time excludes metric recording, transport and model inference. Percentiles use nearest-rank successful requests. Cold means this request initialized source state, not an OS/model cache claim. Reported facts/issues are not correctness or completeness scores."
+    },
+    "limitations": "Backend measurements only; no model tokens, Grep activity or final-answer correctness observed. Bytes are not tokens. Counts cover reported facts, not complete SQL behavior. Metrics reads do not initialize SQL or count themselves."
+  },
+  "observations": [
+    {
+      "format": 1,
+      "version": "0.12.0",
+      "build": "18ff570c115b4d9a9578de242d95c6a7",
+      "session": "e900e9b62eaa434085f88eae157a2f71",
+      "at": "2026-10-17T02:05:26.2912458+00:00",
+      "operation": "find_procedures",
+      "detail": "discovery",
+      "outcome": "Success",
+      "sourceMode": "offline",
+      "coldStart": true,
+      "durationMs": 440.3236,
+      "indexedDocuments": 1,
+      "payloadUtf8Bytes": 1222,
+      "reportUtf8Bytes": null,
+      "resolutionStatus": null,
+      "modules": 0,
+      "calls": 0,
+      "resolvedCalls": 0,
+      "accesses": 0,
+      "resolvedAccesses": 0,
+      "issues": 0,
+      "truncatedModules": 0,
+      "cacheEnabled": 0,
+      "cacheStatuses": {},
+      "timings": {
+        "queueMs": 0.0633,
+        "initializationMs": 316.2485,
+        "navigationMs": 8.7058,
+        "analysisMs": 48.0315,
+        "presentationMs": 0,
+        "cacheValidationMs": 0,
+        "cacheReadMs": 0,
+        "cacheWriteMs": 0
+      }
+    },
+    {
+      "format": 1,
+      "version": "0.12.0",
+      "build": "18ff570c115b4d9a9578de242d95c6a7",
+      "session": "e900e9b62eaa434085f88eae157a2f71",
+      "at": "2026-10-17T02:05:26.5122434+00:00",
+      "operation": "analyze_procedure",
+      "detail": "full",
+      "outcome": "Success",
+      "sourceMode": "offline",
+      "coldStart": false,
+      "durationMs": 148.6848,
+      "indexedDocuments": 1,
+      "payloadUtf8Bytes": 24067,
+      "reportUtf8Bytes": 23431,
+      "resolutionStatus": "Resolved",
+      "modules": 2,
+      "calls": 1,
+      "resolvedCalls": 1,
+      "accesses": 1,
+      "resolvedAccesses": 1,
+      "issues": 0,
+      "truncatedModules": 0,
+      "cacheEnabled": 1,
+      "cacheStatuses": {
+        "Stored": 1
+      },
+      "timings": {
+        "queueMs": 0.0028,
+        "initializationMs": 0.0001,
+        "navigationMs": 1.8686,
+        "analysisMs": 7.0809,
+        "presentationMs": 0.0006,
+        "cacheValidationMs": 50.701,
+        "cacheReadMs": 2.6312,
+        "cacheWriteMs": 64.1661
+      }
+    },
+    {
+      "format": 1,
+      "version": "0.12.0",
+      "build": "18ff570c115b4d9a9578de242d95c6a7",
+      "session": "e900e9b62eaa434085f88eae157a2f71",
+      "at": "2026-10-17T02:05:26.6120676+00:00",
+      "operation": "analyze_procedure",
+      "detail": "compact",
+      "outcome": "Success",
+      "sourceMode": "offline",
+      "coldStart": false,
+      "durationMs": 91.4859,
+      "indexedDocuments": 1,
+      "payloadUtf8Bytes": 15384,
+      "reportUtf8Bytes": 14762,
+      "resolutionStatus": "Resolved",
+      "modules": 2,
+      "calls": 1,
+      "resolvedCalls": 1,
+      "accesses": 1,
+      "resolvedAccesses": 1,
+      "issues": 0,
+      "truncatedModules": 0,
+      "cacheEnabled": 1,
+      "cacheStatuses": {
+        "Hit": 1
+      },
+      "timings": {
+        "queueMs": 0.001,
+        "initializationMs": 0.0001,
+        "navigationMs": 0.0938,
+        "analysisMs": 0,
+        "presentationMs": 27.7728,
+        "cacheValidationMs": 0.4071,
+        "cacheReadMs": 49.726,
+        "cacheWriteMs": 0
+      }
+    }
+  ],
+  "limits": [
+    "No model tokens/correctness measured",
+    "Full request stored the cache; compact request reused it, so times do not isolate presentation format"
+  ]
+}

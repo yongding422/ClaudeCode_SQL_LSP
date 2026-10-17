@@ -112,6 +112,11 @@ public class MetricsTests
             Assert.Equal(2, metrics.GetProperty("persistenceWriteFailures").GetInt32());
             Assert.Equal(2, metrics.GetProperty("report").GetProperty("requests").GetInt32());
             Assert.Equal("Unavailable", (await Metrics(client, true)).GetProperty("report").GetProperty("storageStatus").GetString());
+            var versionCollision = Path.Combine(root, "version-collision"); Directory.CreateDirectory(versionCollision);
+            await File.WriteAllTextAsync(Path.Combine(versionCollision, "metrics-v1"), "PRIVATE_SQL_CANARY");
+            var unavailable = await Command(root, "--metrics-summary", "--metrics-directory", versionCollision);
+            Assert.Equal(2, unavailable.Code);
+            Assert.Equal("Unavailable", unavailable.Data.GetProperty("storageStatus").GetString());
         }
         finally { Directory.Delete(root, true); }
     }

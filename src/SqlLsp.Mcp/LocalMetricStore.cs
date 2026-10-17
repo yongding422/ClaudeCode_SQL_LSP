@@ -49,7 +49,7 @@ internal sealed class LocalMetricStore(string directory)
         try
         {
             CheckPath(root);
-            if (!Directory.Exists(root)) return ([], 0, false, "Empty");
+            if (!Directory.Exists(root)) return ([], 0, false, File.Exists(root) ? "Unavailable" : "Empty");
             var files = OwnedFiles();
             limited = files.Length > MaxFiles;
             foreach (var file in files.OrderByDescending(f => f.LastWriteTimeUtc).Take(MaxFiles).Reverse())
