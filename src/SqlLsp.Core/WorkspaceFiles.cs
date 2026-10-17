@@ -2,6 +2,8 @@ using System.Buffers;
 
 namespace SqlLsp.Core;
 
+public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs);
+
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
     public void Validate()
@@ -69,14 +71,20 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         return false;
     }
 
-    public async Task<string?> ReadAsync(Uri uri, CancellationToken token)
+    public async Task<string?> ReadAsync(Uri uri, CancellationToken token) => (await ReadWithStatusAsync(uri, token)).Text;
+
+    public async Task<WorkspaceReadResult> ReadWithStatusAsync(Uri uri, CancellationToken token)
     {
-        if (!CanRead(uri)) return null;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        long length = 0;
+        WorkspaceReadResult Excluded(string status) => new(status, null, length, null, timer.Elapsed.TotalMilliseconds);
+        if (!CanRead(uri)) return Excluded("ExcludedPolicy");
         try
         {
             await using var stream = new FileStream(uri.LocalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
                 4096, FileOptions.Asynchronous);
-            if (stream.Length > options.MaxFileSizeBytes) return null;
+            length = stream.Length;
+            if (stream.Length > options.MaxFileSizeBytes) return Excluded("ExcludedSize");
             // Bounded read even if a file grows after opening.
             using var contents = new MemoryStream((int)stream.Length);
             var bytes = ArrayPool<byte>.Shared.Rent((int)Math.Min(65_536, Math.Max(1, stream.Length + 1)));
@@ -87,17 +95,20 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                     var remaining = options.MaxFileSizeBytes + 1 - (int)contents.Length;
                     var count = await stream.ReadAsync(bytes.AsMemory(0, Math.Min(bytes.Length, remaining)), token);
                     if (count == 0) break;
-                    if (contents.Length + count > options.MaxFileSizeBytes) return null;
+                    if (contents.Length + count > options.MaxFileSizeBytes) return Excluded("ExcludedSize");
                     contents.Write(bytes, 0, count);
                 }
             }
             finally { ArrayPool<byte>.Shared.Return(bytes, clearArray: true); }
             contents.Position = 0;
             using var reader = new StreamReader(contents, detectEncodingFromByteOrderMarks: true);
-            return await reader.ReadToEndAsync(token);
+            var text = await reader.ReadToEndAsync(token);
+            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds);
         }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        catch (FileNotFoundException) { return Excluded("Deleted"); }
+        catch (DirectoryNotFoundException) { return Excluded("Deleted"); }
+        catch (IOException) { return Excluded("Unreadable"); }
+        catch (UnauthorizedAccessException) { return Excluded("Unreadable"); }
     }
 
     private static IEnumerable<Uri> Enumerate(string root)
