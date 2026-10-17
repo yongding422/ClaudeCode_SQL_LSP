@@ -9,42 +9,42 @@
   "plugins": [
     {
       "name": "sqlscriptdom-lsp-win-x64",
-      "version": "0.11.0",
+      "version": "0.12.0",
       "description": "T-SQL procedure understanding, read/write analysis and navigation for win-x64; includes .NET runtime. Install only your platform's entry.",
       "source": {
         "source": "archive",
-        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.11.0/sqlscriptdom-lsp-0.11.0-win-x64.zip",
-        "sha256": "baa0fa3cfc7ad36e98576835d49a0a441878a357d64cf37e3abfdc8d35970626"
+        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.12.0/sqlscriptdom-lsp-0.12.0-win-x64.zip",
+        "sha256": "64bd78d09fbd498abd553ee31d87abbeabcdbd307737a3f0886e3a7d7ee4cef9"
       }
     },
     {
       "name": "sqlscriptdom-lsp-linux-x64",
-      "version": "0.11.0",
+      "version": "0.12.0",
       "description": "T-SQL procedure understanding, read/write analysis and navigation for linux-x64; includes .NET runtime. Install only your platform's entry.",
       "source": {
         "source": "archive",
-        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.11.0/sqlscriptdom-lsp-0.11.0-linux-x64.zip",
-        "sha256": "cf7d86d66baa097db2d1ee9566d885d4d3b9c9981b3c980ad0c0c4eeda16df37"
+        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.12.0/sqlscriptdom-lsp-0.12.0-linux-x64.zip",
+        "sha256": "7c3b9eb754e0b5651da48e734803a41cae1a041a78caa9daa95e9dd015d3e0bd"
       }
     },
     {
       "name": "sqlscriptdom-lsp-osx-arm64",
-      "version": "0.11.0",
+      "version": "0.12.0",
       "description": "T-SQL procedure understanding, read/write analysis and navigation for osx-arm64; includes .NET runtime. Install only your platform's entry.",
       "source": {
         "source": "archive",
-        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.11.0/sqlscriptdom-lsp-0.11.0-osx-arm64.zip",
-        "sha256": "80eea541e20018348712766e7c5814abd0a7cfe07677a6e13aaffa98296a9e55"
+        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.12.0/sqlscriptdom-lsp-0.12.0-osx-arm64.zip",
+        "sha256": "d249ae00ffcda7a13564523c3415115a74ca80fc93ad07539678ebbadd4b93e6"
       }
     },
     {
       "name": "sqlscriptdom-lsp-osx-x64",
-      "version": "0.11.0",
+      "version": "0.12.0",
       "description": "T-SQL procedure understanding, read/write analysis and navigation for osx-x64; includes .NET runtime. Install only your platform's entry.",
       "source": {
         "source": "archive",
-        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.11.0/sqlscriptdom-lsp-0.11.0-osx-x64.zip",
-        "sha256": "11c7c811a3578d4c9f65e05f797f48c4fc84e4e5afae89074043920272e16753"
+        "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.12.0/sqlscriptdom-lsp-0.12.0-osx-x64.zip",
+        "sha256": "3152cdbb8eb9a584c348b98ac6d3288e5471b07eaf4c2b1749868db1b51dc804"
       }
     }
   ]

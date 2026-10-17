@@ -100,3 +100,7 @@ Ship increments 1 and 2 as the smallest useful procedure-understanding release: 
 ## 0.11.0 follow-up
 
 [Persistent reports](persistent-analysis-cache.md) now implement bounded opt-in JSON reuse after full source validation, not AST/navigation-index restoration. Bulk prebuild and cache intervals are tested. [The comparison study](evaluation/sql-tool-comparison.md) defines four arms to separate SQL analysis from LSP and verifies codebase-memory's parser/graph design. Competitor execution, reviewed representative tasks, blind grading and the larger paired study remain outstanding.
+
+## 0.12.0 metrics follow-up
+
+[Inspectable local MCP metrics](plugin-metrics.md) now supply opt-in bounded numeric events, a no-index get_metrics tool, backend summary/compare commands and actual client CSV usage/time imports. The existing capture runner is bundled. Competitor/LSP-ablation capture, blind correctness review and confidence intervals remain separate work. No superiority claim or automatic token inference is added.

@@ -1,14 +1,14 @@
 # Explain a stored procedure with the plugin
 
-[Actual 0.11.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38682159117) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 30 MCP tests on Windows (one Unix-link skip) or 31 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/persistent-cache-ci.json) records source, checksums, native/installation jobs and the corrected initial Linux failure.
 
-Version 0.11.0 adds [opt-in persistent JSON reports and bulk prebuilding](persistent-analysis-cache.md). The 0.10.0 features remain: [compact reports and direct source citations](compact-reports.md), optional value focus, reuse of expanded callees and per-request initialization/analysis timings. The skill requests compact reports; the original full DTO remains the compatible default. [The workflow diagram](plugin-workflow.md) shows how Claude, MCP, LSP and ScriptDOM work together.
+Version 0.12.0 adds [inspectable local metrics and comparison commands](plugin-metrics.md), alongside [opt-in persistent JSON reports and bulk prebuilding](persistent-analysis-cache.md). The 0.10.0 features remain: [compact reports and direct source citations](compact-reports.md), optional value focus, reuse of expanded callees and per-request initialization/analysis timings. The skill requests compact reports; the original full DTO remains the compatible default. [The workflow diagram](plugin-workflow.md) shows how Claude, MCP, LSP and ScriptDOM work together.
 
 The report includes [bounded parameter/value dependencies](value-tracing.md), verified EXEC bindings, [structural control contexts](control-flow.md), table footprints, coverage issues and bounded callee expansion. Existing LSP navigation and static call hierarchy remain available.
 
 
 
-[Release 0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) is public with four checksum-pinned native packages from clean source 24ccd90e6b98220e14260f575da910163dd4f461. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38681510692) passed all nine jobs. Update your platform entry through the marketplace and start a fresh session. Historical client captures remain separate evidence.
+
+[Release 0.12.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.12.0) is public with four checksum-pinned native packages from clean source 443a12250225a60ac38fa5176ae8496d318e1bbe. [Native CI](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38993716838) passed all nine jobs. Update your platform entry through the marketplace and start a fresh session. The metrics tool does not initialize SQL; recording is opt-in. Historical client captures remain separate evidence.
 
 The [0.10.0 public paired smoke](evidence/compact-reports-pair-windows.json) verified compact analysis and separate timing collection, but the plugin remained slower and used more model tokens than Grep/Read on that single task. A [normal-autoload retry](evidence/claude-compact-reports-windows.json) completed with correct UPDATE/predicate/argument citations; its earlier timeout remains recorded. Tool use is not proof of answer accuracy or overall value. Mac model calls remain unverified. Historical 0.9.0 measurements remain in [milestones](milestones.md).
 
