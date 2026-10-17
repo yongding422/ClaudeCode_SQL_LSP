@@ -117,7 +117,7 @@ class RerunTests(unittest.TestCase):
 
     def test_custom_cohort_is_frozen_with_identity_and_never_changes_the_default_suite(self):
         with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
+            root = Path(folder).resolve()
             suite = root / "holdout.json"
             suite.write_text('{"tasks": []}')
             output = root / "study"
