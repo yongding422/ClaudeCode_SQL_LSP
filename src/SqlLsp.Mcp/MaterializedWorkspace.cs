@@ -21,10 +21,21 @@ internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfi
     private long reads, parseAttempts, bodyParses;
     private double readMs, parseMs, enumerationMs;
     private int reused, extracted;
-    public object Use => new { enabled = true, status = store.Status, verification = "Current file bytes hashed; metadata alone is never trusted", reusedFiles = reused, extractedFiles = extracted,
-        bodyParses, parsedBodiesRetained = parsed.Count, format = "materialized-v1", onlineCatalogs = false };
+    public object Use => new
+    {
+        enabled = true,
+        status = store.Status,
+        verification = "Current file bytes hashed; metadata alone is never trusted",
+        reusedFiles = reused,
+        extractedFiles = extracted,
+        bodyParses,
+        parsedBodiesRetained = parsed.Count,
+        format = "materialized-v1",
+        onlineCatalogs = false
+    };
 
     public WorkspaceFileCoverage[] CoverageFiles(int offset, int limit, Uri? uri) => ledger.Where(f => uri == null || f.Uri == uri).Skip(offset).Take(limit).ToArray();
+    public ImmutableArray<WorkspaceFileCoverage> CoverageSnapshot() => ledger.ToImmutableArray();
 
     public async Task RefreshAsync(CancellationToken token)
     {
@@ -95,9 +106,9 @@ internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfi
         if (changed || extracted > 0) await store.WriteAsync(key, Index.Files.ToArray(), token);
     }
 
-    public async Task<SqlNavigationIndex> NavigationAsync(Uri selected, int depth, int modules, CancellationToken token)
+    public async Task<SqlNavigationIndex> NavigationAsync(Uri selected, int depth, int modules, CancellationToken token, Uri? scope = null)
     {
-        var snapshot = Index;
+        var snapshot = scope == null ? Index : (SqlMaterializedIndex)Index.Within(scope);
         var facts = snapshot.Files.ToDictionary(f => f.Uri);
         var loaded = new Dictionary<Uri, DocumentSnapshot>();
         var queue = new Queue<(Uri Uri, int Depth)>();

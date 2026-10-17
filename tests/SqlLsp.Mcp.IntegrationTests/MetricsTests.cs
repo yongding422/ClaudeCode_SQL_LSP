@@ -7,7 +7,7 @@ public class MetricsTests
 {
     private const string Sql = "CREATE PROC dbo.PRIVATE_SQL_CANARY AS BEGIN IF 1=1 EXEC dbo.Q; EXEC(N'PRIVATE_SQL_CANARY'); END;\nGO\nCREATE PROC dbo.Q AS SELECT * FROM dbo.A;\nGO\nCREATE TABLE dbo.A(id int);";
     private static async Task<JsonElement> Find(McpClient client) => McpClient.Data(await client.Tool("find_procedures", new { query = "PRIVATE_SQL_CANARY" })).GetProperty("modules")[0];
-    private static async Task<JsonElement> Analyze(McpClient client, JsonElement selected, string detail = "compact") => McpClient.Data(await client.AnalyzeExpanded( new
+    private static async Task<JsonElement> Analyze(McpClient client, JsonElement selected, string detail = "compact") => McpClient.Data(await client.AnalyzeExpanded(new
     {
         documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
         line = selected.GetProperty("selection").GetProperty("line").GetInt32(),

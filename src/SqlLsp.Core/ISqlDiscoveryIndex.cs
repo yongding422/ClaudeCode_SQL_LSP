@@ -10,6 +10,7 @@ public interface ISqlDiscoveryIndex
     int DocumentCount { get; }
     string Generation { get; }
     ImmutableArray<IndexedSqlSymbol> Symbols { get; }
+    ISqlDiscoveryIndex Within(Uri directory);
     ImmutableArray<IndexedSqlSymbol> Search(string query, CancellationToken token);
     SqlModuleMetadata ModuleMetadata(IndexedSqlSymbol symbol, CancellationToken token);
     int DocumentCountFor(string? scopeId, Uri? uri = null);

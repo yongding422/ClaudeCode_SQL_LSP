@@ -25,6 +25,8 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     private readonly List<string> roots = new();
     public WorkspaceContexts Contexts { get; } = new(options.ProjectScopes, options.AutoDetectProjects);
     public IReadOnlyList<string> Roots => roots;
+    public bool CanScope(Uri uri) => uri.IsFile && Directory.Exists(uri.LocalPath) &&
+        roots.Any(root => IsContained(root, uri.LocalPath)) && !HasLinkedAncestor(uri.LocalPath) && CanTraverse(uri);
     public string ContextId(Uri uri)
     {
         if (!uri.IsFile) return uri.AbsoluteUri;

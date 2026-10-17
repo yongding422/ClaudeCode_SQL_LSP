@@ -1,5 +1,5 @@
-using System.ComponentModel;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -61,8 +61,12 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
             metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation)
-        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes, IndexCacheDirectory = settings.IndexCacheDirectory,
-            AnalysisMaxBytes = settings.AnalysisMaxBytes };
+        {
+            AutoInitializeSettings = settingsFile == null,
+            DiscoveryMaxBytes = settings.DiscoveryMaxBytes,
+            IndexCacheDirectory = settings.IndexCacheDirectory,
+            AnalysisMaxBytes = settings.AnalysisMaxBytes
+        };
     }
 }
 
@@ -93,19 +97,24 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     public async Task<CallToolResult> FindProcedures([Description("Name substring; empty lists indexed modules.")] string query = "",
         [Description("Maximum entries per page, 1..100; byte budget may return fewer.")] int maxResults = 30,
         CancellationToken cancellationToken = default, string? cursor = null, string section = "modules", string? documentUri = null,
-        [Description("Exact sourceContextId from a previous result; limits modules and issues. File-ledger pages use documentUri instead.")] string? scopeId = null)
+        [Description("Exact sourceContextId from a previous result; limits modules and issues. File-ledger pages use documentUri instead.")] string? scopeId = null,
+        [Description("Optional physical folder URI from the developer's requested scope, useful for SQL-only copies without project files.")] string? scopeUri = null)
     {
         using var observation = metrics.Begin("find_procedures", "discovery", cancellationToken);
         if (query.Length > 256 || maxResults is < 1 or > 100 || section is not ("modules" or "issues" or "files")) throw new McpException("Query/limit/section outside supported bounds.");
-        if (scopeId?.Length > 4096 || section == "files" && scopeId != null) throw new McpException("Invalid scope; file-ledger pages support documentUri only.");
+        if (scopeId?.Length > 4096 || section == "files" && (scopeId != null || scopeUri != null)) throw new McpException("Invalid scope; file-ledger pages support documentUri only.");
         Uri? file = null;
         if (documentUri != null && (!Uri.TryCreate(documentUri, UriKind.Absolute, out file) || !file.IsFile || file.Query.Length != 0 || file.Fragment.Length != 0))
             throw new McpException("documentUri must be an absolute file URI.");
         Task<CallToolResult> Discover(ISqlDiscoveryIndex index, RequestTimings timings)
         {
             var timer = Stopwatch.StartNew();
-            var generation = index.Generation;
-            var options = JsonSerializer.Serialize(new { query, maxResults, section, documentUri, scopeId });
+            var root = RequestScope(scopeUri);
+            var generation = ScopedGeneration(index.Generation, root);
+            var fileLedger = section == "files" ? materialized?.CoverageSnapshot() ?? state?.Documents?.CoverageSnapshot() ?? [] : [];
+            if (section == "files") generation = SqlAnalysisCacheContext.Hash(generation + JsonSerializer.Serialize(fileLedger, JsonOptions));
+            if (root != null) index = index.Within(root);
+            var options = JsonSerializer.Serialize(new { query, maxResults, section, documentUri, scopeId, scopeUri });
             var offset = discoveryCursors.Decode(cursor, generation, options);
             var symbols = index.Search(query, cancellationToken).Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
                 .Where(s => file == null || s.Target.Uri == file)
@@ -117,7 +126,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 return new
                 {
                     symbol.Identity,
-                    moduleRef = moduleSelections.Register(new(generation, symbol.Target.Uri, symbol.Target.Range.Start, metadata.Revision)),
+                    moduleRef = moduleSelections.Register(new(generation, symbol.Target.Uri, symbol.Target.Range.Start, metadata.Revision, root)),
                     context = SourceFiles?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
@@ -129,7 +138,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             var counts = index.ParseIssueCounts(file, scopeId);
             var coverage = Coverage;
             var total = section == "issues" ? counts.Count : section == "files" ?
-                file == null ? coverage?.Discovered ?? 0 : CoverageFiles(0, 1, file).Length : symbols.Length;
+                fileLedger.Count(f => file == null || f.Uri == file) : symbols.Length;
             var entries = new List<object>();
             var consumed = 0;
             var omittedOversized = 0;
@@ -140,7 +149,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 source = "Saved snapshots; no LSP unsaved buffers. Coverage is limited to indexed sources.",
                 indexedDocuments = index.DocumentCount,
                 coverage,
-                scope = new { id = scopeId, documentUri, indexedDocuments = index.DocumentCountFor(scopeId, file) },
+                scope = new { id = scopeId, documentUri, directoryUri = root?.AbsoluteUri, indexedDocuments = index.DocumentCountFor(scopeId, file) },
                 generation,
                 sourceStatuses = SourceStatuses.Take(4).Select(s => s.Length <= 256 ? s : s[..256] + "…").ToArray(),
                 sourceStatusCount = SourceStatuses.Count(),
@@ -162,7 +171,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Analyze recoveryModuleRef when supplied, or inspect a known source file. Omitted count is explicit; do not retry this identical query." : null
             };
             var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken, scopeId).Cast<object>() :
-                section == "files" ? CoverageFiles(offset, maxResults, file).Cast<object>() :
+                section == "files" ? fileLedger.Where(f => file == null || f.Uri == file).Skip(offset).Take(maxResults).Cast<object>() :
                 symbols.Skip(offset).Take(maxResults).Select(Module);
             foreach (var entry in candidates)
             {
@@ -196,7 +205,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         [Description("compact (default); full retains original DTO fields. Both use deliberate pages when oversized.")] string detail = "compact",
         [Description("Compact only: up to 8 variable names or expression snippets, each 1..64 characters. Case-insensitive literal substring selection and connected value dependencies; not semantic search. Omitted counts remain visible.")] string[]? focus = null,
         CancellationToken cancellationToken = default, string? declaration = null, string? moduleRef = null,
-        string? reportRef = null, string section = "", int offset = 0, int maxItems = 20)
+        string? reportRef = null, string section = "", int offset = 0, int maxItems = 20,
+        [Description("Physical folder URI explicitly defining this investigation's source boundary. Outside dependencies stay unresolved.")] string? scopeUri = null)
     {
         using var observation = metrics.Begin(reportRef == null ? "analyze_procedure" : "expand_report", detail, cancellationToken);
         ModuleSelection? selectedModule = moduleRef == null ? null : moduleSelections.Get(moduleRef);
@@ -208,11 +218,15 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             documentUri = selectedModule.Uri.AbsoluteUri;
             line = selectedModule.Position.Line; character = selectedModule.Position.Character;
             expectedRevision ??= selectedModule.Revision;
+            if (scopeUri != null && scopeUri != selectedModule.Scope?.AbsoluteUri) throw new McpException("moduleRef already binds its source scope.");
+            scopeUri = selectedModule.Scope?.AbsoluteUri;
         }
         if (reportRef != null)
         {
             if (declaration != null || moduleRef != null) throw new McpException("Report expansion cannot include another selector.");
             documentUri = analysisPages.Source(reportRef).AbsoluteUri;
+            if (scopeUri != null && scopeUri != analysisPages.Scope(reportRef)?.AbsoluteUri) throw new McpException("reportRef already binds its source scope.");
+            scopeUri = analysisPages.Scope(reportRef)?.AbsoluteUri;
         }
         if (!Uri.TryCreate(documentUri, UriKind.Absolute, out var uri) || !uri.IsFile || uri.Query.Length != 0 || uri.Fragment.Length != 0 ||
             line < 0 || character < 0 || maxDepth is < 0 or > 4 || maxModules is < 1 or > 40 ||
@@ -222,7 +236,13 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
         return observation.Complete(await WithIndex(async (index, timings) =>
         {
-            var generation = materialized?.Index.Generation ?? index.Generation;
+            var root = RequestScope(scopeUri);
+            var generation = ScopedGeneration(materialized?.Index.Generation ?? index.Generation, root);
+            if (root != null)
+            {
+                if (!root.IsBaseOf(uri)) throw new McpException("Selected file is outside the requested scope.");
+                index = index.RestrictedTo(root);
+            }
             if (selectedModule != null && selectedModule.Generation != generation) throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
             if (declaration != null)
             {
@@ -234,11 +254,24 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             }
             CallToolResult Envelope(object reportValue, AnalysisCacheUse? use = null) => Result(new
             {
-                formatVersion = 2, source = "Saved snapshots; this process does not receive LSP unsaved buffers or execute SQL. Effects are static possibilities.",
-                indexedDocuments = materialized?.Index.DocumentCount ?? index.DocumentCount, parsedDocuments = index.DocumentCount,
-                coverage = Coverage, sourceContext = SourceFiles?.Contexts.Describe(uri, SourceFiles.ContextId(uri)),
-                sourceStatuses = SourceStatuses.Take(4).Select(s => s.Length > 256 ? s[..256] + "…" : s).ToArray(), indexCache = materialized?.Use,
-                timings, cache = use, report = reportValue, drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
+                formatVersion = 2,
+                source = "Saved snapshots; this process does not receive LSP unsaved buffers or execute SQL. Effects are static possibilities.",
+                indexedDocuments = materialized?.Index.DocumentCount ?? index.DocumentCount,
+                parsedDocuments = index.DocumentCount,
+                coverage = Coverage,
+                sourceContext = SourceFiles?.Contexts.Describe(uri, SourceFiles.ContextId(uri)),
+                scope = new
+                {
+                    directoryUri = root?.AbsoluteUri,
+                    indexedDocuments = root == null ? materialized?.Index.DocumentCount ?? index.DocumentCount : index.DocumentCount,
+                    limitation = root == null ? null : "Only this explicit folder is searched; outside dependencies remain unresolved."
+                },
+                sourceStatuses = SourceStatuses.Take(4).Select(s => s.Length > 256 ? s[..256] + "…" : s).ToArray(),
+                indexCache = materialized?.Use,
+                timings,
+                cache = use,
+                report = reportValue,
+                drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
             });
             if (reportRef != null)
             {
@@ -247,7 +280,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 if (!FitsWireBudget(response, launch.AnalysisMaxBytes)) throw new McpException("Section exceeds the wire budget; choose a shorter parent section or a smaller page.");
                 return response;
             }
-            var context = CacheContext(index, timings, cancellationToken);
+            var context = CacheContext(index, timings, cancellationToken, root?.AbsoluteUri);
             var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
             var report = analyzed.Report;
             observation.AnalyzerReport(report);
@@ -256,14 +289,14 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
             var responseValue = Envelope(presented, analyzed.Use);
             if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
-            var reference = analysisPages.Register(generation, uri, presented);
+            var reference = analysisPages.Register(generation, uri, presented, root);
             for (var count = Math.Min(8, report.Modules.Length); count >= 0; count--)
             {
                 responseValue = Envelope(analysisPages.Overview(reference, generation, count), analyzed.Use);
                 if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
             }
             throw new McpException("Analysis metadata exceeds wire budget; use a narrower source/depth or direct source inspection.");
-        }, cancellationToken, uri, maxDepth, maxModules));
+        }, cancellationToken, uri, maxDepth, maxModules, scopeUri));
     }
 
     [McpServerTool(Name = "get_metrics", ReadOnly = true, Destructive = false, OpenWorld = false)]
@@ -309,16 +342,16 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         }, token));
     }
 
-    private SqlAnalysisCacheContext? CacheContext(SqlNavigationIndex index, RequestTimings timings, CancellationToken token)
+    private SqlAnalysisCacheContext? CacheContext(SqlNavigationIndex index, RequestTimings timings, CancellationToken token, string? scope = null)
     {
         if (cache == null) return null;
         var timer = Stopwatch.StartNew();
         try
         {
             if (materialized != null)
-                return new(SqlAnalysisCacheContext.Hash(configurationStamp + materialized.Index.Generation + typeof(ProcedureTools).Module.ModuleVersionId),
+                return new(SqlAnalysisCacheContext.Hash(configurationStamp + scope + materialized.Index.Generation + typeof(ProcedureTools).Module.ModuleVersionId),
                     materialized.Index.Files.Select(f => new SqlAnalysisCacheSource(f.Uri, f.Uri, f.Revision, null)).ToImmutableArray());
-            return index.CreateAnalysisCacheContext(configurationStamp + state!.AnalysisCacheCatalogStamp() +
+            return index.CreateAnalysisCacheContext(configurationStamp + scope + state!.AnalysisCacheCatalogStamp() +
                 typeof(ProcedureTools).Module.ModuleVersionId + typeof(ServerState).Module.ModuleVersionId, token);
         }
         catch (InvalidOperationException) { return null; }
@@ -397,7 +430,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     }
 
     private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token,
-        Uri? selected = null, int maxDepth = 2, int maxModules = 20)
+        Uri? selected = null, int maxDepth = 2, int maxModules = 20, string? scopeUri = null)
     {
         var timer = Stopwatch.StartNew();
         await gate.WaitAsync(token);
@@ -411,7 +444,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 await RefreshMaterialized(token);
                 timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
                 timer.Restart();
-                var selectedIndex = await materialized!.NavigationAsync(selected, maxDepth, maxModules, token);
+                var selectedIndex = await materialized!.NavigationAsync(selected, maxDepth, maxModules, token, RequestScope(scopeUri));
                 timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
                 return await action(selectedIndex, timings);
             }
@@ -463,6 +496,15 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
 
     private static bool FitsWireBudget(CallToolResult result, int budget) =>
         JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = long.MaxValue, result }, JsonOptions).Length <= budget - 1024;
+
+    private Uri? RequestScope(string? value)
+    {
+        if (value == null) return null;
+        if (value.Length > 4096 || !Uri.TryCreate(value, UriKind.Absolute, out var uri) || !uri.IsFile || uri.Query.Length != 0 || uri.Fragment.Length != 0 || SourceFiles?.CanScope(uri) != true)
+            throw new McpException("scopeUri must name a physical directory inside the initialized workspace.");
+        return new Uri(Path.TrimEndingDirectorySeparator(Path.GetFullPath(uri.LocalPath)) + Path.DirectorySeparatorChar);
+    }
+    private static string ScopedGeneration(string generation, Uri? scope) => scope == null ? generation : SqlAnalysisCacheContext.Hash(generation + "|" + scope.AbsoluteUri);
 
     public async ValueTask DisposeAsync()
     {

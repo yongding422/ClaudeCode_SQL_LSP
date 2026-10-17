@@ -20,6 +20,10 @@ public sealed partial class SqlNavigationIndex : ISqlDiscoveryIndex
         System.Text.Encoding.UTF8.GetBytes(string.Join("\n", documents.OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
             .Select(d => d.Uri.AbsoluteUri + "|" + context(d.Uri) + "|" + AnalysisRevision(d))))));
     private string? generation;
+    public ISqlDiscoveryIndex Within(Uri directory) => RestrictedTo(directory);
+    public SqlNavigationIndex RestrictedTo(Uri directory) => new(documents.Where(d => directory.IsBaseOf(d.Uri)).ToImmutableArray(),
+        context, options, Symbols.Where(s => directory.IsBaseOf(s.Target.Uri)).ToImmutableArray(), indexDeclarations: false,
+        hybrid: hybrid, reportDrift: false, resolutionFor: resolutionFor, canReference: canReference);
 
     public SqlModuleMetadata ModuleMetadata(IndexedSqlSymbol symbol, CancellationToken token)
     {

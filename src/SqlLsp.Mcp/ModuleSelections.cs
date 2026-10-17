@@ -4,7 +4,7 @@ using SqlLsp.Core;
 
 namespace SqlLsp.Mcp;
 
-internal sealed record ModuleSelection(string Generation, Uri Uri, TextPosition Position, string? Revision);
+internal sealed record ModuleSelection(string Generation, Uri Uri, TextPosition Position, string? Revision, Uri? Scope = null);
 internal sealed class ModuleSelections
 {
     private readonly object gate = new();

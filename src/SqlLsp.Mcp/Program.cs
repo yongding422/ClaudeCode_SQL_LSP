@@ -43,7 +43,11 @@ try
     // The type-only SDK overload constructs/disposes a new target per invocation.
     // Keep one owned target so discovery and analysis share saved snapshots/watchers.
     await using var tools = new ProcedureTools(launch);
-    builder.Services.AddMcpServer(options => options.ServerInfo = new() { Name = "sqlscriptdom-analysis", Version = PluginMetrics.Version })
+    builder.Services.AddMcpServer(options =>
+        {
+            options.ServerInfo = new() { Name = "sqlscriptdom-analysis", Version = PluginMetrics.Version };
+            options.ServerInstructions = "Use file Read/Grep for exact literals and ad-hoc scripts. For a known SQL module, analyze its file/declaration directly; discover only unknown locations, then copy moduleRef. When the developer specifies an application folder, use its scopeUri to exclude unrelated projects, especially in SQL-only copies. Compact defaults use small expansion; expand only relevant reportRef sections and source evidence. Lists are static extracted facts, never proof that triggers, CLR, dynamic SQL or implicit engine effects are absent. MCP works independently of LSP and never executes SQL.";
+        })
         .WithStdioServerTransport().WithTools(tools);
     await builder.Build().RunAsync();
 }

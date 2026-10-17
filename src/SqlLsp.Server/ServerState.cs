@@ -139,36 +139,36 @@ public sealed class ServerState : IAsyncDisposable
             await offlineIndexGate.WaitAsync(token);
             try
             {
-            // One build per immutable input; a canceled waiter cannot evict a valid generation.
-            documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
-            var contextGeneration = Files?.Contexts.Generation ?? "";
-            if (offlineIndex != null && offlineContextGeneration == contextGeneration &&
-                documents.Length == offlineDocuments.Length && documents.Zip(offlineDocuments).All(p => ReferenceEquals(p.First, p.Second)))
-                return offlineIndex;
-            // Freeze context/rules with the document generation, so later project edits cannot mutate this index.
-            var contexts = documents.ToDictionary(d => d.Uri, d => Files?.ContextId(d.Uri) ?? d.Uri.AbsoluteUri);
-            var rules = contexts.ToDictionary(p => p.Key, p => Files?.Contexts.Rules(p.Value, Resolution) ?? Resolution);
-            foreach (var removed in boundDocuments.Keys.Except(documents.Select(d => d.Uri)).ToArray()) boundDocuments.Remove(removed);
-            var bound = documents.Select(document =>
-            {
-                var comparison = rules[document.Uri];
-                if (comparison == Resolution) return document;
-                if (!boundDocuments.TryGetValue(document.Uri, out var entry) || !ReferenceEquals(document, entry.Original) || entry.Rules != comparison)
+                // One build per immutable input; a canceled waiter cannot evict a valid generation.
+                documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
+                var contextGeneration = Files?.Contexts.Generation ?? "";
+                if (offlineIndex != null && offlineContextGeneration == contextGeneration &&
+                    documents.Length == offlineDocuments.Length && documents.Zip(offlineDocuments).All(p => ReferenceEquals(p.First, p.Second)))
+                    return offlineIndex;
+                // Freeze context/rules with the document generation, so later project edits cannot mutate this index.
+                var contexts = documents.ToDictionary(d => d.Uri, d => Files?.ContextId(d.Uri) ?? d.Uri.AbsoluteUri);
+                var rules = contexts.ToDictionary(p => p.Key, p => Files?.Contexts.Rules(p.Value, Resolution) ?? Resolution);
+                foreach (var removed in boundDocuments.Keys.Except(documents.Select(d => d.Uri)).ToArray()) boundDocuments.Remove(removed);
+                var bound = documents.Select(document =>
                 {
-                    entry = (document, document with { Parse = SqlParser.Rebind(document.Parse, comparison, token) }, comparison);
-                    boundDocuments[document.Uri] = entry;
-                }
-                return entry.Bound;
-            }).ToImmutableArray();
-            var permitted = Files?.Contexts.ReferenceMappings() ?? [];
-            var built = new SqlNavigationIndex(bound, uri => contexts.GetValueOrDefault(uri) ?? uri.AbsoluteUri, Resolution,
-                resolutionFor: uri => rules.GetValueOrDefault(uri) ?? Resolution, canReference: (from, to) => permitted.Contains((from, to)));
-            token.ThrowIfCancellationRequested();
-            offlineDocuments = documents;
-            offlineContextGeneration = contextGeneration;
-            offlineIndex = built;
-            NavigationBuilds++;
-            return built;
+                    var comparison = rules[document.Uri];
+                    if (comparison == Resolution) return document;
+                    if (!boundDocuments.TryGetValue(document.Uri, out var entry) || !ReferenceEquals(document, entry.Original) || entry.Rules != comparison)
+                    {
+                        entry = (document, document with { Parse = SqlParser.Rebind(document.Parse, comparison, token) }, comparison);
+                        boundDocuments[document.Uri] = entry;
+                    }
+                    return entry.Bound;
+                }).ToImmutableArray();
+                var permitted = Files?.Contexts.ReferenceMappings() ?? [];
+                var built = new SqlNavigationIndex(bound, uri => contexts.GetValueOrDefault(uri) ?? uri.AbsoluteUri, Resolution,
+                    resolutionFor: uri => rules.GetValueOrDefault(uri) ?? Resolution, canReference: (from, to) => permitted.Contains((from, to)));
+                token.ThrowIfCancellationRequested();
+                offlineDocuments = documents;
+                offlineContextGeneration = contextGeneration;
+                offlineIndex = built;
+                NavigationBuilds++;
+                return built;
             }
             finally { offlineIndexGate.Release(); }
         }

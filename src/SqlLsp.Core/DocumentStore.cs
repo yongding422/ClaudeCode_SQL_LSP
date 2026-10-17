@@ -46,6 +46,10 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
         if (offset < 0 || limit is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(limit));
         lock (gate) return coverage.Values.Where(f => uri == null || f.Uri == uri).OrderBy(f => f.Uri.AbsoluteUri, StringComparer.Ordinal).Skip(offset).Take(limit).ToArray();
     }
+    public ImmutableArray<WorkspaceFileCoverage> CoverageSnapshot()
+    {
+        lock (gate) return coverage.Values.OrderBy(f => f.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+    }
 
     public ImmutableArray<DocumentSnapshot> Index
     {

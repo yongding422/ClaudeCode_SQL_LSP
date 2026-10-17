@@ -28,6 +28,7 @@ public sealed class SqlMaterializedIndex : ISqlDiscoveryIndex
     public string Generation { get; }
     private readonly Dictionary<Uri, SqlMaterializedFile> files;
     private readonly HashSet<(string From, string To)> references;
+    public ISqlDiscoveryIndex Within(Uri directory) => new SqlMaterializedIndex(Files.Where(f => directory.IsBaseOf(f.Uri)).ToImmutableArray(), references);
 
     public SqlMaterializedIndex(ImmutableArray<SqlMaterializedFile> sourceFiles, HashSet<(string From, string To)>? references = null)
     {

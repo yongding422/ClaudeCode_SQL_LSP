@@ -9,7 +9,7 @@ public class PersistentCacheTests
     private const string Sql = "CREATE PROC dbo.P @n int AS BEGIN DECLARE @v int=@n; IF @n>0 SET @v=2; EXEC dbo.Q @q=@v; END;\nGO\nCREATE PROC dbo.Q @q int AS SELECT * FROM dbo.A WHERE id=@q;\nGO\nCREATE TABLE dbo.A(id int);";
     private static async Task<JsonElement> Select(McpClient client) => McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.P" })).GetProperty("modules")[0];
     private static async Task<JsonElement> Analyze(McpClient client, JsonElement selected, string? revision = null, string detail = "full") =>
-        McpClient.Data(await client.AnalyzeExpanded( new
+        McpClient.Data(await client.AnalyzeExpanded(new
         {
             documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
             line = selected.GetProperty("selection").GetProperty("line").GetInt32(),

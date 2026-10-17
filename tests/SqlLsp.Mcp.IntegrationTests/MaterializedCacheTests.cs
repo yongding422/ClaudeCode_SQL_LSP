@@ -48,7 +48,7 @@ public class MaterializedCacheTests
                 Assert.Equal(12, discovery.GetProperty("indexedDocuments").GetInt32());
                 Assert.Equal(12, discovery.GetProperty("coverage").GetProperty("parseAttempts").GetInt32());
                 revision = discovery.GetProperty("modules")[0].GetProperty("revision").GetString()!;
-                var report = McpClient.Data(await first.AnalyzeExpanded( new { documentUri = new Uri(first.SourceFile).AbsoluteUri, line = 0, character = 16 }));
+                var report = McpClient.Data(await first.AnalyzeExpanded(new { documentUri = new Uri(first.SourceFile).AbsoluteUri, line = 0, character = 16 }));
                 Assert.Equal(12, report.GetProperty("indexedDocuments").GetInt32());
                 Assert.Equal(2, report.GetProperty("parsedDocuments").GetInt32());
                 Assert.Equal(2, report.GetProperty("indexCache").GetProperty("bodyParses").GetInt32());
@@ -61,22 +61,22 @@ public class MaterializedCacheTests
                 Assert.Equal(0, discovery.GetProperty("coverage").GetProperty("parseAttempts").GetInt32());
                 Assert.Equal(12, discovery.GetProperty("indexCache").GetProperty("reusedFiles").GetInt32());
                 Assert.Equal(revision, discovery.GetProperty("modules")[0].GetProperty("revision").GetString());
-                var report = McpClient.Data(await second.AnalyzeExpanded( new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
+                var report = McpClient.Data(await second.AnalyzeExpanded(new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
                 Assert.Equal("Hit", report.GetProperty("cache").GetProperty("status").GetString());
                 var q = Path.Combine(root, "q.sql");
                 var stamp = File.GetLastWriteTimeUtc(q);
                 await File.WriteAllTextAsync(q, "CREATE PROC dbo.Q AS SELECT 2;");
                 File.SetLastWriteTimeUtc(q, stamp);
-                report = McpClient.Data(await second.AnalyzeExpanded( new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
+                report = McpClient.Data(await second.AnalyzeExpanded(new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
                 Assert.NotEqual("Hit", report.GetProperty("cache").GetProperty("status").GetString());
                 Assert.Equal(1, report.GetProperty("coverage").GetProperty("parseAttempts").GetInt32());
                 await File.WriteAllTextAsync(Path.Combine(root, "competing.sql"), "CREATE PROC dbo.Q AS SELECT 3;");
-                report = McpClient.Data(await second.AnalyzeExpanded( new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
+                report = McpClient.Data(await second.AnalyzeExpanded(new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
                 Assert.Equal("Ambiguous", report.GetProperty("report").GetProperty("modules")[0].GetProperty("calls")[0].GetProperty("status").GetString());
                 Assert.Single(report.GetProperty("report").GetProperty("modules").EnumerateArray());
                 File.Delete(Path.Combine(root, "competing.sql"));
                 File.Move(q, Path.Combine(root, "renamed.sql"));
-                report = McpClient.Data(await second.AnalyzeExpanded( new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
+                report = McpClient.Data(await second.AnalyzeExpanded(new { documentUri = new Uri(second.SourceFile).AbsoluteUri, line = 0, character = 16 }));
                 Assert.Equal("Resolved", report.GetProperty("report").GetProperty("modules")[0].GetProperty("calls")[0].GetProperty("status").GetString());
                 Assert.Contains("renamed.sql", report.GetProperty("report").GetRawText());
             }

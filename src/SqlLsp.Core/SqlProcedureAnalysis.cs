@@ -216,8 +216,12 @@ public sealed partial class SqlNavigationIndex
             accesses.Distinct().Select(a => a with { FlowContext = flow.ContextAt(a.Location.Range.Start) }).ToImmutableArray(),
             calls.Select(c => c with { FlowContext = flow.ContextAt(c.Location.Range.Start) }).ToImmutableArray(),
             issues.Distinct().ToImmutableArray(), truncated)
-        { ControlFlow = flow, ValueFlow = values, Observations = observations.Facts,
-            ImplementationKind = external ? "External" : finder.Body == null ? "Unavailable" : "TransactSql" };
+        {
+            ControlFlow = flow,
+            ValueFlow = values,
+            Observations = observations.Facts,
+            ImplementationKind = external ? "External" : finder.Body == null ? "Unavailable" : "TransactSql"
+        };
     }
 
     private sealed class AnalysisBodyFinder(SourceText source, TextRange range) : TSqlFragmentVisitor
