@@ -2,7 +2,7 @@
 
 Starting with 0.14.0, the plugin automatically creates **`.sqlscriptdom.json` in the workspace where its MCP server first starts**. Install/update the plugin, then start a fresh Claude session from your SQL project folder. No hook or manual MCP registration is needed.
 
-The generated starter has `metrics.enabled=false` and `analysisCache.enabled=false`. To enable them, edit the file to:
+The generated starter has `metrics.enabled=false` and `analysisCache.enabled=false`. The optional [persisted discovery index](persistent-discovery-index.md), `indexCache`, is also disabled when absent; enabling report storage alone still does not restore discovery facts. To enable metrics and saved reports, edit the file to:
 
 ```json
 {

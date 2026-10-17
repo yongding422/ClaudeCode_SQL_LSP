@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,6 +17,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
 {
     public bool AutoInitializeSettings { get; init; }
     public int DiscoveryMaxBytes { get; init; } = 16384;
+    public string? IndexCacheDirectory { get; init; }
 
     public static McpLaunchOptions Parse(string[] args)
     {
@@ -58,7 +60,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
             metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation)
-        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes };
+        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes, IndexCacheDirectory = settings.IndexCacheDirectory };
     }
 }
 
@@ -71,6 +73,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     private readonly PersistentAnalysisCache? cache = launch.CacheDirectory == null ? null : new(launch.CacheDirectory);
     private readonly PluginMetrics metrics = new(launch.MetricsDirectory);
     private readonly DiscoveryCursor discoveryCursors = new();
+    private MaterializedWorkspace? materialized;
+    private WorkspaceCoverage? Coverage => materialized?.Coverage ?? state?.Documents?.Coverage;
+    private WorkspaceFiles? SourceFiles => materialized?.Files ?? state?.Files;
+    private IEnumerable<string> SourceStatuses => materialized == null ? state?.SourceStatuses ?? [] : ["Offline verified materialized facts; rich bodies parsed on demand."];
+    private WorkspaceFileCoverage[] CoverageFiles(int offset, int limit, Uri? uri) =>
+        materialized?.CoverageFiles(offset, limit, uri) ?? state?.Documents?.CoverageFiles(offset, limit, uri) ?? [];
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -89,7 +97,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         Uri? file = null;
         if (documentUri != null && (!Uri.TryCreate(documentUri, UriKind.Absolute, out file) || !file.IsFile || file.Query.Length != 0 || file.Fragment.Length != 0))
             throw new McpException("documentUri must be an absolute file URI.");
-        return observation.Complete(await WithIndex((index, timings) =>
+        Task<CallToolResult> Discover(ISqlDiscoveryIndex index, RequestTimings timings)
         {
             var timer = Stopwatch.StartNew();
             var generation = index.Generation;
@@ -105,7 +113,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 return new
                 {
                     symbol.Identity,
-                    context = state!.Files?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
+                    context = SourceFiles?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
                     revision = metadata.Revision,
@@ -114,9 +122,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 };
             }
             var counts = index.ParseIssueCounts(file, scopeId);
-            var coverage = state!.Documents?.Coverage;
+            var coverage = Coverage;
             var total = section == "issues" ? counts.Count : section == "files" ?
-                file == null ? coverage?.Discovered ?? 0 : state.Documents?.CoverageFiles(0, 1, file).Length ?? 0 : symbols.Length;
+                file == null ? coverage?.Discovered ?? 0 : CoverageFiles(0, 1, file).Length : symbols.Length;
             var entries = new List<object>();
             var consumed = 0;
             var omittedOversized = 0;
@@ -128,8 +136,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 coverage,
                 scope = new { id = scopeId, documentUri, indexedDocuments = index.DocumentCountFor(scopeId, file) },
                 generation,
-                sourceStatuses = state.SourceStatuses.Take(4).Select(s => s.Length <= 256 ? s : s[..256] + "…").ToArray(),
-                sourceStatusCount = state.SourceStatuses.Count(),
+                sourceStatuses = SourceStatuses.Take(4).Select(s => s.Length <= 256 ? s : s[..256] + "…").ToArray(),
+                sourceStatusCount = SourceStatuses.Count(),
+                indexCache = materialized?.Use,
                 sourceIssues = section == "issues" ? entries : new List<object>(),
                 sourceIssueSummary = new { count = counts.Count, affectedFiles = counts.Files, details = "Request section=issues, optionally documentUri, with pagination." },
                 timings,
@@ -146,7 +155,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Use a known file URI and selection for direct analysis or inspect the source; omitted count is explicit." : null
             };
             var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken, scopeId).Cast<object>() :
-                section == "files" ? (state.Documents?.CoverageFiles(offset, maxResults, file) ?? []).Cast<object>() :
+                section == "files" ? CoverageFiles(offset, maxResults, file).Cast<object>() :
                 symbols.Skip(offset).Take(maxResults).Select(Module);
             foreach (var entry in candidates)
             {
@@ -162,7 +171,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             timings.AnalysisMs = timer.Elapsed.TotalMilliseconds;
             // Timing digits and the SDK envelope need headroom beyond the measured content.
             return Task.FromResult(Result(Payload()));
-        }, cancellationToken));
+        }
+        return observation.Complete(await WithDiscovery(Discover, cancellationToken));
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
@@ -192,16 +202,18 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             return Result(new
             {
                 source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
-                indexedDocuments = index.DocumentCount,
-                coverage = state!.Documents?.Coverage,
-                sourceContext = state.Files?.Contexts.Describe(uri, state.Files.ContextId(uri)),
-                sourceStatuses = state!.SourceStatuses,
+                indexedDocuments = materialized?.Index.DocumentCount ?? index.DocumentCount,
+                parsedDocuments = index.DocumentCount,
+                coverage = Coverage,
+                sourceContext = SourceFiles?.Contexts.Describe(uri, SourceFiles.ContextId(uri)),
+                sourceStatuses = SourceStatuses,
+                indexCache = materialized?.Use,
                 timings,
                 cache = analyzed.Use,
                 report = presented,
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).ToArray()
             });
-        }, cancellationToken));
+        }, cancellationToken, uri, maxDepth, maxModules));
     }
 
     [McpServerTool(Name = "get_metrics", ReadOnly = true, Destructive = false, OpenWorld = false)]
@@ -253,6 +265,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         var timer = Stopwatch.StartNew();
         try
         {
+            if (materialized != null)
+                return new(SqlAnalysisCacheContext.Hash(configurationStamp + materialized.Index.Generation + typeof(ProcedureTools).Module.ModuleVersionId),
+                    materialized.Index.Files.Select(f => new SqlAnalysisCacheSource(f.Uri, f.Uri, f.Revision, null)).ToImmutableArray());
             return index.CreateAnalysisCacheContext(configurationStamp + state!.AnalysisCacheCatalogStamp() +
                 typeof(ProcedureTools).Module.ModuleVersionId + typeof(ServerState).Module.ModuleVersionId, token);
         }
@@ -298,7 +313,41 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         public double CacheWriteMs { get; set; }
     }
 
-    private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token)
+    private async Task<CallToolResult> WithDiscovery(Func<ISqlDiscoveryIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token)
+    {
+        if (launch.IndexCacheDirectory == null) return await WithIndex((index, timings) => action(index, timings), token);
+        var timer = Stopwatch.StartNew();
+        await gate.WaitAsync(token);
+        var timings = new RequestTimings { QueueMs = timer.Elapsed.TotalMilliseconds, ColdStart = materialized == null };
+        try
+        {
+            timer.Restart();
+            await RefreshMaterialized(token);
+            timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
+            return await action(materialized!.Index, timings);
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task RefreshMaterialized(CancellationToken token)
+    {
+        if (materialized != null) { await materialized.RefreshAsync(token); return; }
+        JObject? options = null;
+        if (launch.ConfigurationFile != null)
+        {
+            if (new FileInfo(launch.ConfigurationFile).Length > 1_048_576) throw new McpException("Configuration exceeds size limit.");
+            options = JObject.Parse(await File.ReadAllTextAsync(launch.ConfigurationFile, token));
+        }
+        var config = ServerConfiguration.Parse(options);
+        metrics.SourceMode = config.Mode;
+        configurationStamp = options?.ToString(Newtonsoft.Json.Formatting.None) ?? "{}";
+        var candidate = new MaterializedWorkspace(launch, config, configurationStamp);
+        await candidate.RefreshAsync(token);
+        materialized = candidate;
+    }
+
+    private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token,
+        Uri? selected = null, int maxDepth = 2, int maxModules = 20)
     {
         var timer = Stopwatch.StartNew();
         await gate.WaitAsync(token);
@@ -306,6 +355,16 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         try
         {
             timer.Restart();
+            if (launch.IndexCacheDirectory != null && selected != null)
+            {
+                timings.ColdStart = materialized == null;
+                await RefreshMaterialized(token);
+                timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
+                timer.Restart();
+                var selectedIndex = await materialized!.NavigationAsync(selected, maxDepth, maxModules, token);
+                timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
+                return await action(selectedIndex, timings);
+            }
             if (state == null)
             {
                 var candidate = new ServerState();

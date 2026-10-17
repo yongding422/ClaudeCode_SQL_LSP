@@ -2,7 +2,7 @@ using System.Buffers;
 
 namespace SqlLsp.Core;
 
-public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs, long ReadBytes = 0);
+public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs, long ReadBytes = 0, string? ContentHash = null);
 
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
@@ -116,9 +116,10 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
             }
             finally { ArrayPool<byte>.Shared.Return(bytes, clearArray: true); }
             contents.Position = 0;
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(contents.GetBuffer().AsSpan(0, (int)contents.Length)));
             using var reader = new StreamReader(contents, detectEncodingFromByteOrderMarks: true);
             var text = await reader.ReadToEndAsync(token);
-            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds, readBytes);
+            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds, readBytes, hash);
         }
         catch (FileNotFoundException) { return Excluded("Deleted"); }
         catch (DirectoryNotFoundException) { return Excluded("Deleted"); }

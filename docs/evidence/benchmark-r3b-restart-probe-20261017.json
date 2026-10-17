@@ -1,0 +1,10 @@
+{
+  "mode": "Framework-dependent real MCP stdio, offline, explicit indexCache, no model/SQL execution",
+  "cold_empty_cache": {"elapsed_ms":[7275.08,1398.29],"parse_attempts":[1099,1099],"first_status":"Stored"},
+  "fresh_process_verified_restart": {"elapsed_ms":[3542.22,1555.72],"parse_attempts":[0,0],"reused_files":1099,"first_status":"Read"},
+  "snapshot": {"format":"versioned GZip-compressed JSON facts, no AST", "encoded_bytes":2945662,"decoded_bytes":57150725},
+  "raw_artifacts": ["artifacts/r0-coverage-probe/r3b-compressed-cold.json","artifacts/r0-coverage-probe/r3b-compressed-restart.json"],
+  "unsuccessful_initial_probes": "r3b-cold.json and r3b-restart.json exceeded the first plain-JSON 32-MiB limit, correctly reported TooLarge and reparsed all files. They are not cache hits. Lossless compression preserves every fact while bounding decoded bytes separately.",
+  "tests": "Full solution: Core 153, LSP 60, MCP 71, provider 29 pass; 18 environment/optional skips. Real MCP tests cover restart, partial body loading, report reuse, same-size/time callee edit, added ambiguity, rename/deletion, corruption, competing writers and parser-option change. Compiling core spike verifies extracted DTO discovery/resolution parity without AST serialization.",
+  "limits": "One exploratory timing pair, actual content validation included, not p95/native cross-platform/model evaluation. The 2-second engineering restart target is not met. Verified-fact mode rehashes files every request and is slower warm than live AST mode; do not compare it as equivalent warm work. No general speed/token claim."
+}

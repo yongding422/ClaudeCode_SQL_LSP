@@ -9,6 +9,7 @@
     "version": { "const": 1 },
     "metrics": { "$ref": "#/$defs/storage" },
     "analysisCache": { "$ref": "#/$defs/storage" },
+    "indexCache": { "$ref": "#/$defs/storage" },
     "responses": {
       "type": "object", "additionalProperties": false,
       "properties": {

@@ -136,7 +136,8 @@ public sealed partial class SqlNavigationIndex
         var selected = Symbols.Where(s => SameAnchor(s.Target, target)).ToArray();
         if (selected.Length != 1 || selected[0].Identity.Kind != SqlObjectKind.Procedure) return Fail("Only a unique procedure source signature is supported.", target);
         var symbol = selected[0];
-        var source = documents.First(d => d.Uri == target.Uri);
+        var source = documents.FirstOrDefault(d => d.Uri == target.Uri);
+        if (source == null) return Fail("Verified procedure exists, but its parsed signature was not loaded within the on-demand source budget.", target);
         var finder = new AnalysisBodyFinder(source.Parse.Source, symbol.Declaration.Range); source.Parse.Ast.Accept(finder);
         if (finder.Body is not ProcedureStatementBodyBase routine || routine is FunctionStatementBody || source.Parse.Diagnostics.Length != 0)
             return Fail("Original parsed procedure signature is unavailable or has parse errors; metadata display text is not used as a signature.", target);

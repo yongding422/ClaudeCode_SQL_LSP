@@ -14,7 +14,10 @@ import time
 def probe(args):
     with tempfile.TemporaryDirectory(prefix="sql-mcp-probe-") as temporary:
         settings = Path(temporary) / "settings.json"
-        settings.write_text('{"version":1}', encoding="utf-8")
+        options = {"version": 1}
+        if args.index_cache:
+            options["indexCache"] = {"enabled": True, "directory": str(args.index_cache.resolve())}
+        settings.write_text(json.dumps(options), encoding="utf-8")
         command = [str(args.server)] + ([str(args.assembly)] if args.assembly else [])
         command += ["--stdio", "--workspace", str(args.workspace.resolve()), "--settings", str(settings)]
         environment = os.environ.copy()
@@ -65,7 +68,7 @@ def probe(args):
                 data = result["structuredContent"]
                 samples.append({"elapsed_ms": elapsed, "frame_utf8_bytes": length, "timings": data["timings"],
                                 "coverage": data.get("coverage"), "indexed_documents": data["indexedDocuments"],
-                                "generation": data.get("generation"), "total_matches": data["totalMatches"]})
+                                "generation": data.get("generation"), "index_cache": data.get("indexCache"), "total_matches": data["totalMatches"]})
                 time.sleep(.3)  # Observe normal startup reconciliation without hiding its recorded work.
             binary = args.assembly or args.server
             output = {"mode": "same-live-process, saved source, no model/SQL calls", "server_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
@@ -90,5 +93,6 @@ if __name__ == "__main__":
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--query", default="InsertCustomerOrders")
+    parser.add_argument("--index-cache", type=Path, help="Explicit opt-in snapshot directory, outside the source folder.")
     parser.add_argument("--samples", type=int, choices=range(2, 21), default=5)
     probe(parser.parse_args())

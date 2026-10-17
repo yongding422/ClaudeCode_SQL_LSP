@@ -84,6 +84,11 @@ public sealed partial class SqlNavigationIndex
         while (queue.TryDequeue(out var entry))
         {
             token.ThrowIfCancellationRequested();
+            if (!documents.Any(d => d.Uri == entry.Symbol.Target.Uri))
+            {
+                expansion.Add(new("body-not-loaded", "Verified declaration exists, but its rich body was not loaded within the on-demand source budget. Effects are unknown.", new(entry.Symbol.Target.Uri, entry.Symbol.Target.Range)));
+                continue;
+            }
             if (remainingFacts <= 0)
             {
                 expansion.Add(new("report-limit", "Report fact budget exhausted; additional modules were not expanded.", new(entry.Symbol.Target.Uri, entry.Symbol.Target.Range)));
