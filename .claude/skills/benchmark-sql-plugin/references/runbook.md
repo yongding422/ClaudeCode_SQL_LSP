@@ -4,6 +4,8 @@ Run from the SqlScriptDOM_LSP repository. Python 3.11+ and Claude Code with the 
 
 Source revision: `e5d7bb90ca0b695ac14f61458047bfb5a498459e`. Frozen questions/rubric: `docs/evaluation/sql-server-samples-suite.json`. Retained historical aggregate: `docs/evidence/sql-server-samples-evaluation-20261017.json`. Full protocol: `docs/evaluation/sql-server-samples-study.md`. Improvement backlog: `docs/plans/benchmark-driven-improvement-plan.md`.
 
+Participant archives must exclude maintainer `docs/evaluation`, `docs/evidence`, `docs/plans` and the benchmark skill. Current preflight, catalog generation and native/install checks reject them. Earlier experimental packages copied all docs; no rubric reads were observed in retained restricted transcripts, but those studies retain an exposure-risk qualification. Never remove files from a measured candidate and reuse its fingerprint/study; build a new clean artifact and prepare a new study.
+
 ## Prepare and execute
 
 Use the user's actual source/candidate/output paths below. Each output directory is new; source and plugin paths are read-only inputs. `deepseek-v4-pro` reproduces this machine's original model. If the user chooses another model/provider, run it in both arms and label the historical mismatch rather than claiming an exact reproduction.

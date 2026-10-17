@@ -143,7 +143,7 @@ def report(study, grades_path):
         writer.writerows(rows)
     lines = ["# SQL Server Samples: measured results", "", "Model: `" + experiment["model"] + "` through `" + experiment["provider_host"] + "`; plugin " + experiment["plugin_version"] + ". " +
              f"{len(tasks)} questions × {experiment['repeats']} repeats × 2 conditions; order={experiment['order']}. " +
-             f"{experiment['workers']} concurrent client(s) within each phase; fresh SQL-only workspaces. No SQL was executed.", "",
+             f"{experiment['workers']} concurrent client(s) within each phase; workflow={experiment.get('workflow', 'prescribed')}; fresh SQL-only workspaces. No SQL was executed.", "",
              "| Metric | Read/Grep/Glob | SQL plugin + file tools |", "|---|---:|---:|"]
     metrics = [("Successful sessions", "successful_client_results", "{}"), ("Strict passing answers", "strict_passes", "{}"),
                ("Mean factual score", "mean_factual_score", "{:.1%}"), ("Mean citation score", "mean_citation_score", "{:.1%}"),
@@ -168,7 +168,7 @@ def report(study, grades_path):
         arms = [aggregate([row for row in rows if row["task_id"] == task_id and row["arm"] == arm]) for arm in ("grep", "plugin")]
         lines.append(f"| {task_id} | {arms[0]['mean_factual_score']:.1%} | {arms[1]['mean_factual_score']:.1%} | {arms[0]['mean_elapsed_ms']/1000:.1f} | {arms[1]['mean_elapsed_ms']/1000:.1f} | {arms[0]['reported_total_input_tokens_mean']:,.0f} | {arms[1]['reported_total_input_tokens_mean']:,.0f} |")
     lines += ["", "## Review and limitations", "", suite["grading"], "",
-              "The implementing agent reviewed the answers against the pre-run rubric and source. This is not independent human review. Baseline-first order, uncontrolled OS/provider caches and load, related procedures, selected questions and two repeats limit generalization. This measures a cold, instructed plugin-assisted workflow, not a warm persisted-cache workflow or a separate LSP-versus-MCP/codebase-memory experiment.", "",
+              "The implementing agent reviewed the answers against the pre-run rubric and source. This is not independent human review. Baseline-first order, uncontrolled OS/provider caches and load, related procedures, selected questions and few repeats limit generalization. This measures the cold " + experiment.get("workflow", "prescribed") + " workflow, not warm persisted-cache behavior or a separate LSP-versus-MCP/codebase-memory experiment. Availability without actual MCP calls does not establish an analyzer benefit.", "",
               "Frozen corpus SHA256: `" + manifest["corpus_sha256"] + "`. Source revision: `" + manifest["source_revision"] + "`. Full questions/rubric, raw transcripts, answers, ungraded metrics and explicit review notes are retained alongside this report."]
     baseline, treatment = grouped["grep"], grouped["plugin"]
     if (treatment["mean_elapsed_ms"] > baseline["mean_elapsed_ms"] and

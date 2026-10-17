@@ -47,6 +47,14 @@ class RerunTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Frozen offline"):
                 rerun.candidate(root)
 
+    def test_participant_package_cannot_expose_hidden_rubrics_or_prior_answers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = self.artifact(Path(folder))
+            (root / "docs/evaluation").mkdir(parents=True)
+            (root / "docs/evaluation/rubric.json").write_text("hidden gold")
+            with self.assertRaisesRegex(ValueError, "maintainer benchmark material"):
+                rerun.candidate(root)
+
     def test_offline_preflight_also_excludes_database_enabled_lsp(self):
         with tempfile.TemporaryDirectory() as folder:
             root = self.artifact(Path(folder))

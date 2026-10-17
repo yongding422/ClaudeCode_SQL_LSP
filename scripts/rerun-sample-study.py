@@ -61,6 +61,8 @@ def module(name):
 
 def candidate(plugin):
     plugin = plugin.resolve()
+    if any((plugin / relative).exists() for relative in ("docs/evaluation", "docs/evidence", "docs/plans", ".claude/skills/benchmark-sql-plugin")):
+        raise ValueError("Participant plugin contains maintainer benchmark material. Build a clean native candidate; preserve earlier studies.")
     manifest = read(plugin / ".claude-plugin/plugin.json")
     servers = read(plugin / ".mcp.json")["mcpServers"]
     server = servers["sqlscriptdom-analysis"]

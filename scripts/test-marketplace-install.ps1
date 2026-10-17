@@ -25,6 +25,9 @@ try {
     if ($executables.Count -ne 1) { throw 'Expected exactly one installed apphost in the isolated configuration.' }
     $executable = $executables[0].FullName
     $plugin = Split-Path (Split-Path $executable)
+    foreach ($excluded in @('docs/evaluation', 'docs/evidence', 'docs/plans', '.claude/skills/benchmark-sql-plugin')) {
+        if (Test-Path -LiteralPath (Join-Path $plugin $excluded)) { throw "Installed plugin contains maintainer benchmark material: $excluded" }
+    }
     $expectedVersion = (Get-Content -LiteralPath (Join-Path $repo 'claude-plugin/.claude-plugin/plugin.json') -Raw | ConvertFrom-Json).version
     $installedManifest = Get-Content -LiteralPath (Join-Path $plugin '.claude-plugin/plugin.json') -Raw | ConvertFrom-Json
     $installedBuild = Get-Content -LiteralPath (Join-Path $plugin 'build.json') -Raw | ConvertFrom-Json

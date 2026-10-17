@@ -20,6 +20,9 @@ $entries = foreach ($runtime in @('win-x64', 'linux-x64', 'osx-arm64', 'osx-x64'
     if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or $actual -ne $expected) { throw "Checksum mismatch: $fileName" }
     $zip = [System.IO.Compression.ZipFile]::OpenRead($archive)
     try {
+        if (@($zip.Entries | Where-Object { $_.FullName -match '^docs/(evaluation|evidence|plans)/|^\.claude/skills/benchmark-sql-plugin/' }).Count) {
+            throw "Maintainer benchmark data must not be distributed: $fileName"
+        }
         $manifestEntry = $zip.GetEntry('.claude-plugin/plugin.json')
         $buildEntry = $zip.GetEntry('build.json')
         if ($null -eq $manifestEntry -or $null -eq $buildEntry -or $null -eq $zip.GetEntry('.lsp.json')) { throw "Incomplete plugin: $fileName" }
