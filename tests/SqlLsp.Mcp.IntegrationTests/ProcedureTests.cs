@@ -95,8 +95,10 @@ public class ProcedureTests
         await using var client = await McpClient.Start("CREATE PROC dbo.P AS SELECT FROM;");
         var discovery = McpClient.Data(await client.Tool("find_procedures", new { }));
         Assert.Empty(discovery.GetProperty("modules").EnumerateArray());
-        Assert.NotEmpty(discovery.GetProperty("sourceIssues").EnumerateArray());
-        var report = McpClient.Data(await client.Tool("analyze_procedure", new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = 0, character = 16 })).GetProperty("report");
+        Assert.True(discovery.GetProperty("sourceIssueSummary").GetProperty("count").GetInt32() > 0);
+        var issues = McpClient.Data(await client.Tool("find_procedures", new { section = "issues" }));
+        Assert.NotEmpty(issues.GetProperty("sourceIssues").EnumerateArray());
+        var report = McpClient.Data(await client.AnalyzeExpanded(new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = 0, character = 16 })).GetProperty("report");
         Assert.Empty(report.GetProperty("modules").EnumerateArray());
         Assert.Contains(report.GetProperty("expansionIssues").EnumerateArray(), issue => issue.GetProperty("code").GetString() == "parse-error");
     }
@@ -150,9 +152,9 @@ public class ProcedureTests
         var report = McpClient.Data(await Analyze(client, discovered.GetProperty("modules")[0])).GetProperty("report");
         Assert.Equal("Ambiguous", report.GetProperty("status").GetString());
         Assert.Empty(report.GetProperty("modules").EnumerateArray());
-        var outside = McpClient.Data(await client.Tool("analyze_procedure", new { documentUri = "file:///outside/procedure.sql", line = 0, character = 0 }));
+        var outside = McpClient.Data(await client.AnalyzeExpanded(new { documentUri = "file:///outside/procedure.sql", line = 0, character = 0 }));
         Assert.Equal("Unresolved", outside.GetProperty("report").GetProperty("status").GetString());
-        var invalid = await client.Tool("analyze_procedure", new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = -1, character = 0 });
+        var invalid = await client.AnalyzeExpanded(new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = -1, character = 0 });
         Assert.True(invalid.GetProperty("result").GetProperty("isError").GetBoolean());
         var limit = await client.Tool("find_procedures", new { maxResults = 1000 });
         Assert.True(limit.GetProperty("result").GetProperty("isError").GetBoolean());
@@ -191,12 +193,13 @@ public class ProcedureTests
     }
 
     private static Task<JsonElement> Analyze(McpClient client, JsonElement selected, int depth = 2) =>
-        client.Tool("analyze_procedure", new
+        client.AnalyzeExpanded(new
         {
             documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
             line = selected.GetProperty("selection").GetProperty("line").GetInt32(),
             character = selected.GetProperty("selection").GetProperty("character").GetInt32(),
             maxDepth = depth,
+            detail = "full",
             expectedRevision = selected.GetProperty("revision").GetString()
         });
 

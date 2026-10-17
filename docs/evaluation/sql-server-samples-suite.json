@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "source_repository": "https://github.com/microsoft/sql-server-samples",
+  "grading": "Each criterion is 0 (missing/wrong), 0.5 (partly correct), or 1 (correct). Equal-weight mean within task, then across tasks. Score source citation support separately (0/0.5/1). A passing answer needs all criteria correct, supported citations, no material unsupported claim, and a successful client result. Review answers against source; do not grade by keyword presence or self-reported confidence. Reviewer is the implementing Codex agent, not an independent human. Failures stay in the denominator.",
+  "tasks": [
+    {
+      "id": "Q01-order-footprint", "category": "transitive effects and transactions",
+      "question": "In samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt, explain Website.InsertCustomerOrders: which persistent tables does it write directly, which tables does its pricing function read, and where do sequence allocation, transaction commit and failure handling occur? Distinguish local variables from persistent writes.",
+      "criteria": ["Direct persistent INSERT targets are Sales.Orders and Sales.OrderLines; @OrdersToGenerate is local, not a persistent table.", "The scalar call Website.CalculateCustomerPrice adds reads of Sales.Customers, Warehouse.StockItems, Sales.SpecialDeals and Warehouse.StockItemStockGroups; no writes in that function.", "NEXT VALUE FOR Sequences.OrderID fills the table variable before BEGIN TRY/BEGIN TRAN; commit on success; CATCH rolls back if XACT_STATE() <> 0 and rethrows, so RETURN -1 after THROW is not the error result."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql", 19, 64], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql", 21, 85]]
+    },
+    {
+      "id": "Q02-invoice-eligibility", "category": "branch and write completeness",
+      "question": "In the Wide World Importers SSDT project, what makes an order eligible for Website.InvoiceCustomerOrders, what happens if any requested order is ineligible, and which persistent tables are changed by a successful invocation? Include how stock on hand changes.",
+      "criteria": ["Order must exist, not already have an invoice, and PickingCompletedWhen must not be NULL.", "Any requested order missing from @InvoicesToGenerate causes THROW 51000 before BEGIN TRAN; it does not just skip invalid orders.", "All five persistent write targets: INSERT Sales.Invoices, Sales.InvoiceLines, Warehouse.StockItemTransactions, Sales.CustomerTransactions; UPDATE Warehouse.StockItemHoldings.", "Holdings QuantityOnHand is reduced by SUM(invoice-line Quantity) grouped by StockItemID; stock issue transaction quantities are negative."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InvoiceCustomerOrders.sql", 22, 150]]
+    },
+    {
+      "id": "Q03-price-formula", "category": "scalar business rule",
+      "question": "Inspect Website.CalculateCustomerPrice in the Wide World Importers SSDT project. Assume a valid item with UnitPrice=100, the only applicable special deal has DiscountPercentage=30, and there are no applicable explicit prices or DiscountAmount values. What does the code return and why? Also explain how an explicit deal price and a fixed DiscountAmount compete. Follow the actual implementation.",
+      "criteria": ["Returns 30.00, because ROUND(UnitPrice * HighestDiscountPercentage / 100.0, 2) is a candidate final price, not 100 minus that amount.", "Starts from base UnitPrice, replaces it with the minimum applicable explicit price only if lower, then considers base UnitPrice minus maximum applicable fixed DiscountAmount if lower.", "Finally compares the percentage candidate to the current calculated price and returns the lower value; cite the function's actual formula."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql", 26, 85]]
+    },
+    {
+      "id": "Q04-login-password", "category": "paired security predicates",
+      "question": "Compare Website.ActivateWebsiteLogon and Website.ChangePassword in Wide World Importers SSDT: which row filters differ, how is FullName involved, why is PersonID=1 referenced, and what happens when no row qualifies? Can either procedure update person 1?",
+      "criteria": ["Both update Application.People for supplied PersonID excluding 1. Activation requires IsPermittedToLogon=0; password change requires matching old password hash rather than that disabled-login filter.", "SHA2_256 hashes concatenate the initial/new password with FullName; ChangePassword checks OldPassword + FullName.", "Activation reads person 1 as UserPreferences template, sets LogonName and enables login; person 1 is not an update target for either routine.", "Both throw 51000 on zero updated rows; RETURN -1 statements follow THROW and are not normal returned failure codes."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/ActivateWebsiteLogon.sql", 12, 25], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/ChangePassword.sql", 12, 24]]
+    },
+    {
+      "id": "Q05-sensor-upsert", "category": "loop and conditional effects",
+      "question": "Explain the active Website.RecordColdRoomTemperatures procedure in Wide World Importers SSDT. How are input readings iterated, when does it UPDATE versus INSERT, what isolation/transaction form does it use, and what is its actual error behavior?",
+      "criteria": ["Counter starts at MIN(SensorDataListID), runs while <= MAX, reads TVP row by current ID, increments by one; not a set-based MERGE.", "UPDATE Warehouse.ColdRoomTemperatures by ColdRoomSensorNumber sets RecordedWhen and Temperature; INSERT same table only if @@ROWCOUNT=0.", "Natively compiled, schema-bound BEGIN ATOMIC uses SNAPSHOT isolation; no explicit transaction/COMMIT pair in this body.", "CATCH throws error 51000 with state 2; RETURN 1 is after THROW, not a returned success/failure result."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/RecordColdRoomTemperatures.sql", 2, 50]]
+    },
+    {
+      "id": "Q06-dynamic-reseed", "category": "named arguments and dynamic uncertainty",
+      "question": "Trace Sequences.ReseedAllSequences into Sequences.ReseedSequenceBeyondTableValues in Wide World Importers SSDT. Which three table columns influence the TransactionID sequence? How does the helper read maxima and decide its new sequence value? Can the exact restart value be known from these saved SQL files alone?",
+      "criteria": ["TransactionID helper calls bind Purchasing.SupplierTransactions.SupplierTransactionID, Sales.CustomerTransactions.CustomerTransactionID and Warehouse.StockItemTransactions.StockItemTransactionID.", "Helper reads sys.sequences current_value for the named sequence in Sequences schema; dynamic SQL inserts COALESCE(MAX(quoted column),0) from quoted schema/table into #CurrentValue.", "If table max >= current sequence value, executes dynamic ALTER SEQUENCE Sequences.<quoted name> RESTART WITH table max + 1; identifier parts use QUOTENAME.", "Exact restart depends on live table maxima and sequence current values; cannot supply an exact numeric runtime restart from source alone. Distinguish temporary-table writes from persistent data DML/sequence DDL."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql", 31, 33], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql", 14, 32]]
+    },
+    {
+      "id": "Q07-price-callers", "category": "callers versus dynamic DDL mentions",
+      "question": "Within samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt only, identify direct static callers of Website.CalculateCustomerPrice. Also classify mentions in Configuration_EnableInMemory and Configuration_DisableInMemory: are those immediate pricing calls by the configuration procedures, or definitions embedded in dynamic SQL? Do not count the function declaration as a caller.",
+      "criteria": ["The two direct static callers are Website.InsertCustomerOrders and DataLoadSimulation.CreateCustomerOrders.", "Configuration_EnableInMemory and Configuration_DisableInMemory contain a pricing call inside a CREATE PROCEDURE Website.InsertCustomerOrders string executed as dynamic DDL; not an immediate pricing invocation by those outer procedures.", "Exclude the function's own declaration; cite both actual call sites and contextual evidence that configuration mentions are embedded in DDL strings."],
+      "evidence": [["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql", 40, 44], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/DataLoadSimulation/Stored Procedures/CreateCustomerOrders.sql", 97, 100], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Application/Stored Procedures/Configuration_EnableInMemory.sql", 420, 485], ["samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Application/Stored Procedures/Configuration_DisableInMemory.sql", 399, 464]]
+    },
+    {
+      "id": "Q08-ticket-bindings", "category": "positional arguments and comments",
+      "question": "Under samples/features/in-memory-database/in-memory-oltp/ticket-reservations/TicketReservations, follow BatchInsertReservations to InsertReservationDetails. Map the four positional arguments, identify the ultimate table write and generated Quantity, describe the transaction/error boundary, and determine whether the helper's natively compiled alternative is active code.",
+      "criteria": ["Bindings: CurrentSeq -> TicketReservationID, RowsPerTransaction -> LineCount, Char_TS -> Comment, ThreadID -> FlightID.", "Helper loops LineCount times and inserts dbo.TicketReservationDetail with Quantity = loop % 8 + 1; caller write is transitive, not direct.", "Each caller loop begins and commits a transaction, obtains NEXT VALUE FOR TicketReservationSequence; CATCH rolls back only when XACT_STATE()=-1 and then rethrows.", "The active helper is traditional T-SQL; the native compilation alternative is wholly inside /* ... */ and is not a second active definition."],
+      "evidence": [["samples/features/in-memory-database/in-memory-oltp/ticket-reservations/TicketReservations/dbo/Stored Procedures/BatchInsertReservations.sql", 3, 26], ["samples/features/in-memory-database/in-memory-oltp/ticket-reservations/TicketReservations/dbo/Stored Procedures/InsertReservationDetails.sql", 2, 32]]
+    },
+    {
+      "id": "Q09-json-update", "category": "JSON update semantics",
+      "question": "In samples/demos/belgrade-product-catalog-demo/sql-scripts/1 setup.sql, explain dbo.UpdateProductFromJson when called with the payload shown for it in 2 json.sql. Which product is targeted? What happens to omitted Color, Size, Data, Tags and CompanyID? Which JSON properties use strict paths?",
+      "criteria": ["The example calls UpdateProductFromJson 28 with Name HL Bottom Bracket, Price 121.4900 and Quantity 65; WHERE ProductID=@ProductID targets 28.", "Omitted Color and Size project as NULL and are directly assigned, not preserved.", "Data and Tags use AS JSON plus ISNULL(json value, existing column) and so are preserved when omitted; CompanyID is not assigned by this update.", "Name and Price use strict JSON paths; do not claim every omitted property is preserved or all fields are mandatory."],
+      "evidence": [["samples/demos/belgrade-product-catalog-demo/sql-scripts/1 setup.sql", 93, 114], ["samples/demos/belgrade-product-catalog-demo/sql-scripts/2 json.sql", 27, 31]]
+    },
+    {
+      "id": "Q10-json-format", "category": "lexical control outside procedures",
+      "question": "In samples/demos/belgrade-product-catalog-demo/sql-scripts/2 json.sql, locate the example labelled 'Format query results as JSON (with error)' and explain the fix in the next query. Also identify how that script changes product 16's JSON fields. This question concerns the script statements, not a stored procedure.",
+      "criteria": ["The first FOR JSON PATH selects Data and Tags directly as string columns, causing JSON text to be escaped/encoded as strings; next wraps both in JSON_QUERY to embed JSON values.", "UPDATE Product WHERE ProductID=16 sets Data = JSON_MODIFY(Data,'$.ManufacturingCost',10).", "The same UPDATE sets Tags=JSON_MODIFY(Tags,'append $','new'), appending the new string rather than replacing the entire array."],
+      "evidence": [["samples/demos/belgrade-product-catalog-demo/sql-scripts/2 json.sql", 57, 61], ["samples/demos/belgrade-product-catalog-demo/sql-scripts/2 json.sql", 120, 128]]
+    },
+    {
+      "id": "Q11-external-clr", "category": "external implementation uncertainty",
+      "question": "Using only samples/features/sql-clr/Curl/SqlClrCurl.sql, explain where CURL.XGET and CURL.XPOST are implemented, their SQL parameters/return declarations, and the assembly permission requested. Does this SQL source prove the exact HTTP headers or tables the external methods touch? Do not inspect non-SQL code or execute anything.",
+      "criteria": ["CURL.XGET takes H nvarchar(max), url nvarchar(4000), returns nvarchar(max), external name SqlClrCurl.Curl.Get.", "CURL.XPOST takes H nvarchar(max), d nvarchar(max), url nvarchar(4000), external name SqlClrCurl.Curl.Post; procedure has no declared scalar SQL return type here.", "CREATE ASSEMBLY SqlClrCurl uses a DLL path with PERMISSION_SET=EXTERNAL_ACCESS; external CLR methods have no T-SQL body here.", "Exact headers, external behavior and any table effects cannot be established from this SQL declaration alone; do not assert an empty call graph means no side effects."],
+      "evidence": [["samples/features/sql-clr/Curl/SqlClrCurl.sql", 43, 60]]
+    },
+    {
+      "id": "Q12-fulfill-variants", "category": "duplicate names across database variants",
+      "question": "Compare dbo.usp_FulfillOrders in DiskBased_StoredProcedures.sql and InMem_StoredProcedures.sql under samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures. How do the per-call loop and transaction/isolation declarations differ, and which tables do they read/write? Keep the two database variants separate.",
+      "criteria": ["DiskBasedDB version selects TOP 1 oldest unfulfilled order once; InMemDB version initializes OrdersToProcess=10 and loops/decrements ten times.", "Both filter O_FM_DTS='1900-01-01 00:00:00.000', order by O_DTS ASC, update dbo.Orders and insert dbo.Fulfillment if OrderID non-NULL.", "In-memory version has NATIVE_COMPILATION, EXECUTE AS OWNER, SCHEMABINDING, BEGIN ATOMIC SNAPSHOT; disk version does not declare that atomic block or explicit transaction in this routine.", "Do not guarantee ten distinct orders are fulfilled: SELECT assignment may leave OrderID unchanged when no row is returned, variables are not reset inside the loop, and the data is unknown."],
+      "evidence": [["samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/DiskBased_StoredProcedures.sql", 12, 47], ["samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql", 11, 54]]
+    }
+  ]
+}

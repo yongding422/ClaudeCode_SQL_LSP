@@ -1,0 +1,41 @@
+{
+  "format": "native-workspace-probes-v1",
+  "source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+  "runtime_fingerprint": "dc70df8d5b16a06c94ddaa1405d548b876e9e9f9a3bd2ff91a65873f611a9285",
+  "windows_zip_sha256": "990588c2a8a6b0c1fabd0a2223a5019b5d256b4ac0b35a892f49cd3ae95f5e9b",
+  "indexed_files": 1099,
+  "live_empty_first_ms": 8586.762999999337,
+  "live_after_first": {
+    "n": 19,
+    "mean_ms": 9.82908421275696,
+    "median_ms": 6.221499992534518,
+    "p95_nearest_rank_ms": 75.9537999983877,
+    "min_ms": 3.8403000216931105,
+    "max_ms": 75.9537999983877
+  },
+  "empty_persisted_first_ms": 9288.109600020107,
+  "verified_restart_first_requests": {
+    "n": 20,
+    "mean_ms": 3448.7217999980203,
+    "median_ms": 3375.7297999982256,
+    "p95_nearest_rank_ms": 3855.5918999772985,
+    "min_ms": 3044.1798999963794,
+    "max_ms": 3914.767700014636
+  },
+  "same_materialized_process_followup": {
+    "n": 20,
+    "mean_ms": 551.7852249977295,
+    "median_ms": 548.0476999800885,
+    "p95_nearest_rank_ms": 669.6503000275698,
+    "min_ms": 347.11860000970773,
+    "max_ms": 753.8841999776196
+  },
+  "all_restart_parse_attempts_zero": true,
+  "mode": "No model/SQL calls. Tool wall time after protocol initialize; process startup/handshake excluded. Same host, sequential fresh processes, OS caches uncontrolled. Native artifact; cold empty build cost retained separately. Not a model token/answer-quality benchmark.",
+  "local_raw_evidence": "artifacts/final-native-probes",
+  "initial_engineering_targets": {
+    "live_p95_under_250ms": true,
+    "verified_restart_p95_under_2000ms": false,
+    "restart_mean_reduction_from_this_single_live_cold_observation_percent": 59.836765030101716
+  }
+}

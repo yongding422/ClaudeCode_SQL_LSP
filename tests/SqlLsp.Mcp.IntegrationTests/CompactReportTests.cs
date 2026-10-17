@@ -10,7 +10,7 @@ public class CompactReportTests(ITestOutputHelper output)
         McpClient.Data(await client.Tool("find_procedures", new { query })).GetProperty("modules")[0];
 
     private static Task<JsonElement> Analyze(McpClient client, JsonElement selected, string detail = "compact", string[]? focus = null, int maxDepth = 2) =>
-        client.Tool("analyze_procedure", new
+        client.AnalyzeExpanded(new
         {
             documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
             line = selected.GetProperty("selection").GetProperty("line").GetInt32(),
@@ -151,7 +151,7 @@ public class CompactReportTests(ITestOutputHelper output)
         Assert.Equal("Q", call.GetProperty("target").GetProperty("identity").GetProperty("name").GetString());
         Assert.True(call.TryGetProperty("targetRevision", out _));
         CheckReferences(report);
-        var stale = McpClient.Data(await client.Tool("analyze_procedure", new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = 0, character = 16, expectedRevision = "stale", detail = "compact" })).GetProperty("report");
+        var stale = McpClient.Data(await client.AnalyzeExpanded(new { documentUri = new Uri(client.SourceFile).AbsoluteUri, line = 0, character = 16, expectedRevision = "stale", detail = "compact" })).GetProperty("report");
         Assert.Equal("Unresolved", stale.GetProperty("status").GetString());
         Assert.Empty(stale.GetProperty("modules").EnumerateArray());
         await using var duplicate = await McpClient.Start("CREATE PROC dbo.P AS SELECT 1;\nGO\nCREATE PROC dbo.P AS SELECT 2;");

@@ -1,5 +1,7 @@
 # Explain a stored procedure with the plugin
 
+Candidate contract version 2 adds [direct selectors and bounded evidence pages](bounded-analysis.md), [scoped discovery](discovery-response.md) and optional [verified persisted discovery](persistent-discovery-index.md). Its defaults are compact/depth 1/eight modules; use `detail="full"` explicitly for original DTO fields. The release history below describes 0.14.0 and earlier defaults. The [R1 matched rerun](evaluation/results/sql-server-samples-r1-20261017.md) fixes discovery overflows but still loses to Grep on time/input; later changes require their own measurement.
+
 [Actual 0.14.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39045608531) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 63 MCP tests on Windows (three Unix-only skips) or 66 on Unix. The optional performance case was skipped. Automatic starter creation, preservation and concurrent startup were exercised against the installed executables; Unix also exercised read-only workspaces. Mac executable modes survived without repair. [Final evidence](evidence/automatic-settings-ci.json) records clean source, native/install jobs, dependency checks, installed-server discovery and all eight release digests. No model calls were made.
 
 
