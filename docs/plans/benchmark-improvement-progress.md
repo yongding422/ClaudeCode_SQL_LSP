@@ -10,7 +10,7 @@ Original backlog: [R0–R7](benchmark-driven-improvement-plan.md). Baseline 0.14
 | R3a | Immutable live index/AST reuse, content-verified reconciliation and bounded scheduling implemented/tested; startup-gap protection retained. |
 | R3b | Opt-in materialized facts, verified restart and bounded on-demand ASTs implemented/tested. 1,099 files restored with zero parses; one exploratory restart 3.54 s, above the 2 s target. No new NuGet/native dependency. |
 | R4 | Implemented/tested: compact default, bounded report expansion, validated file/declaration and module selectors, source-bound evidence references and adaptive skill/tool routing. Full DTO reconstruction uses tested wire pages. |
-| R5 | Implemented: named THROW state/new/rethrow, conservative following-RETURN issue, embedded-definition text, sequence/SELECT/atomic/external observations and case-exact OPENJSON evidence; shared core/MCP/LSP regression gates are running. |
+| R5 | Implemented/tested: named THROW state/new/rethrow, conservative following-RETURN issue, embedded-definition text, sequence/SELECT/atomic/external observations and case-exact OPENJSON evidence; shared core/MCP/LSP regression gates pass. |
 | R6 | R1 matched 48-session comparison complete/reviewed. Remaining ablations/final candidate and separately frozen cohorts pending; no superiority claim. |
 | R7 | Pending final four-platform package/marketplace verification and evidence-backed release. Global installed plugin unchanged. |
 
