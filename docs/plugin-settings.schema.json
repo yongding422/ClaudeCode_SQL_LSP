@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SqlScriptDOM local plugin settings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "metrics": { "$ref": "#/$defs/storage" },
+    "analysisCache": { "$ref": "#/$defs/storage" }
+  },
+  "$defs": {
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "directory": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "\\S" }
+      }
+    }
+  }
+}

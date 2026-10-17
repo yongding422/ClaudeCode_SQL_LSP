@@ -6,6 +6,7 @@
     <RuntimeFrameworkVersion Condition="'$(SelfContained)' == 'true'">10.0.13</RuntimeFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="../../docs/plugin-settings.schema.json" LogicalName="SqlLsp.plugin-settings.schema.json" />
     <ProjectReference Include="../SqlLsp.Server/SqlLsp.Server.csproj" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />

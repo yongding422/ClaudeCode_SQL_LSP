@@ -48,6 +48,6 @@ try
 }
 catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or ModelContextProtocol.McpException or Microsoft.VisualBasic.FileIO.MalformedLineException)
 {
-    Console.Error.WriteLine("SQL adapter command failed: invalid options or unavailable sources/metrics.");
+    Console.Error.WriteLine("SQL adapter command failed: invalid options/settings or unavailable sources/metrics.");
     Environment.ExitCode = 1;
 }

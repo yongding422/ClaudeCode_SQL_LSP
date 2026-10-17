@@ -126,4 +126,4 @@ This can spend up to $1 and fails unless it observes actual hover and transport 
 
 For marketplace installation, see [publishing and installation](publishing.md).
 
-To reuse reports across sessions, set SQLLSP_ANALYSIS_CACHE_DIR to an absolute private directory before launching Claude. See [Mac commands, prebuilding and cache limits](persistent-analysis-cache.md). Persistence does not eliminate source acquisition/parsing or guarantee fewer model tokens.
+In 0.13.0, enable metrics and report reuse through [`.sqlscriptdom.json` in the SQL project folder](plugin-settings.md), then restart Claude there. Environment overrides remain supported. See [prebuilding and cache limits](persistent-analysis-cache.md). Persistence does not eliminate source acquisition/parsing or guarantee fewer model tokens.

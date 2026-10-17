@@ -4,6 +4,8 @@ A working T-SQL language server in C#/.NET for SQL code search and stored-proced
 
 [How the plugin works — workflow diagram](docs/plugin-workflow.md)
 
+Version 0.13.0 moves local metrics and report-cache settings into [`.sqlscriptdom.json` in your SQL project folder](docs/plugin-settings.md). Restart Claude after editing it. Existing environment variables and command-line overrides remain supported; SQL/database source options remain explicit.
+
 ## Build and test
 
 Install .NET SDK **10.0.401** (pinned in `global.json`), then run from the repository root:

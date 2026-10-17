@@ -20,6 +20,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         var config = Environment.GetEnvironmentVariable("SQLLSP_MCP_CONFIG");
         var cache = Environment.GetEnvironmentVariable("SQLLSP_ANALYSIS_CACHE_DIR");
         var metrics = Environment.GetEnvironmentVariable("SQLLSP_METRICS_DIR");
+        string? settingsFile = null;
         string? compare = null;
         string? evaluation = null;
         var summary = false;
@@ -31,6 +32,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
             if (args[i] == "--metrics-summary") { summary = true; continue; }
             if (args[i] == "--workspace" && i + 1 < args.Length) workspace = args[++i];
             else if (args[i] == "--config" && i + 1 < args.Length) config = args[++i];
+            else if (args[i] == "--settings" && i + 1 < args.Length) settingsFile = args[++i];
             else if (args[i] == "--cache-directory" && i + 1 < args.Length) cache = args[++i];
             else if (args[i] == "--metrics-directory" && i + 1 < args.Length) metrics = args[++i];
             else if (args[i] == "--compare-metrics" && i + 1 < args.Length) compare = args[++i];
@@ -41,9 +43,14 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (!Directory.Exists(workspace)) throw new ArgumentException("Workspace must exist.");
         cache = string.IsNullOrWhiteSpace(cache) ? null : cache;
         if (cache != null && !Path.IsPathFullyQualified(cache)) throw new ArgumentException("Cache directory must be absolute.");
-        if (build && (cache == null || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Build-cache requires a cache directory and cannot use stdio mode.");
         metrics = string.IsNullOrWhiteSpace(metrics) ? null : metrics;
-        if (metrics != null && !Path.IsPathFullyQualified(metrics) || compare != null && !Path.IsPathFullyQualified(compare)) throw new ArgumentException("Metric directories must be absolute.");
+        if (metrics != null && !Path.IsPathFullyQualified(metrics)) throw new ArgumentException("Metric directory must be absolute.");
+        if (settingsFile != null && string.IsNullOrWhiteSpace(settingsFile)) throw new ArgumentException("Settings file must not be blank.");
+        var settings = PluginSettings.Read(workspace, settingsFile);
+        cache ??= settings.CacheDirectory;
+        metrics ??= settings.MetricsDirectory;
+        if (build && (cache == null || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Build-cache requires a cache directory and cannot use stdio mode.");
+        if (compare != null && !Path.IsPathFullyQualified(compare)) throw new ArgumentException("Metric directories must be absolute.");
         if (summary && (metrics == null || build || args.Contains("--stdio", StringComparer.Ordinal)) || compare != null && !summary) throw new ArgumentException("Metrics summary requires a directory and standalone mode; comparison requires summary.");
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
@@ -143,7 +150,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
 
     [McpServerTool(Name = "get_metrics", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Inspect opt-in local SQL analysis metrics without initializing or scanning SQL. Shows cold/warm request times, cache hits, serialized report bytes, reported facts/issues and failures. No model tokens, Grep timing or answer correctness are observed. Previous sessions are limited to retained files; metrics reads do not count themselves.")]
-    public CallToolResult GetMetrics([Description("Include retained sessions from SQLLSP_METRICS_DIR instead of only this process's recent requests.")] bool includePreviousSessions = false) =>
+    public CallToolResult GetMetrics([Description("Include retained sessions from the configured metrics directory instead of only this process's recent requests.")] bool includePreviousSessions = false) =>
         Result(metrics.Get(includePreviousSessions));
 
     // Explicit CLI prewarm only; not a third MCP tool. One validated source snapshot, at most 256 modules.

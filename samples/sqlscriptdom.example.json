@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "metrics": {
+    "enabled": true,
+    "directory": ".sqlscriptdom/metrics"
+  },
+  "analysisCache": {
+    "enabled": true,
+    "directory": ".sqlscriptdom/cache"
+  }
+}

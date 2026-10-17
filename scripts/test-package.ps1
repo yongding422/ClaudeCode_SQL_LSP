@@ -22,6 +22,10 @@ if (-not $IsWindows) {
 if (-not (Test-Path -LiteralPath (Join-Path $destination '.lsp.json'))) { throw 'Missing plugin configuration in archive.' }
 if (-not (Test-Path -LiteralPath (Join-Path $destination '.mcp.json')) -or
     -not (Test-Path -LiteralPath (Join-Path $destination 'skills/explain-procedure/SKILL.md'))) { throw 'Missing analysis adapter/skill configuration.' }
+foreach ($settingsAsset in @('docs/plugin-settings.md', 'docs/plugin-settings.schema.json', 'samples/sqlscriptdom.example.json')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $destination $settingsAsset))) { throw "Missing plugin settings asset: $settingsAsset" }
+}
+if (Test-Path -LiteralPath (Join-Path $destination '.sqlscriptdom.json')) { throw 'Packages must not enable project storage through an active settings file.' }
 $previousExe = $env:SQLLSP_TEST_SERVER_EXE
 $previousMcpExe = $env:SQLLSP_TEST_MCP_EXE
 $previousLive = $env:SQLLSP_RUN_SQLSERVER_TESTS

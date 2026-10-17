@@ -15,7 +15,7 @@ internal sealed record MetricEvent(int Format, string Version, string Build, str
 
 internal sealed class PluginMetrics(string? directory)
 {
-    internal const string Version = "0.12.0";
+    internal const string Version = "0.13.0";
     internal static readonly string[] PhaseNames = ["queueMs", "initializationMs", "navigationMs", "analysisMs", "presentationMs", "cacheValidationMs", "cacheReadMs", "cacheWriteMs"];
     internal static readonly string[] CacheNames = ["Disabled", "Hit", "Stored", "NotStored", "UnavailableOrInvalid", "TooLarge", "UnsupportedSourceContext"];
     private readonly object sync = new();

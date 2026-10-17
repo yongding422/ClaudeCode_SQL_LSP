@@ -4,29 +4,22 @@ Version 0.12.0 adds **opt-in local MCP metrics**, a `get_metrics` tool, backend 
 
 ## Enable recording, then ask Claude
 
-On macOS/Linux, start a new Claude session after setting an absolute physical directory:
+In 0.13.0, create `.sqlscriptdom.json` in your SQL project folder:
 
-```sh
-export SQLLSP_METRICS_DIR="$HOME/.cache/sqlscriptdom-metrics/my-project"
-cd /path/to/sql-project
-claude
+```json
+{
+  "version": 1,
+  "metrics": { "enabled": true, "directory": ".sqlscriptdom/metrics" }
+}
 ```
 
-On Windows PowerShell:
-
-```powershell
-$env:SQLLSP_METRICS_DIR = Join-Path $env:LOCALAPPDATA 'SqlScriptDOM/metrics/my-project'
-Set-Location C:/path/to/sql-project
-claude
-```
-
-Use a separate directory for each project/experiment condition. Ask procedure questions normally, then ask:
+Start a new Claude session from that folder on Windows, macOS or Linux. No environment variable is needed. Add `.sqlscriptdom/` to the project's `.gitignore`. See [settings, defaults, overrides and validation](plugin-settings.md). Use a separate directory for each project/experiment condition. Ask procedure questions normally, then ask:
 
 > Use the SQL plugin's get_metrics tool with includePreviousSessions=true. Show cold/warm request counts, median/p95 time, errors, cache hits, report sizes and reported issues. Explain missing values and collection limits. Do not infer token savings or answer accuracy from backend metrics.
 
-`get_metrics()` defaults to the latest 1,024 completed requests in the current MCP process. `get_metrics(includePreviousSessions=true)` reads retained files across processes. It does not initialize SQL, query a database, or count itself. `observedInProcess` and `persistenceWriteFailures` expose collection/recording state. If disabled, it returns `enabled=false` and no invented measurements. Restart Claude after changing the directory or disabling the environment variable. Collection cannot reconstruct earlier sessions.
+`get_metrics()` defaults to the latest 1,024 completed requests in the current MCP process. `get_metrics(includePreviousSessions=true)` reads retained files across processes. It does not initialize SQL, query a database, or count itself. `observedInProcess` and `persistenceWriteFailures` expose collection/recording state. If disabled, it returns `enabled=false` and no invented measurements. Restart Claude after changing settings or overrides. Collection cannot reconstruct earlier sessions.
 
-Start the CLI from the shell where you set the variable. If your environment deliberately enables `CLAUDE_CODE_MCP_ALLOWLIST_ENV=1`, shell variables are not inherited by stdio MCP servers; provide the metrics variable through the server's explicit environment configuration or use `--metrics-directory` in an explicit server launch instead. Keep the configured environment policy. [Official Claude environment reference](https://code.claude.com/docs/en/env-vars)
+The existing absolute `SQLLSP_METRICS_DIR` environment variable and `--metrics-directory` flag remain overrides. The config file also works when the client restricts inherited MCP environment variables.
 
 ## What is measured
 
@@ -42,7 +35,7 @@ Start the CLI from the shell where you set the variable. If your environment del
 
 Cold means the request initialized that MCP process's SQL source state. It says nothing about OS, disk-report or model prompt caches. Handler errors before source initialization have unknown cold/warm status. Percentiles use nearest-rank successful observations. Error/cancellation counts remain visible; faster failures do not improve successful latency statistics.
 
-Metrics cover MCP, not the separate LSP process. They do not observe Grep, model input/output tokens, end-to-end final-answer time, correctness or complete SQL coverage. Summary `modelTokens` and `finalAnswerCorrectness` remain null. Enable [report caching](persistent-analysis-cache.md) separately with `SQLLSP_ANALYSIS_CACHE_DIR` if wanted; a hit skips Core report work but does not eliminate source validation or model input.
+Metrics cover MCP, not the separate LSP process. They do not observe Grep, model input/output tokens, end-to-end final-answer time, correctness or complete SQL coverage. Summary `modelTokens` and `finalAnswerCorrectness` remain null. Enable [report caching](persistent-analysis-cache.md) separately with `analysisCache.enabled` if wanted; a hit skips Core report work but does not eliminate source validation or model input.
 
 ## Compare backend runs
 

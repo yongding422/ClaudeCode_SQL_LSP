@@ -6,25 +6,20 @@ This saves completed reports across restarts. It does **not** serialize ScriptDO
 
 ## Enable it in Claude Code
 
-On macOS/Linux, set an absolute private directory before starting a new session:
+In 0.13.0, create `.sqlscriptdom.json` in your SQL project folder and start a fresh Claude session there:
 
-```sh
-export SQLLSP_ANALYSIS_CACHE_DIR="$HOME/.cache/sqlscriptdom-lsp"
-cd /path/to/sql-project
-claude
+```json
+{
+  "version": 1,
+  "analysisCache": { "enabled": true, "directory": ".sqlscriptdom/cache" }
+}
 ```
 
-On Windows PowerShell:
-
-```powershell
-$env:SQLLSP_ANALYSIS_CACHE_DIR = Join-Path $env:LOCALAPPDATA 'SqlScriptDOM/analysis-cache'
-Set-Location C:/path/to/sql-project
-claude
-```
+This works on Windows, macOS and Linux. See [settings and precedence](plugin-settings.md). The existing absolute `SQLLSP_ANALYSIS_CACHE_DIR` environment variable remains an override.
 
 Ask Claude to discover the procedure and call `analyze_procedure` using its URI, selection and revision. Responses include `cache.enabled`, `cache.status` and, when applicable, `cache.file`/`cache.createdAt`. First analysis normally says `Stored`; an unchanged request in a new process can say `Hit`. Full and compact/focused views share the canonical full report for the same expansion limits, then project the requested view.
 
-Unset the variable and restart Claude to disable persistence. It is off by default. Keep the directory outside the SQL repository and do not commit it. Stop using processes before removing cached data.
+Set `analysisCache.enabled` to false, remove any flag/environment override and restart Claude to disable persistence. It is off by default. Add `.sqlscriptdom/` to your project's `.gitignore`, or select an absolute private directory outside the repository. Do not commit cached reports. Stop using processes before removing cached data.
 
 ## Prebuild a folder or database
 
@@ -66,4 +61,4 @@ Reports contain SQL-derived names, bounded snippets, source locations and metada
 
 [Release 0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) is public. [Final native and marketplace evidence](evidence/persistent-cache-ci.json) verifies clean package source, four-platform actual installs, checksums and executable modes. These checks do not measure model answer quality or token savings.
 
-Version 0.12.0 can separately record [local metrics](plugin-metrics.md), including cache-hit rates and validation/read/write intervals across sessions. Set SQLLSP_METRICS_DIR independently. This does not change cache freshness rules or infer model-token savings.
+The plugin can separately record [local metrics](plugin-metrics.md), including cache-hit rates and validation/read/write intervals across sessions. Enable `metrics` independently in the same config file. This does not change cache freshness rules or infer model-token savings.

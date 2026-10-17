@@ -44,7 +44,7 @@ Each module's `controlFlow` maps branches/loops/errors/transactions; call/access
 
 ## Configuration and development
 
-The adapter defaults to the current working directory and offline mode. For explicit source configuration, set `SQLLSP_MCP_CONFIG` to an absolute file path, or launch with `--config`. The file follows [the same schema](configuration.schema.json) as LSP initialization options. Enable online profiles/mappings explicitly and supply credentials through their configured environment variables. MCP configuration and LSP client initialization options are independent and must agree if both should use the same context.
+The adapter defaults to the current working directory and offline mode. Version 0.13.0 reads local metrics/cache settings from [`.sqlscriptdom.json`](plugin-settings.md) in that workspace. For explicit source configuration, set `SQLLSP_MCP_CONFIG` to an absolute file path, or launch with `--config`. The source file follows [the same schema](configuration.schema.json) as LSP initialization options. Enable online profiles/mappings explicitly and supply credentials through their configured environment variables. MCP configuration and LSP client initialization options are independent and must agree if both should use the same context.
 
 ```sh
 dotnet publish src/SqlLsp.Server -c Release -o claude-plugin/server
@@ -52,7 +52,7 @@ dotnet publish src/SqlLsp.Mcp -c Release -o claude-plugin/mcp
 claude --plugin-dir ./claude-plugin
 ```
 
-Packaged marketplace installations contain both self-contained apphosts; developers do not need these build commands or .NET. The MCP process accepts `--stdio`, `--workspace <physical-directory>` and `--config <file>`. Protocol stdout contains only JSON-RPC; operational messages go to stderr.
+Packaged marketplace installations contain both self-contained apphosts; developers do not need these build commands or .NET. The MCP process accepts `--stdio`, `--workspace <physical-directory>`, `--settings <storage-settings-file>` and `--config <source-options-file>`. Protocol stdout contains only JSON-RPC; operational messages go to stderr.
 
 ## Measure against Grep/Read
 
@@ -72,8 +72,8 @@ Default output contains aggregate numeric measurements/task IDs, not SQL, paths,
 
 ## Persistent report reuse (0.11.0)
 
-Set SQLLSP_ANALYSIS_CACHE_DIR to an absolute private directory before launching Claude to save reports across MCP restarts. The standalone --build-cache command prebuilds bounded reports for a folder or configured catalog. Source acquisition, parsing and freshness validation still run. See [usage, format, limits and metrics](persistent-analysis-cache.md) and [the comparative evaluation design](evaluation/sql-tool-comparison.md).
+Enable `analysisCache` in [`.sqlscriptdom.json`](plugin-settings.md) and restart Claude to save reports across MCP restarts. The existing SQLLSP_ANALYSIS_CACHE_DIR override remains supported. The standalone --build-cache command prebuilds bounded reports for a folder or configured catalog. Source acquisition, parsing and freshness validation still run. See [usage, format, limits and metrics](persistent-analysis-cache.md) and [the comparative evaluation design](evaluation/sql-tool-comparison.md).
 
 ## Inspect local metrics (0.12.0)
 
-Set SQLLSP_METRICS_DIR to an absolute private directory before starting Claude, then ask it to call get_metrics. Current or retained-session summaries report cold/warm time, errors, cache hits, bytes and reported fact/issue counts. Standalone summary/compare and client evaluation CSV commands are available in the packaged MCP executable. See [commands, comparison rules and limits](plugin-metrics.md). This third read-only MCP tool does not initialize SQL. It cannot observe Grep or model tokens; client captures remain separate.
+Enable `metrics` in [`.sqlscriptdom.json`](plugin-settings.md), restart Claude, then ask it to call get_metrics. The existing SQLLSP_METRICS_DIR override remains supported. Current or retained-session summaries report cold/warm time, errors, cache hits, bytes and reported fact/issue counts. Standalone summary/compare and client evaluation CSV commands are available in the packaged MCP executable. See [commands, comparison rules and limits](plugin-metrics.md). This third read-only MCP tool does not initialize SQL. It cannot observe Grep or model tokens; client captures remain separate.
