@@ -1,8 +1,8 @@
 # Benchmark-driven SQL understanding improvement plan
 
-Date: 2026-10-17. Status: proposed implementation backlog; no performance fixes or superiority claims are implied by this plan.
+Written: 2026-10-17. The original requirements below are retained; see [implementation progress and measured outcomes](benchmark-improvement-progress.md) for current delivery status. Code repairs and controlled reruns are implemented; performance/quality targets are not achieved and no superiority claim is made.
 
-Delivered alongside this plan: the [rerunnable maintainer skill](../../.claude/skills/benchmark-sql-plugin/SKILL.md), a preparation/execution/review/comparison controller, and validation against the frozen corpus. R1–R7 product changes remain planned. The skill is available as a Claude Code project skill and an installed Codex skill.
+The [rerunnable maintainer skill](../../.claude/skills/benchmark-sql-plugin/SKILL.md), preparation/execution/review/comparison controller and frozen corpus support the independently committed R0–R7 work. The skill is available as a Claude Code project skill and an installed Codex skill; it is excluded from runtime participant archives. Current gates/limits are recorded in the progress document rather than silently changing the original targets below.
 
 The objective is useful, accurate stored-procedure investigation with less developer/model work. Keep the existing read-only, offline-first ScriptDOM architecture and independent MCP/LSP adapters. General IDE milestone M6 remains deferred. Do not add hooks, a mandatory daemon, automatic SQL execution or an automatic database connection.
 

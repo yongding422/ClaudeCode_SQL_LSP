@@ -14,7 +14,7 @@
       "source": {
         "source": "archive",
         "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.16.0/sqlscriptdom-lsp-0.16.0-win-x64.zip",
-        "sha256": "4e97b5054e4d1f91241dc872602f52e2fe70b0ae1fe3a258c66f55e250db9c41"
+        "sha256": "990588c2a8a6b0c1fabd0a2223a5019b5d256b4ac0b35a892f49cd3ae95f5e9b"
       }
     },
     {
@@ -24,7 +24,7 @@
       "source": {
         "source": "archive",
         "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.16.0/sqlscriptdom-lsp-0.16.0-linux-x64.zip",
-        "sha256": "dc3ac2f68af5343de44054f36e29f6721e4855fa21bc7e7633c04952e9bba84a"
+        "sha256": "3271360dbb23b8dc8c4b9e3dc42f795e09fa24846722356972ee9e296201ae1b"
       }
     },
     {
@@ -34,7 +34,7 @@
       "source": {
         "source": "archive",
         "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.16.0/sqlscriptdom-lsp-0.16.0-osx-arm64.zip",
-        "sha256": "91bbb121f00f06476dcd86a7582c54b1d8c6535a142fb45efe185d545d962bc7"
+        "sha256": "1fc55449ccd52f13135d9c0dc57132af341357d2618a6ea060af42f647b9cf9e"
       }
     },
     {
@@ -44,7 +44,7 @@
       "source": {
         "source": "archive",
         "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/download/v0.16.0/sqlscriptdom-lsp-0.16.0-osx-x64.zip",
-        "sha256": "6c79dd33fdfc1c6c998a1236a3d46bd00251216d90546f9f7ba9ac25ed1b0ceb"
+        "sha256": "89ba8002b15e40d3df8d22dda8c28d62af957a71dd06bdd34a7c2c0c4fd7710d"
       }
     }
   ]
