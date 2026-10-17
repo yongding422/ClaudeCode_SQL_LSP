@@ -101,15 +101,15 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
             object Module(IndexedSqlSymbol symbol)
             {
-                var report = index.AnalyzeProcedure(symbol.Target.Uri, symbol.Target.Range.Start, cancellationToken, 0, 1);
+                var metadata = index.ModuleMetadata(symbol, cancellationToken);
                 return new
                 {
                     symbol.Identity,
                     context = state!.Files?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
-                    revision = report.Modules.FirstOrDefault()?.Revision,
-                    status = report.Status,
+                    revision = metadata.Revision,
+                    status = metadata.Status,
                     signature = symbol.Declaration.Documentation?.Signature
                 };
             }
@@ -290,6 +290,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         public double QueueMs { get; set; }
         public double InitializationMs { get; set; }
         public double NavigationMs { get; set; }
+        public bool NavigationReused { get; set; }
         public double AnalysisMs { get; set; }
         public double PresentationMs { get; set; }
         public double CacheValidationMs { get; set; }
@@ -329,8 +330,10 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             }
             timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
             timer.Restart();
+            var priorBuilds = state.NavigationBuilds;
             var index = await state.NavigationAsync(token);
             timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
+            timings.NavigationReused = state.NavigationBuilds == priorBuilds && metrics.SourceMode == "offline";
             return await action(index, timings);
         }
         catch (OperationCanceledException) { throw; }

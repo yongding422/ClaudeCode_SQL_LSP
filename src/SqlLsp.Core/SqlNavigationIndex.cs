@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 namespace SqlLsp.Core;
 
 // A request reads one immutable workspace snapshot; resolution never consults changing dictionaries.
-public sealed partial class SqlNavigationIndex
+public sealed partial class SqlNavigationIndex : ISqlDiscoveryIndex
 {
     private readonly ImmutableArray<DocumentSnapshot> documents;
     private readonly Func<Uri, string> context;
@@ -20,6 +20,20 @@ public sealed partial class SqlNavigationIndex
         System.Text.Encoding.UTF8.GetBytes(string.Join("\n", documents.OrderBy(d => d.Uri.AbsoluteUri, StringComparer.Ordinal)
             .Select(d => d.Uri.AbsoluteUri + "|" + context(d.Uri) + "|" + AnalysisRevision(d))))));
     private string? generation;
+
+    public SqlModuleMetadata ModuleMetadata(IndexedSqlSymbol symbol, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var document = documents.FirstOrDefault(d => d.Uri == symbol.Target.Uri);
+        if (document == null) return new(null, ResolutionStatus.Unresolved);
+        var rules = Rules(symbol.Target.Uri);
+        var identity = symbol.Identity;
+        var count = Symbols.Count(s => s.Target.SourceKind == symbol.Target.SourceKind && s.Identity.Kind == identity.Kind &&
+            s.Identity.SourceContextId == identity.SourceContextId && rules.Comparer.Equals(s.Identity.Server, identity.Server) &&
+            rules.Comparer.Equals(s.Identity.Database, identity.Database) && rules.Comparer.Equals(s.Identity.Schema, identity.Schema) &&
+            rules.Comparer.Equals(s.Identity.Name, identity.Name));
+        return count == 1 ? new(AnalysisRevision(document), ResolutionStatus.Resolved) : new(null, ResolutionStatus.Ambiguous);
+    }
 
     public int DocumentCountFor(string? scopeId, Uri? uri = null) => documents.Count(d => (scopeId == null || context(d.Uri) == scopeId) && (uri == null || d.Uri == uri));
 

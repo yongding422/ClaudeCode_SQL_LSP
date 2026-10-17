@@ -27,6 +27,11 @@ public sealed class ServerState : IAsyncDisposable
     private string? lastDriftStatus;
     private readonly Dictionary<Uri, (DocumentSnapshot Original, DocumentSnapshot Bound, ResolutionOptions Rules)> boundDocuments = new();
     private readonly CancellationTokenSource lifetime = new();
+    private readonly SemaphoreSlim offlineIndexGate = new(1);
+    private ImmutableArray<DocumentSnapshot> offlineDocuments;
+    private string? offlineContextGeneration;
+    private SqlNavigationIndex? offlineIndex;
+    public long NavigationBuilds { get; private set; }
     public bool IsReadOnlySnapshot(Uri uri) => databases.Values.Any(d => d.Files?.Owns(uri) == true);
 
     // Called only for explicitly enabled report persistence, after NavigationAsync validates current sources.
@@ -131,6 +136,15 @@ public sealed class ServerState : IAsyncDisposable
         var documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
         if (databases.Count == 0 || configuration == null)
         {
+            await offlineIndexGate.WaitAsync(token);
+            try
+            {
+            // One build per immutable input; a canceled waiter cannot evict a valid generation.
+            documents = Documents == null ? [] : await Documents.GetIndexAsync(token);
+            var contextGeneration = Files?.Contexts.Generation ?? "";
+            if (offlineIndex != null && offlineContextGeneration == contextGeneration &&
+                documents.Length == offlineDocuments.Length && documents.Zip(offlineDocuments).All(p => ReferenceEquals(p.First, p.Second)))
+                return offlineIndex;
             // Freeze context/rules with the document generation, so later project edits cannot mutate this index.
             var contexts = documents.ToDictionary(d => d.Uri, d => Files?.ContextId(d.Uri) ?? d.Uri.AbsoluteUri);
             var rules = contexts.ToDictionary(p => p.Key, p => Files?.Contexts.Rules(p.Value, Resolution) ?? Resolution);
@@ -147,8 +161,16 @@ public sealed class ServerState : IAsyncDisposable
                 return entry.Bound;
             }).ToImmutableArray();
             var permitted = Files?.Contexts.ReferenceMappings() ?? [];
-            return new(bound, uri => contexts.GetValueOrDefault(uri) ?? uri.AbsoluteUri, Resolution,
+            var built = new SqlNavigationIndex(bound, uri => contexts.GetValueOrDefault(uri) ?? uri.AbsoluteUri, Resolution,
                 resolutionFor: uri => rules.GetValueOrDefault(uri) ?? Resolution, canReference: (from, to) => permitted.Contains((from, to)));
+            token.ThrowIfCancellationRequested();
+            offlineDocuments = documents;
+            offlineContextGeneration = contextGeneration;
+            offlineIndex = built;
+            NavigationBuilds++;
+            return built;
+            }
+            finally { offlineIndexGate.Release(); }
         }
         await databaseGate.WaitAsync(token);
         try
@@ -245,6 +267,8 @@ public sealed class ServerState : IAsyncDisposable
         await lifetime.CancelAsync();
         if (watcher != null) { await watcher.DisposeAsync(); watcher = null; }
         if (Documents != null) await Documents.DisposeAsync();
+        await offlineIndexGate.WaitAsync();
+        offlineIndexGate.Dispose();
         await databaseGate.WaitAsync();
         foreach (var source in databases.Values) await source.DisposeAsync();
         databaseGate.Dispose();

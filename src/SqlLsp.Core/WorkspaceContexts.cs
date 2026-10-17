@@ -14,6 +14,7 @@ public sealed class WorkspaceContexts(ImmutableArray<OfflineProjectScope> config
 {
     private sealed record Project(Uri Uri, string Root, string[] Includes, string[] Removes, bool Partial);
     private ImmutableArray<Project> projects = [];
+    public string Generation { get; private set; } = "";
 
     public void Configure(IEnumerable<Uri> projectFiles)
     {
@@ -43,6 +44,8 @@ public sealed class WorkspaceContexts(ImmutableArray<OfflineProjectScope> config
                 { loaded.Add(new(uri, Path.GetDirectoryName(uri.LocalPath)!, [], [], true)); }
             }
         projects = loaded.ToImmutable();
+        Generation = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(projects)));
     }
 
     public WorkspaceContextInfo Describe(Uri uri, string fallback)

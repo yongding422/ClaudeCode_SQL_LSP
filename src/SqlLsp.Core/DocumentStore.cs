@@ -18,6 +18,7 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     private long readBytes, parseAttempts;
     private double enumerationMs, readMs, parseMs;
     private readonly List<Task> work = new();
+    private ImmutableArray<DocumentSnapshot> published = [];
     private readonly CancellationTokenSource lifetime = new();
     private bool disposed;
     public event Action<DiagnosticPublication>? Diagnostics;
@@ -48,7 +49,15 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
 
     public ImmutableArray<DocumentSnapshot> Index
     {
-        get { lock (gate) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray(); }
+        get { lock (gate) return PublishIndex(); }
+    }
+
+    // Preserve the immutable array identity while all document objects remain the same.
+    private ImmutableArray<DocumentSnapshot> PublishIndex()
+    {
+        if (published.Length != index.Count || published.Any(d => !ReferenceEquals(index.GetValueOrDefault(d.Uri), d)))
+            published = index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+        return published;
     }
 
     public async Task InitializeAsync(IEnumerable<Uri> roots, CancellationToken token)
@@ -60,11 +69,8 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             enumerationMs += timer.Elapsed.TotalMilliseconds;
             foreach (var uri in uris) coverage[uri] = new(uri, "Pending");
         }
-        foreach (var uri in uris)
-        {
-            token.ThrowIfCancellationRequested();
-            await RefreshAsync(uri, token);
-        }
+        await Parallel.ForEachAsync(uris, new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4), CancellationToken = token },
+            async (uri, cancellation) => await RefreshAsync(uri, cancellation));
     }
 
     public bool Open(Uri uri, int version, string text)
@@ -129,7 +135,7 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             {
                 pending = overlays.Values.Select(o => o.Pending).Concat(diskWork.Where(d => !overlays.ContainsKey(d.Key)).Select(d => d.Value.Pending))
                     .OfType<Task>().Where(t => !t.IsCompleted).ToArray();
-                if (pending.Length == 0) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+                if (pending.Length == 0) return PublishIndex();
             }
             await Task.WhenAll(pending).WaitAsync(token);
         }
@@ -153,22 +159,30 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
                     read = await files.ReadWithStatusAsync(uri, job.Cancellation.Token);
                     DocumentSnapshot? snapshot = null;
                     var timer = System.Diagnostics.Stopwatch.StartNew();
+                    var parsed = false;
                     try
                     {
                         if (read.Text != null)
                         {
-                            lock (gate) parseAttempts++;
-                            snapshot = new(uri, null, SqlSourceKind.Workspace,
-                                await parser.ParseAsync(new SourceText(read.Text), job.Cancellation.Token));
+                            // Verify decoded contents, not size/mtime. Reconciliation still reads every file,
+                            // but an unchanged source keeps its immutable AST and semantic extraction.
+                            lock (gate) snapshot = disk.GetValueOrDefault(uri);
+                            if (snapshot?.Parse.Source.Text != read.Text)
+                            {
+                                lock (gate) parseAttempts++;
+                                parsed = true;
+                                snapshot = new(uri, null, SqlSourceKind.Workspace,
+                                    await parser.ParseAsync(new SourceText(read.Text), job.Cancellation.Token));
+                            }
                         }
                     }
                     finally
                     {
                         lock (gate)
                         {
-                            readBytes += read.Bytes;
+                            readBytes += read.ReadBytes;
                             readMs += read.ReadMs;
-                            if (read.Text != null) parseMs += timer.Elapsed.TotalMilliseconds;
+                            if (parsed) parseMs += timer.Elapsed.TotalMilliseconds;
                         }
                     }
                     lock (gate)
@@ -219,11 +233,9 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     {
         Uri[] known;
         lock (gate) known = disk.Keys.Concat(diskWork.Keys).ToArray();
-        foreach (var uri in files.EnumerateUris().Concat(known).Distinct())
-        {
-            token.ThrowIfCancellationRequested();
-            await RefreshAsync(uri, token);
-        }
+        await Parallel.ForEachAsync(files.EnumerateUris().Concat(known).Distinct(),
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4), CancellationToken = token },
+            async (uri, cancellation) => await RefreshAsync(uri, cancellation));
     }
 
     private void Begin(Uri uri, int version, SourceText source)

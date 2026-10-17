@@ -2,7 +2,7 @@ using System.Buffers;
 
 namespace SqlLsp.Core;
 
-public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs);
+public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs, long ReadBytes = 0);
 
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
@@ -90,7 +90,8 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     {
         var timer = System.Diagnostics.Stopwatch.StartNew();
         long length = 0;
-        WorkspaceReadResult Excluded(string status) => new(status, null, length, null, timer.Elapsed.TotalMilliseconds);
+        long readBytes = 0;
+        WorkspaceReadResult Excluded(string status) => new(status, null, length, null, timer.Elapsed.TotalMilliseconds, readBytes);
         if (!CanRead(uri)) return Excluded("ExcludedPolicy");
         try
         {
@@ -107,6 +108,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                 {
                     var remaining = options.MaxFileSizeBytes + 1 - (int)contents.Length;
                     var count = await stream.ReadAsync(bytes.AsMemory(0, Math.Min(bytes.Length, remaining)), token);
+                    readBytes += count;
                     if (count == 0) break;
                     if (contents.Length + count > options.MaxFileSizeBytes) return Excluded("ExcludedSize");
                     contents.Write(bytes, 0, count);
@@ -116,7 +118,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
             contents.Position = 0;
             using var reader = new StreamReader(contents, detectEncodingFromByteOrderMarks: true);
             var text = await reader.ReadToEndAsync(token);
-            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds);
+            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds, readBytes);
         }
         catch (FileNotFoundException) { return Excluded("Deleted"); }
         catch (DirectoryNotFoundException) { return Excluded("Deleted"); }
