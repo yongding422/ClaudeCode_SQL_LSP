@@ -1,6 +1,6 @@
 {
   "name": "sqlscriptdom-lsp",
-  "version": "0.15.0-dev.1",
+  "version": "0.15.0",
   "description": "T-SQL procedure understanding with inspectable local metrics, reusable reports, compact source evidence and verified EXEC arguments",
   "author": { "name": "SqlScriptDOM LSP contributors" }
 }
