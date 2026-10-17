@@ -12,8 +12,12 @@ public enum SqlFlowKind
 }
 
 public sealed record SqlFlowExpression(SqlAnalysisLocation Location, string Preview, bool Truncated);
+public sealed record SqlThrowObservation(string Kind, SqlFlowExpression? ErrorNumber, SqlFlowExpression? Message, SqlFlowExpression? State);
 public sealed record SqlFlowNode(string Id, SqlFlowKind Kind, string? ParentId, SqlAnalysisLocation Location,
-    SqlFlowExpression? Predicate, SqlFlowExpression? Subject, string Detail);
+    SqlFlowExpression? Predicate, SqlFlowExpression? Subject, string Detail)
+{
+    public SqlThrowObservation? Throw { get; init; }
+}
 public sealed record SqlControlFlowSummary(bool BodyAvailable, ImmutableArray<SqlFlowNode> Nodes, bool Truncated,
     ImmutableArray<SqlCoverageIssue> Issues, ImmutableArray<string> Limitations)
 {
@@ -50,6 +54,18 @@ internal sealed class SqlControlFlow(DocumentSnapshot document, CancellationToke
     }
 
     public override void Visit(TSqlFragment node) => token.ThrowIfCancellationRequested();
+
+    public override void ExplicitVisit(StatementList node)
+    {
+        for (var i = 0; i < node.Statements.Count; i++)
+        {
+            token.ThrowIfCancellationRequested();
+            var statement = node.Statements[i];
+            if (i > 0 && node.Statements[i - 1] is ThrowStatement && statement is ReturnStatement && issues.Count < 256)
+                issues.Add(new("return-after-throw", "RETURN immediately follows THROW in the same statement list. Ordinary flow from that THROW does not deliver this return value; alternative entry/GOTO and runtime error routing are not solved.", Location(statement)));
+            statement.Accept(this);
+        }
+    }
 
     public override void ExplicitVisit(IfStatement node) => Within(node, SqlFlowKind.If,
         "IF construct; predicate evaluation and branches are separate source regions.", () =>
@@ -112,10 +128,10 @@ internal sealed class SqlControlFlow(DocumentSnapshot document, CancellationToke
         if (issues.Count < 256) issues.Add(new("unstructured-control-flow", "GOTO can bypass lexical regions; do not infer execution guards from enclosure alone.", Location(node)));
     }
     public override void ExplicitVisit(LabelStatement node) => Event(node, SqlFlowKind.Label, "Label observed; incoming jumps are not resolved.", node);
-    public override void ExplicitVisit(ThrowStatement node) => Event(node, SqlFlowKind.Throw,
-        node.ErrorNumber == null && node.Message == null && node.State == null
-            ? "Bare THROW observed; rethrow requires a valid CATCH context. Error routing is not inferred."
-            : "THROW with arguments observed; values and error routing are not evaluated.");
+    public override void ExplicitVisit(ThrowStatement node) => Within(node, SqlFlowKind.Throw,
+        node.ErrorNumber == null ? "Bare THROW rethrows the caught exception; its severity/state are inherited, not inferred here."
+            : "New THROW: named errorNumber/message/state. The third argument is state, never severity; a new THROW has severity 16. Runtime argument validity/error routing are not evaluated.",
+        () => node.AcceptChildren(this), thrown: new(node.ErrorNumber == null ? "Rethrow" : "NewError", Expression(node.ErrorNumber), Expression(node.Message), Expression(node.State)));
     public override void ExplicitVisit(RaiseErrorStatement node) => Within(node, SqlFlowKind.RaiseError,
         "RAISERROR observed; severity, options and runtime context govern whether control transfers. Message text is not exported.",
         () => node.AcceptChildren(this));
@@ -132,14 +148,14 @@ internal sealed class SqlControlFlow(DocumentSnapshot document, CancellationToke
         Within(node, kind, detail, () => node.AcceptChildren(this), subject: subject);
 
     private void Within(TSqlFragment node, SqlFlowKind kind, string detail, Action children,
-        TSqlFragment? predicate = null, TSqlFragment? subject = null)
+        TSqlFragment? predicate = null, TSqlFragment? subject = null, SqlThrowObservation? thrown = null)
     {
         token.ThrowIfCancellationRequested();
         string? id = null;
         if (nodes.Count < maxNodes && Location(node) is { } location)
         {
             id = "flow-" + node.StartOffset + "-" + kind;
-            nodes.Add(new(id, kind, parents.TryPeek(out var parent) ? parent : null, location, Expression(predicate), Expression(subject), detail));
+            nodes.Add(new(id, kind, parents.TryPeek(out var parent) ? parent : null, location, Expression(predicate), Expression(subject), detail) { Throw = thrown });
         }
         else truncated = true;
         parents.Push(id);

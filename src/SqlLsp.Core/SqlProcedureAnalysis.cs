@@ -26,6 +26,8 @@ public sealed record SqlModuleAnalysis(string Id, SqlObjectIdentity Identity, Sq
 {
     public SqlControlFlowSummary? ControlFlow { get; init; }
     public SqlValueFlowSummary? ValueFlow { get; init; }
+    public ImmutableArray<SqlSourceObservation> Observations { get; init; } = [];
+    public string ImplementationKind { get; init; } = "TransactSql";
 }
 public sealed record SqlProcedureReport(ResolutionStatus Status, string Explanation,
     ImmutableArray<SqlNavigationTarget> Candidates, ImmutableArray<SqlModuleAnalysis> Modules,
@@ -38,7 +40,7 @@ public sealed partial class SqlNavigationIndex
     private static readonly ImmutableArray<string> AnalysisLimitations =
     [
         "Static possible effects, not observed execution. Direct effects belong to each module; expanded module effects are transitive possibilities.",
-        "Dynamic SQL, triggers, synonyms, remote rowsets, runtime data and implicit engine effects are not fully analyzed.",
+        "Dynamic SQL, triggers, temporal/history or other implicit engine effects, synonyms, remote rowsets, CLR bodies and runtime data are not fully analyzed. Absence of extracted calls does not prove absence of side effects.",
         "Control scopes and bounded value dependencies are source observations, not runtime values or complete execution conditions. Sequential reachability, transaction correctness, SQL conversions, function-argument binding and full column lineage are not modeled.",
         "CTE reads retain local identity and underlying query reads. Writes through CTEs/views require further binding and are explicitly partial.",
         "Results cover indexed sources only. File exclusions, size limits and metadata permissions can hide dependencies. Empty results do not prove no effects."
@@ -96,7 +98,7 @@ public sealed partial class SqlNavigationIndex
             }
             var analysis = AnalyzeModule(entry.Symbol, token, Math.Min(MaxAnalysisFacts, remainingFacts));
             modules.Add(analysis);
-            remainingFacts -= analysis.Accesses.Length + analysis.Calls.Length + analysis.Parameters.Length + (analysis.ControlFlow?.Nodes.Length ?? 0) + (analysis.ValueFlow?.FactCount ?? 0);
+            remainingFacts -= analysis.Accesses.Length + analysis.Calls.Length + analysis.Parameters.Length + (analysis.ControlFlow?.Nodes.Length ?? 0) + (analysis.ValueFlow?.FactCount ?? 0) + analysis.Observations.Length;
             var dependencies = analysis.Calls.Where(c => c.Status == ResolutionStatus.Resolved && c.Target != null).Select(c => (c.Target!, c.Location))
                 .Concat(analysis.Accesses.Where(a => a.Operation == SqlAccessOperation.Read && a.Status == ResolutionStatus.Resolved && a.Target?.Identity?.Kind == SqlObjectKind.View)
                     .Select(a => (a.Target!, a.Location)));
@@ -141,6 +143,7 @@ public sealed partial class SqlNavigationIndex
         var document = documents.First(d => d.Uri == symbol.Target.Uri);
         var finder = new AnalysisBodyFinder(document.Parse.Source, symbol.Declaration.Range);
         document.Parse.Ast.Accept(finder);
+        var external = finder.Body is ProcedureStatementBodyBase { MethodSpecifier: not null };
         var issues = new List<SqlCoverageIssue>();
         var accesses = new List<SqlRelationAccess>();
         var calls = new List<SqlAnalyzedCall>();
@@ -151,6 +154,7 @@ public sealed partial class SqlNavigationIndex
             else truncated = true;
         }
         if (finder.Body == null) Issue("body-unavailable", "Original module body is unavailable or unparseable; metadata is not a substitute for source.");
+        if (external) Issue("external-implementation", "SQL declares an external method signature; its implementation/effects are unavailable. Empty extracted SQL lists do not prove no effects.");
         foreach (var diagnostic in document.Parse.Diagnostics) Issue("parse-error", diagnostic.Message, diagnostic.Range);
         if (finder.Body != null)
         {
@@ -192,21 +196,28 @@ public sealed partial class SqlNavigationIndex
             .Select(l => new SqlAnalysisParameter(l.Name, l.DeclaredType, new(document.Uri, l.Range))).ToImmutableArray();
         truncated |= allParameters.Length > parameters.Length;
         var flow = SqlControlFlow.Extract(finder.Body, document, Math.Max(0, maxFacts - calls.Count - accesses.Count - parameters.Length), token);
+        if (external) flow = flow with { BodyAvailable = false };
         foreach (var issue in flow.Issues) Issue(issue.Code, issue.Message, issue.Location?.Range);
         truncated |= flow.Truncated;
         var values = SqlValueFlow.Extract(document, finder.Body, flow, execute => ValueSignature(document, execute, token),
             Math.Max(0, maxFacts - calls.Count - accesses.Count - parameters.Length - flow.Nodes.Length), token);
         foreach (var issue in values.Issues) Issue(issue.Code, issue.Message, issue.Location?.Range);
+        if (external) values = values with { BodyAvailable = false };
         truncated |= values.Truncated;
+        var observations = SqlSourceObservations.Extract(finder.Body, document,
+            Math.Max(0, maxFacts - calls.Count - accesses.Count - parameters.Length - flow.Nodes.Length - values.FactCount), flow, token);
+        truncated |= observations.Truncated;
+        if (observations.Truncated) Issue("observation-limit", "Source observations reached their budget; omitted observations are not absent behavior.", symbol.Declaration.Range);
         if (truncated) issues.Add(new("fact-limit", "Module report reached its fact limit; omitted facts may include effects.", new(document.Uri, symbol.Declaration.Range)));
         return new(ModuleAnalysisId(symbol),
             symbol.Identity, document.SourceKind, AnalysisRevision(document), symbol.CapturedAt,
             new(document.Uri, symbol.Declaration.Range), symbol.Declaration.Documentation?.Signature,
-            finder.Body != null, parameters,
+            finder.Body != null && !external, parameters,
             accesses.Distinct().Select(a => a with { FlowContext = flow.ContextAt(a.Location.Range.Start) }).ToImmutableArray(),
             calls.Select(c => c with { FlowContext = flow.ContextAt(c.Location.Range.Start) }).ToImmutableArray(),
             issues.Distinct().ToImmutableArray(), truncated)
-        { ControlFlow = flow, ValueFlow = values };
+        { ControlFlow = flow, ValueFlow = values, Observations = observations.Facts,
+            ImplementationKind = external ? "External" : finder.Body == null ? "Unavailable" : "TransactSql" };
     }
 
     private sealed class AnalysisBodyFinder(SourceText source, TextRange range) : TSqlFragmentVisitor

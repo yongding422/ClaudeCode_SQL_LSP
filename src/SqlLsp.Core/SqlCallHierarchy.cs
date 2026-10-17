@@ -103,7 +103,7 @@ public sealed partial class SqlNavigationIndex
         if (!IsUniqueCallable(symbol)) return null;
         var document = documents.FirstOrDefault(d => d.Uri == symbol.Target.Uri);
         if (document == null) return null;
-        var available = document.Parse.Declarations.Any(d => d.Kind == symbol.Identity.Kind && d.Range == symbol.Declaration.Range);
+        var available = document.Parse.Declarations.Any(d => d.Kind == symbol.Identity.Kind && d.Range == symbol.Declaration.Range && !d.IsExternalImplementation);
         var resolved = 0;
         var ambiguous = 0;
         var unresolved = 0;
