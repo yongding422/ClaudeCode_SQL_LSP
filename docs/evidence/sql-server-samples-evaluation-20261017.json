@@ -1,0 +1,473 @@
+{
+  "format": "sqlscriptdom-reviewed-sample-study-v1",
+  "date": "2026-10-17",
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "corpus_sha256": "24023744adea38b138dd041e5134a66f5ac4fa211060f0ba6976e15aeebc00d7",
+  "copied_sql_files": 1099,
+  "source_issues_per_discovery": 672,
+  "server_reported_indexed_documents": 1095,
+  "experiment": {
+    "model": "deepseek-v4-pro",
+    "provider_host": "api.deepseek.com",
+    "effort": "low",
+    "cli_version": "2.1.302 (Claude Code)",
+    "plugin_version": "0.14.0",
+    "repeats": 2,
+    "seed": 42,
+    "order": "baseline-first",
+    "workers": 2,
+    "restricted": true,
+    "timeout_seconds": 180,
+    "reported_budget_per_run_usd": 0.5,
+    "schedule": [
+      {
+        "index": 1,
+        "task_id": "Q08-ticket-bindings",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 2,
+        "task_id": "Q03-price-formula",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 3,
+        "task_id": "Q10-json-format",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 4,
+        "task_id": "Q12-fulfill-variants",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 5,
+        "task_id": "Q07-price-callers",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 6,
+        "task_id": "Q06-dynamic-reseed",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 7,
+        "task_id": "Q09-json-update",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 8,
+        "task_id": "Q06-dynamic-reseed",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 9,
+        "task_id": "Q08-ticket-bindings",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 10,
+        "task_id": "Q09-json-update",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 11,
+        "task_id": "Q01-order-footprint",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 12,
+        "task_id": "Q07-price-callers",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 13,
+        "task_id": "Q11-external-clr",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 14,
+        "task_id": "Q04-login-password",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 15,
+        "task_id": "Q05-sensor-upsert",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 16,
+        "task_id": "Q02-invoice-eligibility",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 17,
+        "task_id": "Q12-fulfill-variants",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 18,
+        "task_id": "Q03-price-formula",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 19,
+        "task_id": "Q10-json-format",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 20,
+        "task_id": "Q04-login-password",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 21,
+        "task_id": "Q05-sensor-upsert",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 22,
+        "task_id": "Q01-order-footprint",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 23,
+        "task_id": "Q02-invoice-eligibility",
+        "arm": "grep",
+        "repeat": 2
+      },
+      {
+        "index": 24,
+        "task_id": "Q11-external-clr",
+        "arm": "grep",
+        "repeat": 1
+      },
+      {
+        "index": 25,
+        "task_id": "Q08-ticket-bindings",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 26,
+        "task_id": "Q03-price-formula",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 27,
+        "task_id": "Q10-json-format",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 28,
+        "task_id": "Q12-fulfill-variants",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 29,
+        "task_id": "Q07-price-callers",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 30,
+        "task_id": "Q06-dynamic-reseed",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 31,
+        "task_id": "Q09-json-update",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 32,
+        "task_id": "Q06-dynamic-reseed",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 33,
+        "task_id": "Q08-ticket-bindings",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 34,
+        "task_id": "Q09-json-update",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 35,
+        "task_id": "Q01-order-footprint",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 36,
+        "task_id": "Q07-price-callers",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 37,
+        "task_id": "Q11-external-clr",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 38,
+        "task_id": "Q04-login-password",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 39,
+        "task_id": "Q05-sensor-upsert",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 40,
+        "task_id": "Q02-invoice-eligibility",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 41,
+        "task_id": "Q12-fulfill-variants",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 42,
+        "task_id": "Q03-price-formula",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 43,
+        "task_id": "Q10-json-format",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 44,
+        "task_id": "Q04-login-password",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 45,
+        "task_id": "Q05-sensor-upsert",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 46,
+        "task_id": "Q01-order-footprint",
+        "arm": "plugin",
+        "repeat": 1
+      },
+      {
+        "index": 47,
+        "task_id": "Q02-invoice-eligibility",
+        "arm": "plugin",
+        "repeat": 2
+      },
+      {
+        "index": 48,
+        "task_id": "Q11-external-clr",
+        "arm": "plugin",
+        "repeat": 1
+      }
+    ]
+  },
+  "summary": {
+    "grep": {
+      "runs": 24,
+      "successful_client_results": 24,
+      "strict_passes": 12,
+      "mean_factual_score": 0.9409722222222222,
+      "mean_citation_score": 1,
+      "mean_elapsed_ms": 18923.458333333332,
+      "median_elapsed_ms": 18755.5,
+      "tool_failures": 0,
+      "oversized_tool_results": 0,
+      "runs_with_mcp_calls": 0,
+      "runs_with_analysis_reports": 0,
+      "runs_with_supported_analysis": 0,
+      "input_tokens_known_runs": 24,
+      "input_tokens_sum": 155839,
+      "input_tokens_mean": 6493.291666666667,
+      "output_tokens_known_runs": 24,
+      "output_tokens_sum": 36834,
+      "output_tokens_mean": 1534.75,
+      "cache_read_tokens_known_runs": 24,
+      "cache_read_tokens_sum": 318848,
+      "cache_read_tokens_mean": 13285.333333333334,
+      "cache_write_tokens_known_runs": 24,
+      "cache_write_tokens_sum": 0,
+      "cache_write_tokens_mean": 0,
+      "reported_total_input_tokens_known_runs": 24,
+      "reported_total_input_tokens_sum": 474687,
+      "reported_total_input_tokens_mean": 19778.625,
+      "reported_cost_usd_known_runs": 24,
+      "reported_cost_usd_sum": 1.859469,
+      "reported_cost_usd_mean": 0.077477875,
+      "read_calls": 55,
+      "grep_calls": 27,
+      "glob_calls": 32,
+      "mcp_calls": 0,
+      "lsp_calls": 0,
+      "skill_calls": 0,
+      "other_calls": 0
+    },
+    "plugin": {
+      "runs": 24,
+      "successful_client_results": 24,
+      "strict_passes": 7,
+      "mean_factual_score": 0.90625,
+      "mean_citation_score": 0.9375,
+      "mean_elapsed_ms": 42506.75,
+      "median_elapsed_ms": 39139.5,
+      "tool_failures": 47,
+      "oversized_tool_results": 41,
+      "runs_with_mcp_calls": 24,
+      "runs_with_analysis_reports": 6,
+      "runs_with_supported_analysis": 5,
+      "input_tokens_known_runs": 24,
+      "input_tokens_sum": 303702,
+      "input_tokens_mean": 12654.25,
+      "output_tokens_known_runs": 24,
+      "output_tokens_sum": 64347,
+      "output_tokens_mean": 2681.125,
+      "cache_read_tokens_known_runs": 24,
+      "cache_read_tokens_sum": 931840,
+      "cache_read_tokens_mean": 38826.666666666664,
+      "cache_write_tokens_known_runs": 24,
+      "cache_write_tokens_sum": 0,
+      "cache_write_tokens_mean": 0,
+      "reported_total_input_tokens_known_runs": 24,
+      "reported_total_input_tokens_sum": 1235542,
+      "reported_total_input_tokens_mean": 51480.916666666664,
+      "reported_cost_usd_known_runs": 24,
+      "reported_cost_usd_sum": 3.5931049999999995,
+      "reported_cost_usd_mean": 0.14971270833333333,
+      "read_calls": 54,
+      "grep_calls": 38,
+      "glob_calls": 25,
+      "mcp_calls": 48,
+      "lsp_calls": 0,
+      "skill_calls": 0,
+      "other_calls": 0
+    }
+  },
+  "comparisons": {
+    "mean_factual_score_plugin_change_percent": -3.690036900368998,
+    "mean_elapsed_ms_plugin_change_percent": 124.62463917139881,
+    "reported_total_input_tokens_mean_plugin_change_percent": 160.28561978735462,
+    "output_tokens_mean_plugin_change_percent": 74.6945756637889,
+    "reported_cost_usd_sum_plugin_change_percent": 93.23285303492554
+  },
+  "audit": [],
+  "quality_review": "Implementing Codex agent, source-backed rubric frozen before runs; not independent/blinded human review.",
+  "rubric_sha256": "6d8f0ab81e7e5c0c25f94461e0d2632b7eaff18648683909a8f03bfc70e8e6f9",
+  "grades_sha256": "fd7301b4e1733c9eebb555d488ad417d61562903a85b6b42b346bbee251b1dcd",
+  "runner_sha256": "1a2b7b7663f5bf145c34edd2d8788f3ea0a720c9484f5a503c0d1a82af70edca",
+  "release_zip_sha256": "6c5ca3d31bc1afdac7845f4ab78970fcd7186a62591ac928311fdb42024b609d",
+  "per_question": [
+    {
+      "id": "Q01-order-footprint",
+      "grep_factual": 0.9166666666666667,
+      "plugin_factual": 0.8333333333333334
+    },
+    {
+      "id": "Q02-invoice-eligibility",
+      "grep_factual": 1.0,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q03-price-formula",
+      "grep_factual": 1.0,
+      "plugin_factual": 0.9166666666666667
+    },
+    {
+      "id": "Q04-login-password",
+      "grep_factual": 0.875,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q05-sensor-upsert",
+      "grep_factual": 0.875,
+      "plugin_factual": 0.875
+    },
+    {
+      "id": "Q06-dynamic-reseed",
+      "grep_factual": 0.875,
+      "plugin_factual": 0.875
+    },
+    {
+      "id": "Q07-price-callers",
+      "grep_factual": 1.0,
+      "plugin_factual": 0.5
+    },
+    {
+      "id": "Q08-ticket-bindings",
+      "grep_factual": 1.0,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q09-json-update",
+      "grep_factual": 1.0,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q10-json-format",
+      "grep_factual": 1.0,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q11-external-clr",
+      "grep_factual": 1.0,
+      "plugin_factual": 1.0
+    },
+    {
+      "id": "Q12-fulfill-variants",
+      "grep_factual": 0.75,
+      "plugin_factual": 0.875
+    }
+  ],
+  "local_evidence_directory": "artifacts/sample-study-20261017",
+  "tests": {
+    "passed": 16,
+    "skipped": 1
+  }
+}

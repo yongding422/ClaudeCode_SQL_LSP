@@ -3,6 +3,8 @@ import json
 import unittest
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch, MagicMock
 
 spec = importlib.util.spec_from_file_location("evaluation", Path(__file__).with_name("evaluate-understanding.py"))
 evaluation = importlib.util.module_from_spec(spec)
@@ -10,6 +12,70 @@ spec.loader.exec_module(evaluation)
 
 
 class MetricsTests(unittest.TestCase):
+    def test_client_oversize_result_is_a_failure_even_without_is_error_flag(self):
+        call = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__sql__find_procedures"}]}}
+        result = {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": "Error: result (217707 characters) exceeds maximum allowed tokens. Output saved."}]}}
+        metrics = evaluation.summarize([call, result])
+        self.assertEqual(1, metrics["tool_failures"])
+        self.assertEqual(1, metrics["oversized_tool_results"])
+        self.assertEqual(0, metrics["server_timed_calls"])
+
+    def test_client_configuration_is_isolated_and_only_requested_plugin_is_wired(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace, plugin, output = root / "sql", root / "plugin", root / "results"
+            workspace.mkdir()
+            (workspace / "a.sql").write_text("SELECT 1")
+            (workspace / "CLAUDE.md").write_text("HIDDEN GOLD")
+            (plugin / ".claude-plugin").mkdir(parents=True)
+            (plugin / ".claude-plugin/plugin.json").write_text(json.dumps({"name": "test-sql", "version": "1"}))
+            (plugin / ".mcp.json").write_text(json.dumps({"mcpServers": {"sqlscriptdom-analysis": {
+                "command": "${CLAUDE_PLUGIN_ROOT}/mcp/server.exe", "args": ["--stdio"]}}}))
+            args = SimpleNamespace(workspace=workspace, plugin=plugin, output=output, restricted=True,
+                                   claude="claude", model="fixed-model", effort="low", budget=.5, timeout=10,
+                                   keep_transcripts=True, keep_answers=True, revision="rev", cli_version="cli", plugin_version="1")
+            def fake_process(command, **options):
+                copied = Path(options["cwd"])
+                self.assertTrue((copied / "a.sql").is_file())
+                self.assertFalse((copied / "CLAUDE.md").exists())
+                self.assertIn("--restricted", command)
+                self.assertIn("--strict-mcp-config", command)
+                self.assertEqual("", command[command.index("--setting-sources") + 1])
+                self.assertNotIn("SQLLSP_MCP_CONFIG", options["env"])
+                process = MagicMock()
+                process.returncode = 0
+                process.communicate.return_value = (json.dumps({"type": "result", "subtype": "success", "result": "answer"}), "")
+                process.__enter__.return_value = process
+                return process
+            with patch.object(evaluation.subprocess, "Popen", side_effect=fake_process) as launch:
+                for index, arm in enumerate(("grep", "plugin"), 1):
+                    row = evaluation.run_one(args, {"id": "a", "question": "Question"}, arm, 1, index)
+                    self.assertEqual("success", row["outcome"])
+                    command = launch.call_args.args[0]
+                    servers = json.loads(command[command.index("--mcp-config") + 1])["mcpServers"]
+                    if arm == "grep":
+                        self.assertEqual({}, servers)
+                        self.assertNotIn("--plugin-dir", command)
+                        self.assertEqual("Read,Grep,Glob", command[command.index("--tools") + 1])
+                    else:
+                        self.assertEqual(["plugin:test-sql:sqlscriptdom-analysis"], list(servers))
+                        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", servers[next(iter(servers))]["command"])
+
+    def test_baseline_first_schedule_has_matching_pairs_and_no_phase_overlap(self):
+        tasks = [{"id": "a", "question": "a"}, {"id": "b", "question": "b"}]
+        schedule = evaluation.make_schedule(tasks, 2, 42, "baseline-first")
+        self.assertEqual(["grep"] * 4 + ["plugin"] * 4, [arm for _, arm, _ in schedule])
+        self.assertEqual([(task, repeat) for task, _, repeat in schedule[:4]],
+                         [(task, repeat) for task, _, repeat in schedule[4:]])
+        self.assertEqual(schedule, evaluation.make_schedule(tasks, 2, 42, "baseline-first"))
+
+    def test_random_schedule_preserves_all_pairs_and_single_arm_is_possible(self):
+        tasks = [{"id": "a", "question": "a"}, {"id": "b", "question": "b"}]
+        schedule = evaluation.make_schedule(tasks, 3, 42)
+        self.assertEqual(12, len(schedule))
+        self.assertEqual(12, len({(task["id"], arm, repeat) for task, arm, repeat in schedule}))
+        self.assertEqual(6, len(evaluation.make_schedule(tasks, 3, 42, "baseline-first", ["grep"])))
+
     def test_correlates_ids_deduplicates_and_retains_client_failures(self):
         call = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "LSP"}]}}
         result = {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": "Error performing outgoingCalls: starting"}]}}

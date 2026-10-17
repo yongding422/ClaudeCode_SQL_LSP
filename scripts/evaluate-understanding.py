@@ -4,6 +4,7 @@ Does not enable persistent server metrics or hooks. Accuracy scores require inde
 never inferred from tool counts or a model's assertion that its answer is correct.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
 import math
@@ -15,6 +16,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from urllib.parse import urlparse
 
 
 def summarize(events):
@@ -46,13 +48,16 @@ def summarize(events):
         return "other"
 
     counts = dict.fromkeys(("lsp", "grep", "read", "glob", "skill", "mcp", "other"), 0)
-    failures, missing = 0, 0
+    failures, missing, oversized = 0, 0, 0
     server_timings, report_bytes, analysis_caches = [], [], []
     for call_id, name in calls.items():
         counts[category(name)] += 1
         result = results.get(call_id)
         if result is None:
             missing += 1
+        elif "exceeds maximum allowed tokens" in json.dumps(result.get("content", "")):
+            failures += 1
+            oversized += 1
         elif result.get("is_error") or "Error performing " in json.dumps(result.get("content", "")):
             failures += 1
         elif name.startswith("mcp__") and name.endswith(("__find_procedures", "__analyze_procedure")):
@@ -85,7 +90,7 @@ def summarize(events):
     cold = [t["coldStart"] for t in server_timings if isinstance(t.get("coldStart"), bool)]
     usage = final.get("usage", {}) or {}
     return {**{key + "_calls": value for key, value in counts.items()}, "tool_failures": failures,
-            "missing_tool_results": missing, "malformed_events": malformed,
+            "missing_tool_results": missing, "oversized_tool_results": oversized, "malformed_events": malformed,
             "outcome": final.get("subtype", "missing-result"), "model_observed": initial.get("model"),
             "input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
             "cache_read_tokens": usage.get("cache_read_input_tokens"),
@@ -139,6 +144,8 @@ def run_one(args, task, arm, repeat, index):
                    "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--no-session-persistence",
                    "--permission-mode", "dontAsk", "--tools", tools, "--allowedTools", allowed,
                    "--max-budget-usd", str(args.budget)]
+        if getattr(args, "restricted", False):
+            command += ["--restricted"]
         if arm == "plugin":
             command += ["--plugin-dir", str(args.plugin)]
             manifest = json.loads((args.plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8-sig"))
@@ -150,8 +157,12 @@ def run_one(args, task, arm, repeat, index):
             command[command.index("--mcp-config") + 1] = json.dumps({"mcpServers": {f"plugin:{manifest['name']}:sqlscriptdom-analysis": server}})
         else:
             command += ["--disable-slash-commands"]
-        command += [task["question"] + "\nExplain with file:line citations, direct versus transitive effects, and explicit unknowns. "
-                    "Do not execute SQL or run shell commands. Report tool failures honestly."]
+        workflow = ("Use the SQL plugin's find_procedures and analyze_procedure tools for relevant modules first; "
+                    "use Read/Grep/Glob to verify or fill gaps. " if arm == "plugin" else
+                    "Use Read/Grep/Glob to investigate the SQL source. ")
+        command += [task["question"] + "\n" + workflow +
+                    "Answer in at most 450 words with file:line citations, direct versus transitive effects where relevant, "
+                    "and explicit unknowns. Do not execute SQL or run shell commands. Report tool failures honestly."]
         env = os.environ.copy()
         env["CLAUDE_CONFIG_DIR"] = str(destination / "isolated-config")
         env.pop("SQLLSP_MCP_CONFIG", None)  # Frozen offline experiment; no accidental online profile.
@@ -175,8 +186,9 @@ def run_one(args, task, arm, repeat, index):
                         os.killpg(process.pid, signal.SIGKILL)
                     raw, stderr = process.communicate()
                 exit_code = process.returncode
-        except OSError:
+        except OSError as error:
             exit_code = -1
+            stderr = str(error)
         events, malformed = [], 0
         for line in raw.splitlines():
             try:
@@ -209,16 +221,35 @@ def run_one(args, task, arm, repeat, index):
         return row
 
 
+def make_schedule(tasks, repeats, seed, order="random", arms=("grep", "plugin")):
+    pairs = [(task, repeat) for task in tasks for repeat in range(1, repeats + 1)]
+    rng = random.Random(seed)
+    rng.shuffle(pairs)
+    if order == "baseline-first":
+        return [(task, arm, repeat) for arm in arms for task, repeat in pairs]
+    schedule = []
+    for task, repeat in pairs:
+        shuffled = list(arms)
+        rng.shuffle(shuffled)
+        schedule.extend((task, arm, repeat) for arm in shuffled)
+    return schedule
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--tasks", required=True, type=Path, help="JSON array of {id, question}; never include hidden gold.")
     parser.add_argument("--plugin", required=True, type=Path)
     parser.add_argument("--model", required=True, help="Exact model/version shared by both arms.")
+    parser.add_argument("--source-revision", help="Reviewed original source revision when using an SQL-only snapshot.")
     parser.add_argument("--claude", default=shutil.which("claude"))
     parser.add_argument("--effort", choices=("low", "medium", "high"), default="low")
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--order", choices=("random", "baseline-first"), default="random")
+    parser.add_argument("--arms", nargs="+", choices=("grep", "plugin"), default=["grep", "plugin"])
+    parser.add_argument("--workers", type=int, default=1, help="Bounded concurrent clients; phases never overlap in baseline-first mode.")
+    parser.add_argument("--restricted", action="store_true", help="Require a Claude CLI supporting workspace-confined file tools.")
     parser.add_argument("--budget", type=float, default=0.50, help="Reported USD limit per run, not guaranteed subscription billing.")
     parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--output", type=Path, default=Path("artifacts/understanding-evaluation") / str(int(time.time())))
@@ -226,7 +257,7 @@ def main():
     parser.add_argument("--keep-transcripts", action="store_true", help="Opt in to local raw sessions that can contain private SQL details.")
     args = parser.parse_args()
     args.workspace, args.plugin, args.output = args.workspace.resolve(), args.plugin.resolve(), args.output.resolve()
-    if not args.claude or args.repeats < 1 or args.budget <= 0 or args.timeout < 1:
+    if not args.claude or args.repeats < 1 or args.budget <= 0 or args.timeout < 1 or args.workers < 1 or len(set(args.arms)) != len(args.arms):
         parser.error("Claude executable, positive repeats/budget/timeout are required.")
     if not args.workspace.is_dir() or not (args.plugin / ".claude-plugin/plugin.json").is_file():
         parser.error("Workspace and built plugin must exist.")
@@ -240,23 +271,32 @@ def main():
     args.plugin_version = json.loads((args.plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8-sig"))["version"]
     args.cli_version = subprocess.check_output([args.claude, "--version"], text=True).strip()
     revision = subprocess.run(["git", "-C", str(args.workspace), "rev-parse", "HEAD"], capture_output=True, text=True)
-    args.revision = revision.stdout.strip() if revision.returncode == 0 else "unversioned-snapshot"
+    args.revision = args.source_revision or (revision.stdout.strip() if revision.returncode == 0 else "unversioned-snapshot")
     args.output.mkdir(parents=True, exist_ok=False)
-    schedule = [(task, repeat) for task in tasks for repeat in range(1, args.repeats + 1)]
-    rng = random.Random(args.seed)
-    rng.shuffle(schedule)
-    rows, index = [], 0
-    for task, repeat in schedule:
-        arms = ["grep", "plugin"]
-        rng.shuffle(arms)
-        for arm in arms:
-            index += 1
-            print(f"Run {index}/{2 * len(schedule)}: {task['id']} {arm}", flush=True)
-            rows.append(run_one(args, task, arm, repeat, index))
-            with (args.output / "metrics.csv").open("w", newline="", encoding="utf-8") as stream:
-                writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-                writer.writeheader()
-                writer.writerows(rows)
+    schedule = make_schedule(tasks, args.repeats, args.seed, args.order, args.arms)
+    (args.output / "experiment.json").write_text(json.dumps({
+        "model": args.model, "provider_host": urlparse(os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")).hostname,
+        "effort": args.effort, "cli_version": args.cli_version, "plugin_version": args.plugin_version,
+        "repeats": args.repeats, "seed": args.seed, "order": args.order, "workers": args.workers,
+        "restricted": args.restricted, "timeout_seconds": args.timeout, "reported_budget_per_run_usd": args.budget,
+        "schedule": [{"index": i, "task_id": task["id"], "arm": arm, "repeat": repeat}
+                     for i, (task, arm, repeat) in enumerate(schedule, 1)]}, indent=2), encoding="utf-8")
+    rows = []
+    phases = [[(i, entry) for i, entry in enumerate(schedule, 1) if entry[1] == arm] for arm in args.arms] if args.order == "baseline-first" else [list(enumerate(schedule, 1))]
+    def execute(item):
+        index, (task, arm, repeat) = item
+        print(f"Run {index}/{len(schedule)}: {task['id']} {arm} repeat {repeat}", flush=True)
+        row = run_one(args, task, arm, repeat, index)
+        print(f"Finished {index}: {row['outcome']} {row['elapsed_ms']} ms", flush=True)
+        return row
+    for phase in phases:
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            for row in pool.map(execute, phase):
+                rows.append(row)
+                with (args.output / "metrics.csv").open("w", newline="", encoding="utf-8") as stream:
+                    writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+                    writer.writeheader()
+                    writer.writerows(rows)
     print(f"Aggregate metrics saved to {args.output}. Accuracy/review columns remain unscored.")
 
 
