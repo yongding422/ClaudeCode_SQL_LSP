@@ -80,6 +80,13 @@ claude
 
 For Intel Mac use `sqlscriptdom-lsp-osx-x64`; Windows x64 uses `sqlscriptdom-lsp-win-x64`, and Linux x64 uses `sqlscriptdom-lsp-linux-x64`, each followed by `@sqlscriptdom-lsp-marketplace`. Install one entry for your platform. The packages include the runtime; no .NET installation is required. See [marketplace setup](docs/publishing.md) and [Mac usage](docs/macos.md).
 
+On Windows x64:
+
+```powershell
+claude plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git
+claude plugin install sqlscriptdom-lsp-win-x64@sqlscriptdom-lsp-marketplace
+```
+
 The plugin uses Claude's built-in LSP integration plus read-only MCP analysis and an explanation skill, with no hooks. See [procedure analysis](docs/procedure-analysis.md) and [evaluation](docs/evaluation.md) for actual tool checks and a fair task-level comparison.
 
 For complex procedure investigation, [the assessment](docs/stored-procedure-understanding.md) records implemented footprints/workflows, remaining gaps and accuracy/time/usage metrics. [Static call hierarchy](docs/call-hierarchy.md) remains available; general M6 editor enhancements stay deferred.

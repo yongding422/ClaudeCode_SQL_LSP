@@ -194,9 +194,23 @@
   },
   "rollout": {
     "release_url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.16.0",
-    "prerelease": true,
-    "main_catalog_promoted": false,
-    "global_user_plugin_modified": false
+    "prerelease": false,
+    "main_catalog_promoted": true,
+    "global_user_plugin_modified": false,
+    "main_catalog_merge_commit": "ad479375cc3602df33264bc1bacef7f11515e9ec",
+    "pull_request": "https://github.com/yongding422/ClaudeCode_SQL_LSP/pull/1",
+    "latest_release_verified": "v0.16.0"
   },
-  "measurement": "Final clean 48-session matched result and 20 native restart trials retained separately. Speed/input and quality targets unmet; no overall Grep advantage claimed."
+  "measurement": "Final clean 48-session matched result and 20 native restart trials retained separately. Speed/input and quality targets unmet; no overall Grep advantage claimed.",
+  "main_git_marketplace_smoke": {
+    "source": "standard public Git marketplace on main",
+    "cli": "2.1.302",
+    "version": "0.16.0",
+    "fingerprint": "dc70df8d5b16a06c94ddaa1405d548b876e9e9f9a3bd2ff91a65873f611a9285",
+    "model_calls": 0,
+    "global_user_plugin_modified": false,
+    "strict_validation_passed": true,
+    "catalog_version_and_exact_runtime_fingerprint_matched": true
+  },
+  "documentation": "Immutable archive docs reflect package build commit; final measurements and rollout evidence are in current repository/release notes."
 }
