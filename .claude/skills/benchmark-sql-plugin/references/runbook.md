@@ -37,6 +37,8 @@ python scripts/rerun-sample-study.py report --study artifacts/sample-study-candi
 
 Outputs include `report.md`, `reviewed-results.csv/json` and `baseline-comparison.md/json`. Raw `runs/metrics.csv`, per-session metrics/answers/transcripts, frozen manifests and `rerun-plan.json` remain local. The historical comparison reports matching dimensions and mismatches. It is descriptive even if all recorded dimensions match; uncontrolled provider/OS caches, load and selected tasks still limit causal claims. The report measures the plugin-assisted MCP workflow; zero LSP calls cannot demonstrate an LSP-specific benefit.
 
+After review, `python scripts/summarize-workload-cohorts.py --reviewed-results <study>/reviewed-results.json --output <study>/cohorts.json` applies the predeclared structural and simple-control targets, with matched-session validation, unknown-usage handling and quality gates. It reports nearest-rank p95 observations and midpoint medians. A prescribed workflow cannot establish the natural-availability simple-control target. Retain per-question regressions even when a cohort mean improves.
+
 ## Interpret and recover
 
 - Overflow/rejected result: count the failure. Do not count a saved giant payload as evidence the model consumed or successfully analyzed it. Total model input includes provider cache-read/write categories, not the byte size of saved files.

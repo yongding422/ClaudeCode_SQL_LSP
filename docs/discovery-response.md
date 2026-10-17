@@ -1,4 +1,4 @@
-# Bounded discovery contract (candidate)
+# Bounded discovery contract (0.16.0)
 
 `find_procedures` keeps `query` and `maxResults` and adds optional `section`, `documentUri` and `cursor`. The response uses `formatVersion=2`. Existing module identities, targets, selections, revisions and statuses remain available. `sourceIssues` is now empty on ordinary discovery; `sourceIssueSummary` reports exact diagnostic and affected-file counts, including issues beyond the old 1,000-item analysis cap.
 
@@ -12,4 +12,4 @@ The complete discovery JSON-RPC response is budgeted to 16 KiB, including both s
 {"version":1,"responses":{"discoveryMaxBytes":8192}}
 ```
 
-Valid limits are 8,192–16,384 bytes. Existing settings/starters remain valid and storage stays disabled by default. A page may contain fewer entries than `maxResults` because of its byte limit. This discovery-only candidate leaves analysis DTO/defaults unchanged so payload effects can be measured separately from parsing/indexing/routing changes. Full analysis budgeting and deliberate evidence expansion remain in the next interface slice.
+Valid limits are 8,192–16,384 bytes. Existing settings/starters remain valid and storage stays disabled by default. A page may contain fewer entries than `maxResults` because of its byte limit. The separately measured 0.15.0 discovery-only candidate kept the previous analysis defaults. The combined 0.16.0 candidate adds [bounded compact analysis and explicit expansion](bounded-analysis.md), [folder/project scopes](offline-project-scopes.md), and source-bound `moduleRef` selectors. Details remain available without repeating unrelated workspace diagnostics.

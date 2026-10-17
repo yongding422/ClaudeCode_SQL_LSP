@@ -4,6 +4,8 @@ A working T-SQL language server in C#/.NET for SQL code search and stored-proced
 
 [How the plugin works — workflow diagram](docs/plugin-workflow.md)
 
+The **0.16.0 candidate** implements the [benchmark-driven fixes](docs/plans/benchmark-improvement-progress.md): [bounded discovery](docs/discovery-response.md), [scoped resolution](docs/offline-project-scopes.md), [compact analysis and selective expansion](docs/bounded-analysis.md), [live reuse](docs/workspace-reuse.md), [opt-in persisted discovery facts](docs/persistent-discovery-index.md) and [stronger semantic evidence](docs/semantic-evidence.md). The default `analyze_procedure` response is compact with depth 1/eight modules; request `detail="full"` for the compatible report, using bounded pages when necessary. These repairs do not establish a performance advantage; the final matched evaluation and native rollout are tracked in the progress document.
+
 Version 0.14.0 automatically creates a disabled starter [`.sqlscriptdom.json` in the workspace when MCP first starts](docs/plugin-settings.md). Edit it to enable metrics/report reuse and restart Claude. Existing files and directory overrides remain supported; SQL/database source options remain explicit. If the MCP tools are missing, [check the installed version and restart the session](docs/installation.md#if-the-sql-mcp-tools-are-missing).
 
 ## Build and test
