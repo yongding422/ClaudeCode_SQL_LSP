@@ -1,0 +1,3 @@
+interface:
+  display_name: "Benchmark SQL Plugin"
+  short_description: "Compare SQL plugin accuracy, time and token use"

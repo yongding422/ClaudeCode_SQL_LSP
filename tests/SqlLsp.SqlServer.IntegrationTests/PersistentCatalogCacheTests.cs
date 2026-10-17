@@ -57,12 +57,15 @@ public class LivePersistentCatalogCacheTests(SqlServerFixture fixture)
                 await using var client = await McpClient.Start("-- not scanned in online mode", config, Path.Combine(root, "saved"), root, true);
                 var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.ValueCaller" })).GetProperty("modules")[0];
                 var uri = selected.GetProperty("target").GetProperty("uri").GetString();
-                var result = McpClient.Data(await client.Tool("analyze_procedure", new
+                var result = McpClient.Data(await client.AnalyzeExpanded(new
                 {
                     documentUri = uri,
                     line = selected.GetProperty("selection").GetProperty("line").GetInt32(),
                     character = selected.GetProperty("selection").GetProperty("character").GetInt32(),
-                    expectedRevision = selected.GetProperty("revision").GetString()
+                    expectedRevision = selected.GetProperty("revision").GetString(),
+                    detail = "full",
+                    maxDepth = 2,
+                    maxModules = 20
                 }));
                 Assert.Equal(attempt == 0 ? "Stored" : "Hit", result.GetProperty("cache").GetProperty("status").GetString());
                 var module = result.GetProperty("report").GetProperty("modules")[0];

@@ -2,6 +2,8 @@
 
 Research checked 2026-10-15. **No general speed or model-token advantage has been demonstrated for this plugin yet.** Measure verified final answers, including setup cost. LSP versus MCP alone cannot establish superiority.
 
+Measured 2026-10-17: [48-session SQL Server Samples comparison](results/sql-server-samples-20261017.md). Released plugin 0.14.0 was slower and used more reported tokens than Read/Grep/Glob in this DeepSeek-backed cold-workflow test; workspace-wide discovery diagnostics frequently exceeded the client response limit and blocked analysis. The [frozen suite](sql-server-samples-suite.json) and [reproduction protocol](sql-server-samples-study.md) retain the questions, rubric and controls. This run does not include codebase-memory.
+
 ## What differs
 
 This research uses **DeusData/codebase-memory-mcp**, pinned source `8df0639c6268afe9888979e72b9797aa2cc1de7c`. The user's installed repository/version is unconfirmed and its MCP tools/binary are unavailable in this session. These are source observations, not a runtime comparison or exhaustive negative feature audit.

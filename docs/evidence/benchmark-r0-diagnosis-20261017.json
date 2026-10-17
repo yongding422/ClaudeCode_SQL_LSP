@@ -1,0 +1,30 @@
+{
+  "baseline": "0.14.0; original evidence is unchanged",
+  "probe": "artifacts/r0-coverage-probe/result.json; direct read-only core scan, no model or SQL execution",
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "raw_source_sql_files": 1100,
+  "benchmark_copied_files": 1099,
+  "indexed": 1095,
+  "excluded_size": 1,
+  "failed": 4,
+  "unreadable": 0,
+  "pending": 0,
+  "parse_error_files": 370,
+  "parse_errors": 672,
+  "failure_kind": "NullReferenceException in SqlSyntaxDocumentation.Describe, dereferencing CreateTableStatement.Definition for CREATE TABLE AS SELECT syntax",
+  "failed_files": [
+    "samples/applications/iot-connected-car/setup_reset.sql",
+    "samples/demos/SQLDW/free-trial-lab/CTAS-hash.sql",
+    "samples/demos/SQLDW/free-trial-lab/CTAS.sql",
+    "samples/features/sql-graph/DerivedTablesAndViewsInGraphMatch/setup-wwi-graph.sql"
+  ],
+  "oversized_file": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/PostDeploymentScripts/pds110-ins-app-countries.sql",
+  "oversized_bytes": 2968291,
+  "client_failures": {
+    "oversized_result": 41,
+    "restricted_path_mismatch": 6,
+    "details": "Four Grep/Read errors in run-0028 and two Read errors in run-0039. Requested temporary folder used hyphens where the actual restricted workspace had underscores. These are client path errors, not parser errors."
+  },
+  "ledger_limits": "SQL files within traversable physical roots; excluded/linked directories are not traversed and inaccessible directory contents cannot be enumerated. Each enumerated input has an explicit status; detailed pages are capped at 100.",
+  "timing_limits": "Read/decode and parse/extraction are cumulative worker durations, not additive wall time; enumeration is separately timed. Request queue, initialization, navigation, analysis, cache validation/read/write and presentation remain separate. Native client rejection and actual wire bytes are measured by the external harness/wire tests."
+}

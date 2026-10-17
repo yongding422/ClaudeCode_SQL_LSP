@@ -312,7 +312,7 @@ public class PluginSettingsTests
     private static async Task<JsonElement> Analyze(McpClient client)
     {
         var selected = McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.P" })).GetProperty("modules")[0];
-        return McpClient.Data(await client.Tool("analyze_procedure", new
+        return McpClient.Data(await client.AnalyzeExpanded(new
         {
             documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
             line = selected.GetProperty("selection").GetProperty("line").GetInt32(),

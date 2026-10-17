@@ -60,18 +60,20 @@ internal static class SqlSyntaxDocumentation
                 };
             details.Add("Parameter defaults and body expressions are omitted.");
         }
-        if (node is CreateTableStatement table)
+        if (node is CreateTableStatement { Definition: { } definition })
         {
             details.Add("Columns declared in this statement; migrations and database nullability are not inferred:");
-            foreach (var column in table.Definition.ColumnDefinitions.Take(SqlSymbolDisplay.MaxMembers))
+            foreach (var column in definition.ColumnDefinitions.Take(SqlSymbolDisplay.MaxMembers))
             {
                 var nullable = column.Constraints.OfType<NullableConstraintDefinition>().FirstOrDefault();
                 details.Add(SqlSymbolDisplay.Quote(column.ColumnIdentifier.Value) + " " +
                     (column.ComputedColumnExpression != null ? "computed (type not inferred)" : SqlSymbolDisplay.TypeText(column.DataType, source)) +
                     (nullable == null ? " (nullability unspecified)" : nullable.Nullable ? " NULL" : " NOT NULL"));
             }
-            if (table.Definition.ColumnDefinitions.Count > SqlSymbolDisplay.MaxMembers) details.Add("Additional columns omitted from hover.");
+            if (definition.ColumnDefinitions.Count > SqlSymbolDisplay.MaxMembers) details.Add("Additional columns omitted from hover.");
         }
+        else if (node is CreateTableStatement)
+            details.Add("CREATE TABLE AS SELECT: column types and nullability require query/database binding and are not inferred.");
         if (node is ViewStatementBody view)
         {
             if (view.Columns.Count > 0)

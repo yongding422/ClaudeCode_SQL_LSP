@@ -2,7 +2,7 @@
 
 Starting with 0.14.0, the plugin automatically creates **`.sqlscriptdom.json` in the workspace where its MCP server first starts**. Install/update the plugin, then start a fresh Claude session from your SQL project folder. No hook or manual MCP registration is needed.
 
-The generated starter has `metrics.enabled=false` and `analysisCache.enabled=false`. To enable them, edit the file to:
+The generated starter has `metrics.enabled=false` and `analysisCache.enabled=false`. The optional [persisted discovery index](persistent-discovery-index.md), `indexCache`, is also disabled when absent; enabling report storage alone still does not restore discovery facts. To enable metrics and saved reports, edit the file to:
 
 ```json
 {
@@ -43,7 +43,7 @@ For each storage feature, precedence is:
 
 Existing directory flags/environment variables continue to require absolute paths and explicitly enable their feature, even if the file says `enabled=false`. Blank inherited environment variables are ignored. Settings are validated even when storage paths are overridden. Unknown/duplicate fields, unsupported versions, malformed JSON, invalid types, inaccessible files and files over 64 KiB fail startup with exit 1 and a generic stderr message; values are not echoed. A missing automatically discovered file uses disabled defaults and is scaffolded at normal server startup. Standalone summary/evaluation/prebuild commands do not scaffold it. An explicitly requested missing file is an error, and explicit `--settings` use does not generate an extra project file. UTF-8 with or without a BOM is supported; comments/trailing commas are not.
 
-This file configures **MCP local storage only**. SQL parsing, resolution and approved database profiles retain their existing explicit `--config` / `SQLLSP_MCP_CONFIG` [source options](configuration.schema.json). They cannot be supplied in `.sqlscriptdom.json`. The LSP process still receives its own client initialization options.
+This file configures MCP local storage and optional [response budgets](discovery-response.md). `responses.discoveryMaxBytes` accepts 8192–16384 (default 16384); it never enables storage. These optional fields extend version 1 while keeping existing files valid. SQL parsing, resolution and approved database profiles retain their existing explicit `--config` / `SQLLSP_MCP_CONFIG` [source options](configuration.schema.json). They cannot be supplied in `.sqlscriptdom.json`. The LSP process still receives its own client initialization options.
 
 ## Standalone commands
 

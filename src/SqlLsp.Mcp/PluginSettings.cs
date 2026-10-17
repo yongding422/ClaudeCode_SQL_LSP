@@ -4,7 +4,7 @@ using Json.Schema;
 namespace SqlLsp.Mcp;
 
 // Local storage settings only. SQL source/database options remain explicitly selected with --config.
-internal sealed record PluginSettings(string? MetricsDirectory = null, string? CacheDirectory = null)
+internal sealed record PluginSettings(string? MetricsDirectory = null, string? CacheDirectory = null, int DiscoveryMaxBytes = 16384, string? IndexCacheDirectory = null, int AnalysisMaxBytes = 32768)
 {
     private const string Starter = """
         {
@@ -61,7 +61,10 @@ internal sealed record PluginSettings(string? MetricsDirectory = null, string? C
             var root = document.RootElement;
             if (!Schema.Evaluate(root).IsValid || HasDuplicates(root)) throw new ArgumentException("Invalid plugin settings.");
             var directory = Path.GetDirectoryName(file)!;
-            return new(Storage(root, "metrics", directory), Storage(root, "analysisCache", directory));
+            return new(Storage(root, "metrics", directory), Storage(root, "analysisCache", directory),
+                root.TryGetProperty("responses", out var responses) && responses.TryGetProperty("discoveryMaxBytes", out var budget) ? budget.GetInt32() : 16384,
+                Storage(root, "indexCache", directory),
+                root.TryGetProperty("responses", out responses) && responses.TryGetProperty("analysisMaxBytes", out budget) ? budget.GetInt32() : 32768);
         }
         catch (FileNotFoundException) when (explicitFile == null) { return new(); }
         catch (JsonException) { throw new ArgumentException("Invalid plugin settings JSON."); }
@@ -70,7 +73,8 @@ internal sealed record PluginSettings(string? MetricsDirectory = null, string? C
     private static string? Storage(JsonElement root, string section, string directory)
     {
         if (!root.TryGetProperty(section, out var settings) || !settings.TryGetProperty("enabled", out var enabled) || !enabled.GetBoolean()) return null;
-        var location = settings.TryGetProperty("directory", out var value) ? value.GetString()! : ".sqlscriptdom/" + (section == "metrics" ? "metrics" : "cache");
+        var location = settings.TryGetProperty("directory", out var value) ? value.GetString()! : ".sqlscriptdom/" +
+            (section == "metrics" ? "metrics" : section == "indexCache" ? "index" : "cache");
         if (string.IsNullOrWhiteSpace(location)) throw new ArgumentException("Storage directory must not be blank.");
         return Path.GetFullPath(location, directory);
     }

@@ -55,6 +55,12 @@ Assert-Rejected 'Package identity mismatch'
 Write-FixtureArchive 'osx-x64' 'sqlscriptdom-lsp-osx-x64' $false
 Assert-Rejected 'Package identity mismatch'
 Write-FixtureArchive 'osx-x64' 'sqlscriptdom-lsp-osx-x64'
+$leaked = [System.IO.Compression.ZipFile]::Open($intel, [System.IO.Compression.ZipArchiveMode]::Update)
+try { $leaked.CreateEntry('docs/evaluation/rubric.json') | Out-Null } finally { $leaked.Dispose() }
+$leakedHash = (Get-FileHash -LiteralPath $intel -Algorithm SHA256).Hash.ToLowerInvariant()
+"$leakedHash  $([System.IO.Path]::GetFileName($intel))" | Set-Content -LiteralPath ($intel + '.sha256')
+Assert-Rejected 'Maintainer benchmark data'
+Write-FixtureArchive 'osx-x64' 'sqlscriptdom-lsp-osx-x64'
 Move-Item -LiteralPath $intel -Destination ($intel + '.missing')
 Assert-Rejected 'Missing package'
 Move-Item -LiteralPath ($intel + '.missing') -Destination $intel

@@ -7,7 +7,7 @@ public class MetricsTests
 {
     private const string Sql = "CREATE PROC dbo.PRIVATE_SQL_CANARY AS BEGIN IF 1=1 EXEC dbo.Q; EXEC(N'PRIVATE_SQL_CANARY'); END;\nGO\nCREATE PROC dbo.Q AS SELECT * FROM dbo.A;\nGO\nCREATE TABLE dbo.A(id int);";
     private static async Task<JsonElement> Find(McpClient client) => McpClient.Data(await client.Tool("find_procedures", new { query = "PRIVATE_SQL_CANARY" })).GetProperty("modules")[0];
-    private static async Task<JsonElement> Analyze(McpClient client, JsonElement selected, string detail = "compact") => McpClient.Data(await client.Tool("analyze_procedure", new
+    private static async Task<JsonElement> Analyze(McpClient client, JsonElement selected, string detail = "compact") => McpClient.Data(await client.AnalyzeExpanded(new
     {
         documentUri = selected.GetProperty("target").GetProperty("uri").GetString(),
         line = selected.GetProperty("selection").GetProperty("line").GetInt32(),
@@ -41,6 +41,7 @@ public class MetricsTests
     {
         var root = Path.Combine(TestPaths.TempRoot, "metric PRIVATE_SQL_CANARY 中文 " + Guid.NewGuid().ToString("N"));
         var directory = Path.Combine(root, "metrics");
+        var expectedRequests = 0;
         try
         {
             await using (var first = await McpClient.Start(Sql, cacheDirectory: Path.Combine(root, "cache"), rootDirectory: root, preserveWorkspace: true, metricsDirectory: directory, metricsViaEnvironment: true))
@@ -53,10 +54,11 @@ public class MetricsTests
                 var invalid = await first.Tool("find_procedures", new { query = "PRIVATE_SQL_CANARY", maxResults = 1000 });
                 Assert.True(invalid.GetProperty("result").GetProperty("isError").GetBoolean());
                 var metrics = await Metrics(first);
-                Assert.Equal(4, metrics.GetProperty("observedInProcess").GetInt32());
+                expectedRequests = metrics.GetProperty("observedInProcess").GetInt32();
+                Assert.True(expectedRequests >= 4);
                 Assert.Equal(0, metrics.GetProperty("persistenceWriteFailures").GetInt32());
                 var report = metrics.GetProperty("report");
-                Assert.Equal(4, report.GetProperty("requests").GetInt32());
+                Assert.Equal(expectedRequests, report.GetProperty("requests").GetInt32());
                 var warm = report.GetProperty("groups").EnumerateArray().Single(g => g.GetProperty("key").GetString() == "analyze_procedure:warm");
                 Assert.Equal(2, warm.GetProperty("successfulRequests").GetInt32());
                 Assert.Equal(1, warm.GetProperty("cacheHits").GetInt32());
@@ -66,12 +68,12 @@ public class MetricsTests
                 Assert.True(warm.GetProperty("meanReportUtf8Bytes").GetDouble() > 0);
                 Assert.True(warm.GetProperty("p95Ms").GetDouble() >= warm.GetProperty("p50Ms").GetDouble());
                 Assert.Equal(1, report.GetProperty("groups").EnumerateArray().Single(g => g.GetProperty("key").GetString() == "find_procedures:unknown").GetProperty("errors").GetInt32());
-                Assert.Equal(4, (await Metrics(first, true)).GetProperty("report").GetProperty("requests").GetInt32());
+                Assert.Equal(expectedRequests, (await Metrics(first, true)).GetProperty("report").GetProperty("requests").GetInt32());
             }
             await using (var second = await McpClient.Start(Sql, rootDirectory: root, preserveWorkspace: true, metricsDirectory: directory))
             {
                 var previous = await Metrics(second, true);
-                Assert.Equal(4, previous.GetProperty("report").GetProperty("requests").GetInt32());
+                Assert.Equal(expectedRequests, previous.GetProperty("report").GetProperty("requests").GetInt32());
                 Assert.Equal(0, previous.GetProperty("observedInProcess").GetInt32());
                 Assert.Equal(0, (await Metrics(second)).GetProperty("report").GetProperty("requests").GetInt32());
                 await Find(second);
@@ -91,7 +93,7 @@ public class MetricsTests
             }
             var summary = await Command(root, "--metrics-summary", "--metrics-directory", directory);
             Assert.Equal(0, summary.Code);
-            Assert.Equal(5, summary.Data.GetProperty("requests").GetInt32());
+            Assert.Equal(expectedRequests + 1, summary.Data.GetProperty("requests").GetInt32());
             Assert.Equal("Ready", summary.Data.GetProperty("storageStatus").GetString());
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }

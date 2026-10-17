@@ -10,6 +10,9 @@ if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant
 $destination = Join-Path $repo ('artifacts/package test 中文 ' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $destination | Out-Null
 [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $destination)
+foreach ($excluded in @('docs/evaluation', 'docs/evidence', 'docs/plans', '.claude/skills/benchmark-sql-plugin')) {
+    if (Test-Path -LiteralPath (Join-Path $destination $excluded)) { throw "Maintainer benchmark material leaked into package: $excluded" }
+}
 $binary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-lsp.exe' } else { 'sqlscriptdom-lsp' }
 $executable = Join-Path $destination "server/$binary"
 $mcpBinary = if ($Runtime.StartsWith('win-')) { 'sqlscriptdom-mcp.exe' } else { 'sqlscriptdom-mcp' }

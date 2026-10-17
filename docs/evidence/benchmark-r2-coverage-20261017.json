@@ -1,0 +1,22 @@
+{
+  "probe": "artifacts/r0-coverage-probe/result-fixed.json; direct source scan, no model or SQL execution",
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "raw_sql_files": 1100,
+  "indexed": 1099,
+  "excluded_size": 1,
+  "failed": 0,
+  "unreadable": 0,
+  "pending": 0,
+  "parse_error_files": 371,
+  "parse_errors": 687,
+  "interpretation": "All 1099 benchmark-sized SQL inputs now parse/extract without a process exception. Syntax diagnostics remain visible; indexed does not mean every declaration is supported. The oversized original seed file remains excluded. Original source files/config were not modified.",
+  "validation": [
+    "Two CTAS parser/documentation regression fixtures pass",
+    "Actual MCP tests: separate literal sqlproj memberships resolve dbo.Product locally",
+    "Actual MCP tests: explicit contexts enforce include/exclude, default schema/database and case rules",
+    "Actual MCP tests: cross-context calls require explicit references and database qualification",
+    "Core tests: conditional/imported/overlapping membership never picks an arbitrary project",
+    "Full solution: Core 150, LSP 60, MCP 68, provider 29 passed; 18 environment/optional skips. Additional context regression passed separately after addition."
+  ],
+  "measurement_limits": "Corpus timings ran alongside benchmark sessions and other tests; they are diagnostic, not a speed comparison. The frozen R1 native artifact does not include this CTAS/scope change."
+}

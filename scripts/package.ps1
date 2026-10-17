@@ -32,7 +32,13 @@ $mcpConfig = [ordered]@{ mcpServers = [ordered]@{ 'sqlscriptdom-analysis' = [ord
 $mcpConfig | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage '.mcp.json') -Encoding utf8NoBOM
 Copy-Item -LiteralPath (Join-Path $repo 'claude-plugin/skills') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'README.md') -Destination $stage
-Copy-Item -LiteralPath (Join-Path $repo 'docs') -Destination $stage -Recurse
+$runtimeDocs = Join-Path $stage 'docs'
+New-Item -ItemType Directory -Path $runtimeDocs | Out-Null
+# Maintainer rubrics, reviewed answers and implementation plans must not enter a participant plugin.
+foreach ($entry in Get-ChildItem -LiteralPath (Join-Path $repo 'docs') -Force) {
+    if ($entry.Name -in @('evaluation', 'evidence', 'plans')) { continue }
+    Copy-Item -LiteralPath $entry.FullName -Destination $runtimeDocs -Recurse
+}
 Copy-Item -LiteralPath (Join-Path $repo 'samples') -Destination $stage -Recurse
 New-Item -ItemType Directory -Path (Join-Path $stage 'evaluation') | Out-Null
 Copy-Item -LiteralPath (Join-Path $repo 'scripts/evaluate-understanding.py') -Destination (Join-Path $stage 'evaluation')

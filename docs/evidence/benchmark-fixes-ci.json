@@ -1,0 +1,202 @@
+{
+  "format": "sqlscriptdom-benchmark-fixes-release-v1",
+  "plugin_version": "0.16.0",
+  "package_source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+  "native_ci": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39070924405",
+    "headSha": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "native_jobs": [
+    {
+      "name": "sqlserver",
+      "conclusion": "success"
+    },
+    {
+      "name": "packages (ubuntu-latest, linux-x64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "packages (macos-15, osx-arm64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "packages (macos-15-intel, osx-x64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "offline (windows-latest)",
+      "conclusion": "success"
+    },
+    {
+      "name": "offline (macos-latest)",
+      "conclusion": "success"
+    },
+    {
+      "name": "packages (windows-latest, win-x64)",
+      "conclusion": "success"
+    },
+    {
+      "name": "offline (ubuntu-latest)",
+      "conclusion": "success"
+    },
+    {
+      "name": "catalog",
+      "conclusion": "success"
+    }
+  ],
+  "archives": [
+    {
+      "name": "sqlscriptdom-lsp-0.16.0-linux-x64.zip",
+      "runtime": "linux-x64",
+      "sha256": "3271360dbb23b8dc8c4b9e3dc42f795e09fa24846722356972ee9e296201ae1b",
+      "source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+      "dirty_source": false,
+      "self_contained": true,
+      "maintainer_gold_excluded": true,
+      "unix_modes": {
+        "server/sqlscriptdom-lsp": "0o100755",
+        "mcp/sqlscriptdom-mcp": "0o100755"
+      }
+    },
+    {
+      "name": "sqlscriptdom-lsp-0.16.0-osx-arm64.zip",
+      "runtime": "osx-arm64",
+      "sha256": "1fc55449ccd52f13135d9c0dc57132af341357d2618a6ea060af42f647b9cf9e",
+      "source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+      "dirty_source": false,
+      "self_contained": true,
+      "maintainer_gold_excluded": true,
+      "unix_modes": {
+        "server/sqlscriptdom-lsp": "0o100755",
+        "mcp/sqlscriptdom-mcp": "0o100755"
+      }
+    },
+    {
+      "name": "sqlscriptdom-lsp-0.16.0-osx-x64.zip",
+      "runtime": "osx-x64",
+      "sha256": "89ba8002b15e40d3df8d22dda8c28d62af957a71dd06bdd34a7c2c0c4fd7710d",
+      "source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+      "dirty_source": false,
+      "self_contained": true,
+      "maintainer_gold_excluded": true,
+      "unix_modes": {
+        "server/sqlscriptdom-lsp": "0o100755",
+        "mcp/sqlscriptdom-mcp": "0o100755"
+      }
+    },
+    {
+      "name": "sqlscriptdom-lsp-0.16.0-win-x64.zip",
+      "runtime": "win-x64",
+      "sha256": "990588c2a8a6b0c1fabd0a2223a5019b5d256b4ac0b35a892f49cd3ae95f5e9b",
+      "source_commit": "2b37f30195ad0276e69c7a9d255e99cc3826495f",
+      "dirty_source": false,
+      "self_contained": true,
+      "maintainer_gold_excluded": true,
+      "unix_modes": {}
+    }
+  ],
+  "published_assets": [
+    {
+      "digest": "sha256:3271360dbb23b8dc8c4b9e3dc42f795e09fa24846722356972ee9e296201ae1b",
+      "name": "sqlscriptdom-lsp-0.16.0-linux-x64.zip",
+      "size": 90751864
+    },
+    {
+      "digest": "sha256:c112aee2866dc8f74e952799d0fbf5bf8d6c43a882322a9e4fb301ad2965748a",
+      "name": "sqlscriptdom-lsp-0.16.0-linux-x64.zip.sha256",
+      "size": 104
+    },
+    {
+      "digest": "sha256:1fc55449ccd52f13135d9c0dc57132af341357d2618a6ea060af42f647b9cf9e",
+      "name": "sqlscriptdom-lsp-0.16.0-osx-arm64.zip",
+      "size": 83930577
+    },
+    {
+      "digest": "sha256:101c87718dd40b4a823c15821344b2c12285505114a13672e526c44b8b8e560d",
+      "name": "sqlscriptdom-lsp-0.16.0-osx-arm64.zip.sha256",
+      "size": 104
+    },
+    {
+      "digest": "sha256:89ba8002b15e40d3df8d22dda8c28d62af957a71dd06bdd34a7c2c0c4fd7710d",
+      "name": "sqlscriptdom-lsp-0.16.0-osx-x64.zip",
+      "size": 88647925
+    },
+    {
+      "digest": "sha256:9787f40d04082e15555ee904f4310c9acc55823da31e7c92b4eac8983c321703",
+      "name": "sqlscriptdom-lsp-0.16.0-osx-x64.zip.sha256",
+      "size": 102
+    },
+    {
+      "digest": "sha256:990588c2a8a6b0c1fabd0a2223a5019b5d256b4ac0b35a892f49cd3ae95f5e9b",
+      "name": "sqlscriptdom-lsp-0.16.0-win-x64.zip",
+      "size": 91313855
+    },
+    {
+      "digest": "sha256:99f1f404896ec8c557e1cdf1be666f3cb9bdeb52414f5fd189e9e5613a7634ce",
+      "name": "sqlscriptdom-lsp-0.16.0-win-x64.zip.sha256",
+      "size": 103
+    }
+  ],
+  "all_eight_published_digests_match_ci_files": true,
+  "marketplace_install": {
+    "status": "completed",
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39072798294",
+    "catalog_commit": "0b31361cc803d2c3df35374a456659655d9b7e06",
+    "source_kind": "HTTPS candidate catalog, exact public GitHub release archives; isolated Claude configuration; no model calls",
+    "conclusion": "success",
+    "head_sha": "0b31361cc803d2c3df35374a456659655d9b7e06",
+    "jobs": [
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      }
+    ],
+    "claude_cli": "2.1.224",
+    "strict_validation": true,
+    "installed_manifest_and_build_identity_verified": true,
+    "mac_executable_modes_preserved_without_repair": true,
+    "model_calls": 0
+  },
+  "tests": {
+    "windows_default": {
+      "passed": 329,
+      "skipped": 18
+    },
+    "unix_default": {
+      "passed": 332,
+      "skipped": 15
+    },
+    "sql_server_disposable": {
+      "passed": 43,
+      "skipped": 0
+    },
+    "python": {
+      "total": 32,
+      "windows_skipped": 1
+    },
+    "dependency_locks_changed": false,
+    "new_nuget_dependencies": false,
+    "dependency_audit": "No vulnerable packages reported; retained local audit artifacts/dependency-audit-fixes.json."
+  },
+  "rollout": {
+    "release_url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.16.0",
+    "prerelease": true,
+    "main_catalog_promoted": false,
+    "global_user_plugin_modified": false
+  },
+  "measurement": "Final clean 48-session matched result and 20 native restart trials retained separately. Speed/input and quality targets unmet; no overall Grep advantage claimed."
+}

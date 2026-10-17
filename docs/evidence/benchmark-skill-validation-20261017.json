@@ -1,0 +1,23 @@
+{
+  "format": "sqlscriptdom-benchmark-skill-validation-v1",
+  "date": "2026-10-17",
+  "python_tests": {
+    "passed": 24,
+    "skipped": 1,
+    "skip_reason": "Windows host does not allow symbolic-link fixture creation"
+  },
+  "skill_frontmatter_validation": "passed (repository and installed Codex copy)",
+  "claude_project_skill_validation": "passed: claude plugin validate .claude/skills",
+  "preflight_and_preparation": "passed with existing native Windows x64 0.14.0 artifact",
+  "copied_sql_files": 1099,
+  "corpus_sha256": "24023744adea38b138dd041e5134a66f5ac4fa211060f0ba6976e15aeebc00d7",
+  "candidate_fingerprint": "bf3b140191f7e870a86d32f32a7733c19a48677cb3b989a0d707fa726f03c328",
+  "dry_run": "passed; no model process launched",
+  "report_replay": "passed using original retained sessions and their existing reviews; not a new candidate benchmark",
+  "historical_dimensions_match_in_replay": true,
+  "original_aggregate_unchanged": true,
+  "new_model_calls": 0,
+  "evidence_directory": "artifacts/benchmark-skill-check-20261017-final",
+  "repository_skill": ".claude/skills/benchmark-sql-plugin/SKILL.md",
+  "improvement_plan": "docs/plans/benchmark-driven-improvement-plan.md"
+}

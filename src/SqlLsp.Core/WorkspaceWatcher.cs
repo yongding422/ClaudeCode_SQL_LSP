@@ -51,6 +51,7 @@ public sealed class WorkspaceWatcher : IAsyncDisposable
         var folder = new Uri(Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar);
         if (Directory.Exists(path) || documents.Index.Any(d => d.Uri.IsFile && folder.IsBaseOf(d.Uri)))
             events.Writer.TryWrite(null);
+        else if (string.Equals(Path.GetExtension(path), ".sqlproj", StringComparison.OrdinalIgnoreCase)) events.Writer.TryWrite(null);
         else if (string.Equals(Path.GetExtension(path), ".sql", StringComparison.OrdinalIgnoreCase)) events.Writer.TryWrite(uri);
     }
 

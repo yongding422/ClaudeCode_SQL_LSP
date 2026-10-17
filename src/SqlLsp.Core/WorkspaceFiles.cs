@@ -2,12 +2,19 @@ using System.Buffers;
 
 namespace SqlLsp.Core;
 
+public sealed record WorkspaceReadResult(string Status, string? Text, long Bytes, string? Encoding, double ReadMs, long ReadBytes = 0, string? ContentHash = null);
+
 public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
+    public System.Collections.Immutable.ImmutableArray<OfflineProjectScope> ProjectScopes { get; init; } = [];
+    public bool AutoDetectProjects { get; init; } = true;
     public void Validate()
     {
         if (MaxFileSizeBytes is < 1 or > 16_777_216)
             throw new ArgumentException("maxFileSizeBytes must be between 1 and 16777216.");
+        if (ProjectScopes.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != ProjectScopes.Length ||
+            ProjectScopes.Any(s => string.IsNullOrWhiteSpace(s.Id) || !s.Root.IsFile || s.Root.Query.Length != 0 || s.Root.Fragment.Length != 0))
+            throw new ArgumentException("Project scopes require unique IDs and absolute physical directory URIs.");
     }
 }
 
@@ -16,15 +23,23 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.OrdinalIgnoreCase)
         { "bin", "obj", "node_modules", ".git" };
     private readonly List<string> roots = new();
+    public WorkspaceContexts Contexts { get; } = new(options.ProjectScopes, options.AutoDetectProjects);
     public IReadOnlyList<string> Roots => roots;
+    public bool CanScope(Uri uri) => uri.IsFile && Directory.Exists(uri.LocalPath) &&
+        roots.Any(root => IsContained(root, uri.LocalPath)) && !HasLinkedAncestor(uri.LocalPath) && CanTraverse(uri);
     public string ContextId(Uri uri)
     {
         if (!uri.IsFile) return uri.AbsoluteUri;
         var root = uri.IsFile ? roots.Where(r => IsContained(r, uri.LocalPath)).OrderByDescending(r => r.Length).FirstOrDefault() : null;
-        return root == null ? new Uri(uri, ".").AbsoluteUri : new Uri(root).AbsoluteUri;
+        var fallback = root == null ? new Uri(uri, ".").AbsoluteUri : new Uri(root).AbsoluteUri;
+        return Contexts.Describe(uri, fallback).Id;
     }
 
-    public IEnumerable<Uri> EnumerateUris() => roots.Where(Directory.Exists).SelectMany(Enumerate).Distinct().ToArray();
+    public IEnumerable<Uri> EnumerateUris()
+    {
+        Contexts.Configure(roots.Where(Directory.Exists).SelectMany(r => Enumerate(r, ".sqlproj")));
+        return roots.Where(Directory.Exists).SelectMany(r => Enumerate(r)).Distinct().ToArray();
+    }
 
     public bool CanTraverse(Uri uri) => uri.IsFile && roots.Any(root => IsContained(root, uri.LocalPath) &&
         !Path.GetRelativePath(root, uri.LocalPath).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(ExcludedDirectories.Contains));
@@ -44,12 +59,14 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
             var path = Path.GetFullPath(uri.LocalPath);
             if (Directory.Exists(path) && !HasLinkedAncestor(path)) roots.Add(path);
         }
-        return roots.SelectMany(Enumerate).Distinct().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
+        if (options.ProjectScopes.Any(s => !roots.Any(root => IsContained(root, s.Root.LocalPath)) || HasLinkedAncestor(s.Root.LocalPath)))
+            throw new ArgumentException("Project scopes must remain in initialized physical workspace roots.");
+        return EnumerateUris().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
     }
 
     public bool CanRead(Uri uri)
     {
-        if (!uri.IsFile || !string.Equals(Path.GetExtension(uri.LocalPath), ".sql", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!uri.IsFile || !string.Equals(Path.GetExtension(uri.LocalPath), ".sql", StringComparison.OrdinalIgnoreCase) || !Contexts.Included(uri)) return false;
         var path = Path.GetFullPath(uri.LocalPath);
         foreach (var root in roots)
         {
@@ -69,14 +86,21 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         return false;
     }
 
-    public async Task<string?> ReadAsync(Uri uri, CancellationToken token)
+    public async Task<string?> ReadAsync(Uri uri, CancellationToken token) => (await ReadWithStatusAsync(uri, token)).Text;
+
+    public async Task<WorkspaceReadResult> ReadWithStatusAsync(Uri uri, CancellationToken token)
     {
-        if (!CanRead(uri)) return null;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        long length = 0;
+        long readBytes = 0;
+        WorkspaceReadResult Excluded(string status) => new(status, null, length, null, timer.Elapsed.TotalMilliseconds, readBytes);
+        if (!CanRead(uri)) return Excluded("ExcludedPolicy");
         try
         {
             await using var stream = new FileStream(uri.LocalPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete,
                 4096, FileOptions.Asynchronous);
-            if (stream.Length > options.MaxFileSizeBytes) return null;
+            length = stream.Length;
+            if (stream.Length > options.MaxFileSizeBytes) return Excluded("ExcludedSize");
             // Bounded read even if a file grows after opening.
             using var contents = new MemoryStream((int)stream.Length);
             var bytes = ArrayPool<byte>.Shared.Rent((int)Math.Min(65_536, Math.Max(1, stream.Length + 1)));
@@ -86,21 +110,26 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                 {
                     var remaining = options.MaxFileSizeBytes + 1 - (int)contents.Length;
                     var count = await stream.ReadAsync(bytes.AsMemory(0, Math.Min(bytes.Length, remaining)), token);
+                    readBytes += count;
                     if (count == 0) break;
-                    if (contents.Length + count > options.MaxFileSizeBytes) return null;
+                    if (contents.Length + count > options.MaxFileSizeBytes) return Excluded("ExcludedSize");
                     contents.Write(bytes, 0, count);
                 }
             }
             finally { ArrayPool<byte>.Shared.Return(bytes, clearArray: true); }
             contents.Position = 0;
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(contents.GetBuffer().AsSpan(0, (int)contents.Length)));
             using var reader = new StreamReader(contents, detectEncodingFromByteOrderMarks: true);
-            return await reader.ReadToEndAsync(token);
+            var text = await reader.ReadToEndAsync(token);
+            return new("Read", text, contents.Length, reader.CurrentEncoding.WebName, timer.Elapsed.TotalMilliseconds, readBytes, hash);
         }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        catch (FileNotFoundException) { return Excluded("Deleted"); }
+        catch (DirectoryNotFoundException) { return Excluded("Deleted"); }
+        catch (IOException) { return Excluded("Unreadable"); }
+        catch (UnauthorizedAccessException) { return Excluded("Unreadable"); }
     }
 
-    private static IEnumerable<Uri> Enumerate(string root)
+    private static IEnumerable<Uri> Enumerate(string root, string extension = ".sql")
     {
         var pending = new Stack<string>();
         pending.Push(root);
@@ -118,7 +147,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
                 {
                     if (!ExcludedDirectories.Contains(Path.GetFileName(entry))) pending.Push(entry);
                 }
-                else if (string.Equals(Path.GetExtension(entry), ".sql", StringComparison.OrdinalIgnoreCase)) yield return new Uri(entry);
+                else if (string.Equals(Path.GetExtension(entry), extension, StringComparison.OrdinalIgnoreCase)) yield return new Uri(entry);
             }
         }
     }

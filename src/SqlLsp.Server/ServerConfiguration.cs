@@ -27,6 +27,17 @@ public sealed record ServerConfiguration(ParserOptions Parser, WorkspaceOptions 
             throw new RpcErrorException(-32602, new { retry = false }, "Invalid initializationOptions: " + string.Join("; ", failures));
         }
         var config = options as JObject;
+        var scopes = (config?["workspace"]?["projectScopes"] as JArray ?? []).OfType<JObject>().Select(s =>
+        {
+            if (!Uri.TryCreate(s["root"]!.Value<string>(), UriKind.Absolute, out var root) || !root.IsFile || root.Query.Length != 0 || root.Fragment.Length != 0)
+                throw Invalid("projectScopes requires physical absolute directory URIs");
+            string[]? Patterns(string key) => (s[key] as JArray)?.Values<string>().Select(p => p!).ToArray();
+            return new OfflineProjectScope(s["id"]!.Value<string>()!, root, s["database"]?.Value<string>(), s["defaultSchema"]?.Value<string>(),
+                s["caseSensitive"]?.Value<bool>(), Patterns("include"), Patterns("exclude"), Patterns("references"));
+        }).ToImmutableArray();
+        if (scopes.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != scopes.Length ||
+            scopes.Any(s => s.References?.Any(r => !scopes.Any(p => p.Id == r)) == true))
+            throw Invalid("projectScopes requires unique IDs and references to configured scope IDs");
         var mode = config?["sql"]?["mode"]?.Value<string>() ?? "offline";
         var profiles = (config?["databases"] as JArray ?? []).OfType<JObject>().Select(p => new SqlServerProfile(
             p["id"]!.Value<string>()!, p["connectionStringEnv"]!.Value<string>()!, p["environment"]!.Value<string>()!,
@@ -70,7 +81,11 @@ public sealed record ServerConfiguration(ParserOptions Parser, WorkspaceOptions 
         return new ServerConfiguration(
             new ParserOptions(config?["sql"]?["parserVersion"]?.Value<string>() ?? "170",
                 config?["sql"]?["quotedIdentifier"]?.Value<bool>() ?? true),
-            new WorkspaceOptions(config?["workspace"]?["maxFileSizeBytes"]?.Value<int>() ?? 2_097_152),
+            new WorkspaceOptions(config?["workspace"]?["maxFileSizeBytes"]?.Value<int>() ?? 2_097_152)
+            {
+                AutoDetectProjects = config?["workspace"]?["autoDetectProjects"]?.Value<bool>() ?? true,
+                ProjectScopes = scopes
+            },
             new ResolutionOptions(config?["resolution"]?["caseSensitive"]?.Value<bool>() ?? true,
                 config?["resolution"]?["defaultSchema"]?.Value<string>(), config?["resolution"]?["defaultDatabase"]?.Value<string>()),
             mode, config?["workspace"]?["scanInOnline"]?.Value<bool>() ?? false, selected, profiles.ToImmutableArray(), mappings,

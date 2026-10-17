@@ -14,7 +14,11 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     private readonly Dictionary<Uri, DocumentSnapshot> disk = new();
     private readonly Dictionary<Uri, DocumentSnapshot> index = new();
     private readonly Dictionary<Uri, DiskWork> diskWork = new();
+    private readonly Dictionary<Uri, WorkspaceFileCoverage> coverage = new();
+    private long readBytes, parseAttempts;
+    private double enumerationMs, readMs, parseMs;
     private readonly List<Task> work = new();
+    private ImmutableArray<DocumentSnapshot> published = [];
     private readonly CancellationTokenSource lifetime = new();
     private bool disposed;
     public event Action<DiagnosticPublication>? Diagnostics;
@@ -22,18 +26,55 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
 
     public int PendingDiskReadCount { get { lock (gate) return diskWork.Count; } }
 
+    public WorkspaceCoverage Coverage
+    {
+        get
+        {
+            lock (gate)
+            {
+                int Count(string status) => coverage.Values.Count(f => f.Status == status);
+                return new(coverage.Count, Count("Indexed"), coverage.Values.Count(f => f.ParseErrors > 0),
+                    coverage.Values.Sum(f => f.ParseErrors), Count("ExcludedSize"), Count("ExcludedPolicy"),
+                    Count("Unreadable"), Count("Failed"), Count("Deleted"), Count("Pending"), readBytes, parseAttempts,
+                    enumerationMs, readMs, parseMs);
+            }
+        }
+    }
+
+    public WorkspaceFileCoverage[] CoverageFiles(int offset = 0, int limit = 100, Uri? uri = null)
+    {
+        if (offset < 0 || limit is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(limit));
+        lock (gate) return coverage.Values.Where(f => uri == null || f.Uri == uri).OrderBy(f => f.Uri.AbsoluteUri, StringComparer.Ordinal).Skip(offset).Take(limit).ToArray();
+    }
+    public ImmutableArray<WorkspaceFileCoverage> CoverageSnapshot()
+    {
+        lock (gate) return coverage.Values.OrderBy(f => f.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+    }
+
     public ImmutableArray<DocumentSnapshot> Index
     {
-        get { lock (gate) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray(); }
+        get { lock (gate) return PublishIndex(); }
+    }
+
+    // Preserve the immutable array identity while all document objects remain the same.
+    private ImmutableArray<DocumentSnapshot> PublishIndex()
+    {
+        if (published.Length != index.Count || published.Any(d => !ReferenceEquals(index.GetValueOrDefault(d.Uri), d)))
+            published = index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+        return published;
     }
 
     public async Task InitializeAsync(IEnumerable<Uri> roots, CancellationToken token)
     {
-        foreach (var uri in files.Configure(roots))
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var uris = files.Configure(roots).ToArray();
+        lock (gate)
         {
-            token.ThrowIfCancellationRequested();
-            await RefreshAsync(uri, token);
+            enumerationMs += timer.Elapsed.TotalMilliseconds;
+            foreach (var uri in uris) coverage[uri] = new(uri, "Pending");
         }
+        await Parallel.ForEachAsync(uris, new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4), CancellationToken = token },
+            async (uri, cancellation) => await RefreshAsync(uri, cancellation));
     }
 
     public bool Open(Uri uri, int version, string text)
@@ -98,7 +139,7 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             {
                 pending = overlays.Values.Select(o => o.Pending).Concat(diskWork.Where(d => !overlays.ContainsKey(d.Key)).Select(d => d.Value.Pending))
                     .OfType<Task>().Where(t => !t.IsCompleted).ToArray();
-                if (pending.Length == 0) return index.Values.OrderBy(s => s.Uri.AbsoluteUri, StringComparer.Ordinal).ToImmutableArray();
+                if (pending.Length == 0) return PublishIndex();
             }
             await Task.WhenAll(pending).WaitAsync(token);
         }
@@ -112,15 +153,47 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             if (diskWork.TryGetValue(uri, out var previous) && !previous.Completed) previous.Cancellation.Cancel();
             var job = new DiskWork(CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, token));
             diskWork[uri] = job;
+            coverage[uri] = new(uri, "Pending");
             if (!overlays.ContainsKey(uri)) index.Remove(uri);
             job.Pending = Task.Run(async () =>
             {
+                WorkspaceReadResult? read = null;
                 try
                 {
-                    var snapshot = await LoadDiskAsync(uri, job.Cancellation.Token);
+                    read = await files.ReadWithStatusAsync(uri, job.Cancellation.Token);
+                    DocumentSnapshot? snapshot = null;
+                    var timer = System.Diagnostics.Stopwatch.StartNew();
+                    var parsed = false;
+                    try
+                    {
+                        if (read.Text != null)
+                        {
+                            // Verify decoded contents, not size/mtime. Reconciliation still reads every file,
+                            // but an unchanged source keeps its immutable AST and semantic extraction.
+                            lock (gate) snapshot = disk.GetValueOrDefault(uri);
+                            if (snapshot?.Parse.Source.Text != read.Text)
+                            {
+                                lock (gate) parseAttempts++;
+                                parsed = true;
+                                snapshot = new(uri, null, SqlSourceKind.Workspace,
+                                    await parser.ParseAsync(new SourceText(read.Text), job.Cancellation.Token));
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        lock (gate)
+                        {
+                            readBytes += read.ReadBytes;
+                            readMs += read.ReadMs;
+                            if (parsed) parseMs += timer.Elapsed.TotalMilliseconds;
+                        }
+                    }
                     lock (gate)
                     {
                         if (!ReferenceEquals(diskWork.GetValueOrDefault(uri), job) || job.Cancellation.IsCancellationRequested) return;
+                        coverage[uri] = new(uri, snapshot == null ? read.Status : "Indexed", read.Bytes, read.Encoding,
+                            snapshot?.Parse.Diagnostics.Length ?? 0);
                         if (snapshot == null) disk.Remove(uri); else disk[uri] = snapshot;
                         if (!overlays.ContainsKey(uri))
                         {
@@ -128,8 +201,22 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
                         }
                     }
                 }
-                catch (OperationCanceledException) { }
-                catch (Exception) { Fault?.Invoke("Workspace parsing failed; source and details suppressed."); }
+                catch (OperationCanceledException)
+                {
+                    lock (gate)
+                        if (ReferenceEquals(diskWork.GetValueOrDefault(uri), job)) coverage[uri] = new(uri, "Pending");
+                }
+                catch (Exception error)
+                {
+                    lock (gate)
+                        if (ReferenceEquals(diskWork.GetValueOrDefault(uri), job))
+                        {
+                            disk.Remove(uri);
+                            if (!overlays.ContainsKey(uri)) index.Remove(uri);
+                            coverage[uri] = new(uri, "Failed", read?.Bytes ?? 0, read?.Encoding, FailureKind: error.GetType().Name);
+                        }
+                    Fault?.Invoke("Workspace parsing failed; source and details suppressed.");
+                }
                 finally
                 {
                     lock (gate)
@@ -150,11 +237,9 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
     {
         Uri[] known;
         lock (gate) known = disk.Keys.Concat(diskWork.Keys).ToArray();
-        foreach (var uri in files.EnumerateUris().Concat(known).Distinct())
-        {
-            token.ThrowIfCancellationRequested();
-            await RefreshAsync(uri, token);
-        }
+        await Parallel.ForEachAsync(files.EnumerateUris().Concat(known).Distinct(),
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 4), CancellationToken = token },
+            async (uri, cancellation) => await RefreshAsync(uri, cancellation));
     }
 
     private void Begin(Uri uri, int version, SourceText source)
@@ -194,13 +279,6 @@ public sealed class DocumentStore(ISqlParser parser, WorkspaceFiles files, Works
             Diagnostics?.Invoke(new DiagnosticPublication(uri, version, []));
             Fault?.Invoke("Document exceeds maxFileSizeBytes; analysis excluded.");
         }
-    }
-
-    private async Task<DocumentSnapshot?> LoadDiskAsync(Uri uri, CancellationToken token)
-    {
-        var text = await files.ReadAsync(uri, token);
-        return text == null ? null : new DocumentSnapshot(uri, null, SqlSourceKind.Workspace,
-            await parser.ParseAsync(new SourceText(text), token));
     }
 
     private static void Cancel(Overlay overlay)

@@ -177,6 +177,28 @@ public class ProcedureAnalysisTests
         Assert.Contains(module.Issues, i => i.Code == "fact-limit");
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(1005)]
+    public async Task Failed_analysis_scopes_parse_issues_before_applying_the_fact_limit(int selectedErrors)
+    {
+        var parser = new SqlParser(new());
+        var noise = new DocumentSnapshot(new("file:///project/a.sql"), null, SqlSourceKind.Workspace,
+            await parser.ParseAsync(new SourceText(string.Concat(Enumerable.Repeat("SELECT FROM;\nGO\n", 1100))), CancellationToken.None));
+        var selected = new DocumentSnapshot(new("file:///project/z.sql"), null, SqlSourceKind.Workspace,
+            await parser.ParseAsync(new SourceText(string.Concat(Enumerable.Repeat("SELECT FROM;\nGO\n", selectedErrors))), CancellationToken.None));
+        Assert.True(noise.Parse.Diagnostics.Length > 1000);
+        var index = new SqlNavigationIndex([noise, selected], _ => "project", new());
+        var report = index.AnalyzeProcedure(selected.Uri, new(0, 0), CancellationToken.None);
+        Assert.Empty(report.Modules);
+        var errors = report.ExpansionIssues.Where(i => i.Code == "parse-error").ToArray();
+        Assert.Equal(Math.Min(1000, selected.Parse.Diagnostics.Length), errors.Length);
+        Assert.All(errors, issue => Assert.Equal(selected.Uri, issue.Location!.Uri));
+        Assert.Equal(selected.Parse.Diagnostics.Length > 1000, report.ExpansionIssues.Any(i => i.Code == "parse-issue-limit"));
+        // All details remain recoverable from the explicitly scoped discovery page.
+        Assert.Equal(selected.Parse.Diagnostics.Length, index.ParseIssuePage(selected.Uri, 0, int.MaxValue, CancellationToken.None).Count());
+    }
+
     [Fact]
     public async Task Duplicate_local_creations_do_not_attach_to_an_earlier_declaration_on_the_same_line()
     {

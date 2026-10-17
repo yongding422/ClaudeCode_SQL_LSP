@@ -1,0 +1,10 @@
+{
+  "mode": "Framework-dependent actual MCP stdio server; same process; no model or SQL execution",
+  "raw_probe": "artifacts/r0-coverage-probe/r3a-live.json",
+  "requests": 5,
+  "elapsed_ms": [10628.21, 15.79, 41.25, 9.68, 11.02],
+  "parse_attempts": [1099, 1099, 1099, 1099, 1099],
+  "indexed_documents": 1099,
+  "interpretation": "Unchanged startup reconciliation and subsequent requests reused ASTs; live-process discovery is fast on this probe. Cold startup has not demonstrated improvement.",
+  "limits": "One exploratory probe, concurrent benchmark/test load, no independent accuracy review or native restart comparison. Not a p95 estimate or a model/token advantage. Raw artifact fingerprints the tested assembly; a subsequent discovery metadata optimization is tested separately."
+}
