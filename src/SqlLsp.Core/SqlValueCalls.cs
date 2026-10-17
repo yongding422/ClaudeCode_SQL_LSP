@@ -119,7 +119,7 @@ public sealed partial class SqlNavigationIndex
 {
     private SqlValueSignature ValueSignature(DocumentSnapshot caller, ExecuteSpecification execute, CancellationToken token)
     {
-        var rules = options.Comparer;
+        var rules = Rules(caller.Uri).Comparer;
         SqlValueSignature Fail(string error, SqlNavigationTarget? target = null) => new(target, null, null, null, [], rules, error);
         if (execute.ExecutableEntity is not ExecutableProcedureReference procedure || procedure.ProcedureReference?.ProcedureReference?.Name is not { } name ||
             execute.LinkedServer != null || procedure.AdHocDataSource != null || procedure.ProcedureReference.ProcedureReference.Number != null)
@@ -140,7 +140,7 @@ public sealed partial class SqlNavigationIndex
         var finder = new AnalysisBodyFinder(source.Parse.Source, symbol.Declaration.Range); source.Parse.Ast.Accept(finder);
         if (finder.Body is not ProcedureStatementBodyBase routine || routine is FunctionStatementBody || source.Parse.Diagnostics.Length != 0)
             return Fail("Original parsed procedure signature is unavailable or has parse errors; metadata display text is not used as a signature.", target);
-        var comparer = (hybrid?.RulesFor(symbol.Identity.SourceContextId, options) ?? options).Comparer;
+        var comparer = Rules(symbol.Target.Uri).Comparer;
         if (routine.Parameters.Count > 64) return Fail("Signature exceeds the 64-parameter binding limit.", target) with { Limited = true };
         if (routine.Parameters.Select(p => p.VariableName.Value).Distinct(comparer).Count() != routine.Parameters.Count)
             return Fail("Duplicate formal parameter names prevent a unique binding.", target);

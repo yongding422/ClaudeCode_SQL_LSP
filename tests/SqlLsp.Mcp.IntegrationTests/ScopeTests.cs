@@ -49,8 +49,8 @@ public class ScopeTests
             } }
         });
         await using var client = await McpClient.Start("SELECT 1;", config, rootDirectory: root);
-        await File.WriteAllTextAsync(Path.Combine(root, "A", "caller.sql"), "CREATE PROC P AS BEGIN EXEC q; EXEC Second.dbo.Q; END;");
-        await File.WriteAllTextAsync(Path.Combine(root, "A", "q.sql"), "CREATE PROC dbo.Q AS SELECT 1;");
+        await File.WriteAllTextAsync(Path.Combine(root, "A", "caller.sql"), "CREATE PROC P AS BEGIN EXEC q @VALUE=1; EXEC Second.dbo.Q; END;");
+        await File.WriteAllTextAsync(Path.Combine(root, "A", "q.sql"), "CREATE PROC dbo.Q @value int AS SELECT @value;");
         await File.WriteAllTextAsync(Path.Combine(root, "A", "excluded.sql"), "CREATE PROC dbo.Hidden AS SELECT 1;");
         await File.WriteAllTextAsync(Path.Combine(root, "B", "q.sql"), "CREATE PROC dbo.Q AS SELECT 2;");
         var discovery = McpClient.Data(await client.Tool("find_procedures", new { scopeId = "a" }));
@@ -62,5 +62,7 @@ public class ScopeTests
         Assert.All(calls.EnumerateArray(), c => Assert.Equal("Resolved", c.GetProperty("status").GetString()));
         Assert.Equal("First", calls[0].GetProperty("target").GetProperty("identity").GetProperty("database").GetString());
         Assert.Equal("Second", calls[1].GetProperty("target").GetProperty("identity").GetProperty("database").GetString());
+        Assert.All(analyzed.GetProperty("modules")[0].GetProperty("valueFlow").GetProperty("calls").EnumerateArray(),
+            c => Assert.Equal("Resolved", c.GetProperty("bindingStatus").GetString()));
     }
 }
