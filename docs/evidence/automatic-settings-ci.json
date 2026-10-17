@@ -1,0 +1,193 @@
+{
+  "pluginVersion": "0.14.0",
+  "packageSourceCommit": "24916c1a1b3f1bcde6ff7f50c3a9a90ff5c52c6e",
+  "packageDirtySource": false,
+  "nativeCi": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39044930760",
+    "headSha": "24916c1a1b3f1bcde6ff7f50c3a9a90ff5c52c6e",
+    "jobs": [
+      {
+        "name": "packages (windows-latest, win-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "sqlserver",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (macos-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "packages (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (ubuntu-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "offline (windows-latest)",
+        "conclusion": "success"
+      },
+      {
+        "name": "catalog",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "marketplaceInstall": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/39045608531",
+    "headSha": "eed7fcbc2bd2dc7fa7bebc9e253cf9ae264c701f",
+    "jobs": [
+      {
+        "name": "install (ubuntu-latest, linux-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15-intel, osx-x64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (macos-15, osx-arm64)",
+        "conclusion": "success"
+      },
+      {
+        "name": "install (windows-latest, win-x64)",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "automaticSettings": {
+    "time": "First normal MCP startup per workspace",
+    "file": ".sqlscriptdom.json",
+    "hooksAdded": false,
+    "featuresEnabledByStarter": false,
+    "existingFilesOverwritten": false,
+    "publication": "Complete temporary file, no-overwrite move, owned-temp cleanup",
+    "standaloneCommandsCreateFile": false,
+    "readOnlyWorkspace": "Generic stderr notice; server continues",
+    "newRealProcessCases": 7
+  },
+  "localDefaultSuite": {
+    "passed": 299,
+    "skipped": 18,
+    "core": 147,
+    "lsp": 60,
+    "mcp": 63,
+    "deterministicProvider": 29
+  },
+  "nativeDefaultSuites": {
+    "windowsPassed": 299,
+    "windowsSkipped": 18,
+    "unixPassed": 302,
+    "unixSkipped": 15
+  },
+  "nativeAndInstalledPackageChecks": {
+    "lspPassedPerPlatform": 60,
+    "windowsMcpPassed": 63,
+    "windowsMcpSkipped": 3,
+    "unixMcpPassed": 66,
+    "macExecutableModesRepaired": false,
+    "marketplaceCliVersion": "2.1.224",
+    "modelCallsMade": false
+  },
+  "ownedSqlServerCi": {
+    "passed": 43,
+    "liveCases": 14,
+    "externalServerUsed": false
+  },
+  "dependencies": {
+    "newNuGetDependencies": false,
+    "lockedRestore": "passed",
+    "buildWarnings": 0,
+    "formatVerification": "passed",
+    "audit": "No vulnerable packages reported in eight projects"
+  },
+  "existingInstalledUserServerDiscovery": {
+    "server": {
+      "name": "sqlscriptdom-analysis",
+      "version": "0.13.0"
+    },
+    "tools": [
+      "find_procedures",
+      "get_metrics",
+      "analyze_procedure"
+    ],
+    "metricsEnabled": true,
+    "observedInProcess": 0,
+    "scope": "Installed executable; actual initialization/tool discovery/get_metrics, no SQL or model calls"
+  },
+  "olderSessionReport": {
+    "reportedVersion": "0.6.1",
+    "actualInstalledVersionBeforeUpdate": "0.13.0",
+    "enabled": true,
+    "actualBundledMcpDiscovery": "All three tools returned; 12 procedure tests passed",
+    "limitation": "Direct executable verification does not update a running Claude session; restart required"
+  },
+  "release": {
+    "url": "https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.14.0",
+    "assetsMatchCiAndCatalog": true,
+    "assets": [
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-linux-x64.zip",
+        "sha256": "c61fbdf94874562a8d9ab128fdd82319a0e3d60c1322ef98990b8241a2935324",
+        "bytes": 90665995
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-linux-x64.zip.sha256",
+        "sha256": "24c4829807ee33e56a620fc9f219eb70af30a1b659cadcaa99430e9de846aefe",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-osx-arm64.zip",
+        "sha256": "5593f283a4fd86dd324ef54c13a70923fa65adab3ecb830450e7a5e5ad5c2a7c",
+        "bytes": 83844668
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-osx-arm64.zip.sha256",
+        "sha256": "0d526fb0b89006fbad66fe33d3a26ecdba6feebb4c826dec15b0ed770355db0c",
+        "bytes": 104
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-osx-x64.zip",
+        "sha256": "86c06921541d0d08e3b4a8b0425e26aaa1f562a663eb56ce9a632e580d723ea4",
+        "bytes": 88562078
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-osx-x64.zip.sha256",
+        "sha256": "85eff2713eb824d001355585529aa3ac18f1ebae5432bf6331678dcd23d63300",
+        "bytes": 102
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-win-x64.zip",
+        "sha256": "6c5ca3d31bc1afdac7845f4ab78970fcd7186a62591ac928311fdb42024b609d",
+        "bytes": 91227954
+      },
+      {
+        "name": "sqlscriptdom-lsp-0.14.0-win-x64.zip.sha256",
+        "sha256": "8b03fb765485c1263b25dc6824f7ed4bd7904cb68cd1fbb31743d95292f11016",
+        "bytes": 103
+      }
+    ]
+  },
+  "cancelledRedundantBuildRuns": [
+    "39045591194",
+    "39045608455"
+  ],
+  "limits": [
+    "Starter is created at workspace MCP startup, not global archive installation",
+    "Metrics/cache remain opt-in",
+    "No SQL analysis or model requests were performed for local installed-server discovery",
+    "Existing user plugin and recorded test data were not changed during metrics inspection",
+    "No performance or token-savings claim"
+  ]
+}

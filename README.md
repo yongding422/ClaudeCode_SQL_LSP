@@ -1,6 +1,6 @@
 # SqlScriptDOM LSP
 
-A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; general M6 editor work stays deferred.** Version 0.13.0 adds [project configuration](docs/plugin-settings.md) for [inspectable local metrics and comparison commands](docs/plugin-metrics.md) and [opt-in persistent JSON analysis reports](docs/persistent-analysis-cache.md), alongside [compact evidence reports, ready-to-cite source lines and shared MCP source state](docs/compact-reports.md). Reports include bounded value tracing, verified EXEC bindings, control maps and table footprints, supported by the explanation skill. Existing features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained packaging. See [procedure analysis and usage](docs/procedure-analysis.md), [the full specification](SqlScriptDOM_LSP_Implementation_Plan.md), and [release evidence](docs/milestones.md).
+A working T-SQL language server in C#/.NET for SQL code search and stored-procedure understanding. **M0–M5 are complete; general M6 editor work stays deferred.** Version 0.14.0 adds automatic starter [project configuration](docs/plugin-settings.md) for [inspectable local metrics and comparison commands](docs/plugin-metrics.md) and [opt-in persistent JSON analysis reports](docs/persistent-analysis-cache.md), alongside [compact evidence reports, ready-to-cite source lines and shared MCP source state](docs/compact-reports.md). Reports include bounded value tracing, verified EXEC bindings, control maps and table footprints, supported by the explanation skill. Existing features include stdio LSP lifecycle, incremental synchronization, SqlScriptDOM diagnostics, symbols, definition/references navigation, static incoming/outgoing call hierarchy, hover, workspace overlays, opt-in SQL Server metadata, mapped hybrid resolution, and self-contained packaging. See [procedure analysis and usage](docs/procedure-analysis.md), [the full specification](SqlScriptDOM_LSP_Implementation_Plan.md), and [release evidence](docs/milestones.md).
 
 [How the plugin works — workflow diagram](docs/plugin-workflow.md)
 
@@ -89,7 +89,7 @@ Build a self-contained package with PowerShell 7 and the pinned SDK. Supported p
 ./scripts/test-package.ps1 -Runtime win-x64
 ```
 
-Extract your local `artifacts/packages/sqlscriptdom-lsp-0.13.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
+Extract your local `artifacts/packages/sqlscriptdom-lsp-0.14.0-win-x64.zip` into a stable directory. It includes the .NET **10.0.13** runtime, so users need no .NET SDK/runtime installation. Launch a new Claude session from a SQL workspace with the extracted plugin's absolute path:
 
 ```powershell
 claude --plugin-dir 'C:/Tools/sqlscriptdom-lsp'
