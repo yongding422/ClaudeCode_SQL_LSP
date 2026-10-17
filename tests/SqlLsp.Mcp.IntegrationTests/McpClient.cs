@@ -34,13 +34,15 @@ internal sealed class McpClient : IAsyncDisposable
         });
     }
     public static async Task<McpClient> Start(string sql, string? configuration = null, string? cacheDirectory = null,
-        string? rootDirectory = null, bool preserveWorkspace = false, string? metricsDirectory = null, bool metricsViaEnvironment = false)
+        string? rootDirectory = null, bool preserveWorkspace = false, string? metricsDirectory = null, bool metricsViaEnvironment = false,
+        string? settingsFile = null)
     {
         var root = rootDirectory ?? Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         await File.WriteAllTextAsync(Path.Combine(root, "modules.sql"), sql);
         var info = Command(root);
         info.ArgumentList.Add("--stdio");
+        if (settingsFile != null) { info.ArgumentList.Add("--settings"); info.ArgumentList.Add(settingsFile); }
         if (cacheDirectory != null) { info.ArgumentList.Add("--cache-directory"); info.ArgumentList.Add(cacheDirectory); }
         if (metricsDirectory != null)
         {

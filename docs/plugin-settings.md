@@ -1,6 +1,8 @@
 # Configure local metrics and saved reports
 
-Starting with 0.13.0, create **`.sqlscriptdom.json` in the SQL project folder where you start Claude Code**:
+Starting with 0.14.0, the plugin automatically creates **`.sqlscriptdom.json` in the workspace where its MCP server first starts**. Install/update the plugin, then start a fresh Claude session from your SQL project folder. No hook or manual MCP registration is needed.
+
+The generated starter has `metrics.enabled=false` and `analysisCache.enabled=false`. To enable them, edit the file to:
 
 ```json
 {
@@ -16,7 +18,9 @@ Starting with 0.13.0, create **`.sqlscriptdom.json` in the SQL project folder wh
 }
 ```
 
-Start a fresh Claude session from that folder. This works with the marketplace plugin on Windows, macOS and Linux, without setting shell variables or editing the installed plugin. Ask Claude to analyze a procedure, then ask it to call `get_metrics` with `includePreviousSessions=true`.
+Restart Claude after editing the settings. This works with the marketplace plugin on Windows, macOS and Linux, without setting shell variables or editing the installed plugin. Ask Claude to analyze a procedure, then ask it to call `get_metrics` with `includePreviousSessions=true`. Version 0.13.0 supports the same file, but requires creating it manually.
+
+Creation happens on the first MCP server startup in each workspace, rather than during global plugin installation. Existing files retain their contents, formatting and modification time. Creation publishes complete JSON without replacing a file created concurrently. Read-only workspaces continue using current/default options if the starter cannot be written; a generic notice goes to stderr. No cache/metrics data directory is created by scaffolding alone.
 
 The [example file](../samples/sqlscriptdom.example.json) and [JSON Schema](plugin-settings.schema.json) are bundled with each package. An optional `$schema` field can identify the schema for your editor. The runtime uses its embedded schema and never fetches `$schema` URLs.
 
@@ -37,7 +41,7 @@ For each storage feature, precedence is:
 3. The selected settings file.
 4. Disabled.
 
-Existing directory flags/environment variables continue to require absolute paths and explicitly enable their feature, even if the file says `enabled=false`. Blank inherited environment variables are ignored. Settings are validated even when storage paths are overridden. Unknown/duplicate fields, unsupported versions, malformed JSON, invalid types, inaccessible files and files over 64 KiB fail startup with exit 1 and a generic stderr message; values are not echoed. A missing automatically discovered file is allowed. An explicitly requested missing file is an error. UTF-8 with or without a BOM is supported; comments/trailing commas are not.
+Existing directory flags/environment variables continue to require absolute paths and explicitly enable their feature, even if the file says `enabled=false`. Blank inherited environment variables are ignored. Settings are validated even when storage paths are overridden. Unknown/duplicate fields, unsupported versions, malformed JSON, invalid types, inaccessible files and files over 64 KiB fail startup with exit 1 and a generic stderr message; values are not echoed. A missing automatically discovered file uses disabled defaults and is scaffolded at normal server startup. Standalone summary/evaluation/prebuild commands do not scaffold it. An explicitly requested missing file is an error, and explicit `--settings` use does not generate an extra project file. UTF-8 with or without a BOM is supported; comments/trailing commas are not.
 
 This file configures **MCP local storage only**. SQL parsing, resolution and approved database profiles retain their existing explicit `--config` / `SQLLSP_MCP_CONFIG` [source options](configuration.schema.json). They cannot be supplied in `.sqlscriptdom.json`. The LSP process still receives its own client initialization options.
 

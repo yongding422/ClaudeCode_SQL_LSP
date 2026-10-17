@@ -10,6 +10,124 @@ public class PluginSettingsTests
     private const string Enabled = """{"version":1,"metrics":{"enabled":true,"directory":"local 中文/metrics"},"analysisCache":{"enabled":true,"directory":"local 中文/cache"}}""";
 
     [Fact]
+    public async Task First_project_start_creates_an_editable_starter_without_enabling_storage_or_initializing_sql()
+    {
+        await using var client = await McpClient.Start(Sql, "{\"sql\":{\"mode\":\"invalid\"}}");
+        var settings = Path.Combine(client.Root, ".sqlscriptdom.json");
+        Assert.True(File.Exists(settings));
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settings));
+        Assert.Equal(1, json.RootElement.GetProperty("version").GetInt32());
+        Assert.False(json.RootElement.GetProperty("metrics").GetProperty("enabled").GetBoolean());
+        Assert.False(json.RootElement.GetProperty("analysisCache").GetProperty("enabled").GetBoolean());
+        Assert.False((await Metrics(client)).GetProperty("enabled").GetBoolean());
+        Assert.False(Directory.Exists(Path.Combine(client.Root, ".sqlscriptdom")));
+        Assert.Empty(Directory.GetFiles(client.Root, ".sqlscriptdom-*.tmp"));
+    }
+
+    [Fact]
+    public async Task Startup_preserves_existing_file_bytes_and_modification_time()
+    {
+        var root = NewRoot();
+        try
+        {
+            await Settings(root, Enabled, new UTF8Encoding(true));
+            var file = Path.Combine(root, ".sqlscriptdom.json");
+            File.SetLastWriteTimeUtc(file, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            var stamp = File.GetLastWriteTimeUtc(file);
+            var bytes = await File.ReadAllBytesAsync(file);
+            await using var client = await McpClient.Start(Sql, rootDirectory: root, preserveWorkspace: true);
+            Assert.True((await Metrics(client)).GetProperty("enabled").GetBoolean());
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(file));
+            Assert.Equal(stamp, File.GetLastWriteTimeUtc(file));
+            Assert.Empty(Directory.GetFiles(root, ".sqlscriptdom-*.tmp"));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Concurrent_process_starts_publish_one_complete_starter_and_leave_no_temporary_files()
+    {
+        var root = NewRoot();
+        try
+        {
+            var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Run(root, ["--stdio"])));
+            Assert.All(results, result => { Assert.Equal(0, result.Code); Assert.Empty(result.Output); });
+            using var json = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, ".sqlscriptdom.json")));
+            Assert.False(json.RootElement.GetProperty("metrics").GetProperty("enabled").GetBoolean());
+            Assert.Empty(Directory.GetFiles(root, ".sqlscriptdom-*.tmp"));
+            await using var client = await McpClient.Start(Sql, rootDirectory: root, preserveWorkspace: true);
+            Assert.Equal("Disabled", (await Analyze(client)).GetProperty("cache").GetProperty("status").GetString());
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Explicit_settings_do_not_generate_an_additional_project_file()
+    {
+        var root = NewRoot();
+        try
+        {
+            var selected = Path.Combine(root, "selected"); Directory.CreateDirectory(selected);
+            var file = Path.Combine(selected, "options.json"); await File.WriteAllTextAsync(file, Enabled);
+            await using var client = await McpClient.Start(Sql, rootDirectory: root, preserveWorkspace: true, settingsFile: file);
+            Assert.True((await Metrics(client)).GetProperty("enabled").GetBoolean());
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Standalone_commands_do_not_generate_a_starter_file()
+    {
+        var root = NewRoot();
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(root, "p.sql"), Sql);
+            Assert.Equal(0, (await Run(root, ["--metrics-summary", "--metrics-directory", Path.Combine(root, "metrics")])).Code);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+            Assert.Equal(0, (await Run(root, ["--build-cache", "--cache-directory", Path.Combine(root, "cache")])).Code);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+            Assert.Equal(1, (await Run(root, ["--evaluation-summary", Path.Combine(root, "missing.csv")])).Code);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Implicit_stdio_start_creates_settings_only_in_the_selected_workspace()
+    {
+        var root = NewRoot();
+        try
+        {
+            var workspace = Path.Combine(root, "sql"); Directory.CreateDirectory(workspace);
+            Assert.Equal(0, (await Run(root, ["--workspace", workspace])).Code);
+            Assert.True(File.Exists(Path.Combine(workspace, ".sqlscriptdom.json")));
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+            Assert.Equal(1, (await Run(root, ["--stdio", "--metrics-summary"])).Code);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [UnixWritableSettingsFact]
+    public async Task Read_only_workspace_allows_server_start_without_creating_a_file()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var root = NewRoot();
+        var original = File.GetUnixFileMode(root);
+        try
+        {
+            File.SetUnixFileMode(root, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            var result = await Run(root, ["--stdio"]);
+            Assert.Equal(0, result.Code);
+            Assert.Contains("could not create starter settings", result.Error);
+            Assert.Empty(result.Output);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
+        }
+        finally { File.SetUnixFileMode(root, original); Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task Marketplace_stdio_discovers_project_settings_and_reuses_reports_and_metrics_after_restart()
     {
         var root = NewRoot();
@@ -80,6 +198,7 @@ public class PluginSettingsTests
             Assert.Equal("Disabled", (await Analyze(client)).GetProperty("cache").GetProperty("status").GetString());
             Assert.False(Directory.Exists(Path.Combine(root, "unused")));
             Assert.False(Directory.Exists(Path.Combine(root, ".sqlscriptdom")));
+            Assert.Equal(settings, await File.ReadAllTextAsync(Path.Combine(root, ".sqlscriptdom.json")));
         }
         finally { Directory.Delete(root, true); }
     }
@@ -159,6 +278,8 @@ public class PluginSettingsTests
             Assert.Empty(result.Output);
             Assert.Equal("SQL adapter command failed: invalid options/settings or unavailable sources/metrics.", result.Error.Trim());
             Assert.False(Directory.Exists(Path.Combine(root, ".sqlscriptdom")));
+            Assert.Equal(settings, await File.ReadAllTextAsync(Path.Combine(root, ".sqlscriptdom.json")));
+            Assert.Empty(Directory.GetFiles(root, ".sqlscriptdom-*.tmp"));
         }
         finally { Directory.Delete(root, true); }
     }
@@ -173,6 +294,7 @@ public class PluginSettingsTests
             Assert.Equal(1, (await Run(root, ["--stdio"])).Code);
             File.Delete(Path.Combine(root, ".sqlscriptdom.json"));
             Assert.Equal(1, (await Run(root, ["--stdio", "--settings", "PRIVATE_SQL_CANARY-missing.json"])).Code);
+            Assert.False(File.Exists(Path.Combine(root, ".sqlscriptdom.json")));
             Assert.Equal(1, (await Run(root, ["--stdio", "--settings"])).Code);
             Assert.False(Directory.Exists(Path.Combine(root, ".sqlscriptdom")));
         }
@@ -212,5 +334,13 @@ public class PluginSettingsTests
         var stderr = await error;
         Assert.DoesNotContain("PRIVATE_SQL_CANARY", stderr);
         return (process.ExitCode, await output, stderr);
+    }
+}
+
+public sealed class UnixWritableSettingsFactAttribute : FactAttribute
+{
+    public UnixWritableSettingsFactAttribute()
+    {
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root") Skip = "Requires Unix permissions and a non-root user; exercised on Unix CI.";
     }
 }

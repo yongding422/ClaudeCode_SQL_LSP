@@ -14,6 +14,8 @@ namespace SqlLsp.Mcp;
 public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFile, string? CacheDirectory = null, bool BuildCache = false,
     string? MetricsDirectory = null, bool MetricsSummary = false, string? CompareMetricsDirectory = null, string? EvaluationCsv = null)
 {
+    public bool AutoInitializeSettings { get; init; }
+
     public static McpLaunchOptions Parse(string[] args)
     {
         var workspace = Directory.GetCurrentDirectory();
@@ -54,7 +56,8 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (summary && (metrics == null || build || args.Contains("--stdio", StringComparer.Ordinal)) || compare != null && !summary) throw new ArgumentException("Metrics summary requires a directory and standalone mode; comparison requires summary.");
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
-            metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation);
+            metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation)
+        { AutoInitializeSettings = settingsFile == null };
     }
 }
 

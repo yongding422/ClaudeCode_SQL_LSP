@@ -19,6 +19,20 @@ Install one entry for your computer:
 
 Start a fresh `claude` session from your SQL project. No `--plugin-dir` flag is required. See [Mac usage](macos.md) for SQL search examples. Inside Claude, `/plugin marketplace add https://github.com/yongding422/ClaudeCode_SQL_LSP.git` adds the marketplace, and `/plugin` opens the plugin browser.
 
+## If the SQL MCP tools are missing
+
+The `find_procedures`, `analyze_procedure` and `get_metrics` tools require a recent plugin; 0.6.1 provides LSP only. Use 0.13.0 or newer for all three tools, or 0.14.0 for automatic starter settings. A project/global `.mcp.json` is not required: the plugin bundles its own MCP registration.
+
+For Windows, refresh the catalog and update the installed entry:
+
+```sh
+claude plugin marketplace update sqlscriptdom-lsp-marketplace
+claude plugin update sqlscriptdom-lsp-win-x64@sqlscriptdom-lsp-marketplace
+claude plugin list --json
+```
+
+Use the matching platform entry on Mac/Linux. Exit the running Claude session completely and restart it from the SQL project folder; updating files on disk does not replace an already-loaded session's tools. Check the version/enabled state from the same terminal/profile that starts Claude. `.sqlscriptdom.json` configures the server after it loads; it does not register or enable a missing server.
+
 ## Optional: build and install a local package
 
 The remaining package commands are for source developers and manual installation. Marketplace users can skip them.

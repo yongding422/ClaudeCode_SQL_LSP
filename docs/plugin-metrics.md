@@ -4,7 +4,7 @@ Version 0.12.0 adds **opt-in local MCP metrics**, a `get_metrics` tool, backend 
 
 ## Enable recording, then ask Claude
 
-In 0.13.0, create `.sqlscriptdom.json` in your SQL project folder:
+In 0.14.0, start Claude once from your SQL project folder so the MCP process creates a disabled starter `.sqlscriptdom.json`. Edit its metrics section to:
 
 ```json
 {
@@ -13,7 +13,7 @@ In 0.13.0, create `.sqlscriptdom.json` in your SQL project folder:
 }
 ```
 
-Start a new Claude session from that folder on Windows, macOS or Linux. No environment variable is needed. Add `.sqlscriptdom/` to the project's `.gitignore`. See [settings, defaults, overrides and validation](plugin-settings.md). Use a separate directory for each project/experiment condition. Ask procedure questions normally, then ask:
+Keep any existing `analysisCache` section if wanted, then start a new Claude session from that folder on Windows, macOS or Linux. No environment variable is needed. Add `.sqlscriptdom/` to the project's `.gitignore`. See [settings, defaults, overrides and validation](plugin-settings.md). Use a separate directory for each project/experiment condition. Ask procedure questions normally, then ask:
 
 > Use the SQL plugin's get_metrics tool with includePreviousSessions=true. Show cold/warm request counts, median/p95 time, errors, cache hits, report sizes and reported issues. Explain missing values and collection limits. Do not infer token savings or answer accuracy from backend metrics.
 

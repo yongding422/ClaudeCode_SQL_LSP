@@ -44,7 +44,7 @@ Each module's `controlFlow` maps branches/loops/errors/transactions; call/access
 
 ## Configuration and development
 
-The adapter defaults to the current working directory and offline mode. Version 0.13.0 reads local metrics/cache settings from [`.sqlscriptdom.json`](plugin-settings.md) in that workspace. For explicit source configuration, set `SQLLSP_MCP_CONFIG` to an absolute file path, or launch with `--config`. The source file follows [the same schema](configuration.schema.json) as LSP initialization options. Enable online profiles/mappings explicitly and supply credentials through their configured environment variables. MCP configuration and LSP client initialization options are independent and must agree if both should use the same context.
+The adapter defaults to the current working directory and offline mode. Local metrics/cache settings come from [`.sqlscriptdom.json`](plugin-settings.md) in that workspace; 0.14.0 creates a disabled starter at first MCP startup without overwriting an existing file. For explicit source configuration, set `SQLLSP_MCP_CONFIG` to an absolute file path, or launch with `--config`. The source file follows [the same schema](configuration.schema.json) as LSP initialization options. Enable online profiles/mappings explicitly and supply credentials through their configured environment variables. MCP configuration and LSP client initialization options are independent and must agree if both should use the same context.
 
 ```sh
 dotnet publish src/SqlLsp.Server -c Release -o claude-plugin/server

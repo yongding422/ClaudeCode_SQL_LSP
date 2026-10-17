@@ -35,6 +35,7 @@ try
             Environment.ExitCode = 2;
         return;
     }
+    if (launch.AutoInitializeSettings) PluginSettings.EnsureStarter(launch.Workspace);
     var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true, Args = [] });
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);

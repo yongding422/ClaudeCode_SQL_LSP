@@ -6,8 +6,45 @@ namespace SqlLsp.Mcp;
 // Local storage settings only. SQL source/database options remain explicitly selected with --config.
 internal sealed record PluginSettings(string? MetricsDirectory = null, string? CacheDirectory = null)
 {
+    private const string Starter = """
+        {
+          "version": 1,
+          "metrics": { "enabled": false, "directory": ".sqlscriptdom/metrics" },
+          "analysisCache": { "enabled": false, "directory": ".sqlscriptdom/cache" }
+        }
+        """;
     private const int MaxBytes = 65_536;
     private static readonly JsonSchema Schema = LoadSchema();
+
+    public static void EnsureStarter(string workspace)
+    {
+        var target = Path.Combine(workspace, ".sqlscriptdom.json");
+        if (File.Exists(target)) return;
+        var temporary = Path.Combine(workspace, ".sqlscriptdom-" + Guid.NewGuid().ToString("N") + ".tmp");
+        var owned = false;
+        try
+        {
+            // Publish only a complete file. Concurrent MCP starts must never read partial JSON.
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                owned = true;
+                stream.Write(System.Text.Encoding.UTF8.GetBytes(Starter + "\n"));
+                stream.Flush(flushToDisk: true);
+            }
+            try { File.Move(temporary, target, overwrite: false); }
+            catch (IOException) when (File.Exists(target)) { /* Another process or user created it first. */ }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Read-only workspaces still support analysis. Keep protocol stdout clean and values private.
+            Console.Error.WriteLine("SQL plugin could not create starter settings; continuing with current options.");
+        }
+        finally
+        {
+            try { if (owned) File.Delete(temporary); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        }
+    }
 
     public static PluginSettings Read(string workspace, string? explicitFile)
     {

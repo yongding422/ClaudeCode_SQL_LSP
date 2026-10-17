@@ -4,7 +4,7 @@ A working T-SQL language server in C#/.NET for SQL code search and stored-proced
 
 [How the plugin works — workflow diagram](docs/plugin-workflow.md)
 
-Configure metrics and report reuse in [`.sqlscriptdom.json` in your SQL project folder](docs/plugin-settings.md), then restart Claude. Existing environment variables and command-line overrides remain supported; SQL/database source options remain explicit.
+Version 0.14.0 automatically creates a disabled starter [`.sqlscriptdom.json` in the workspace when MCP first starts](docs/plugin-settings.md). Edit it to enable metrics/report reuse and restart Claude. Existing files and directory overrides remain supported; SQL/database source options remain explicit. If the MCP tools are missing, [check the installed version and restart the session](docs/installation.md#if-the-sql-mcp-tools-are-missing).
 
 ## Build and test
 

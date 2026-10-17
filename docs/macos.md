@@ -126,4 +126,4 @@ This can spend up to $1 and fails unless it observes actual hover and transport 
 
 For marketplace installation, see [publishing and installation](publishing.md).
 
-In 0.13.0, enable metrics and report reuse through [`.sqlscriptdom.json` in the SQL project folder](plugin-settings.md), then restart Claude there. Environment overrides remain supported. See [prebuilding and cache limits](persistent-analysis-cache.md). Persistence does not eliminate source acquisition/parsing or guarantee fewer model tokens.
+In 0.14.0, MCP creates a disabled starter [`.sqlscriptdom.json` in the SQL project folder](plugin-settings.md) on first startup. Edit it to enable metrics/report reuse, then restart Claude there. Existing files and environment overrides remain supported. See [prebuilding and cache limits](persistent-analysis-cache.md). Persistence does not eliminate source acquisition/parsing or guarantee fewer model tokens.

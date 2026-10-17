@@ -6,7 +6,7 @@ This saves completed reports across restarts. It does **not** serialize ScriptDO
 
 ## Enable it in Claude Code
 
-In 0.13.0, create `.sqlscriptdom.json` in your SQL project folder and start a fresh Claude session there:
+In 0.14.0, start Claude once from your SQL project folder to generate a disabled starter `.sqlscriptdom.json`. Edit its `analysisCache` section and restart Claude:
 
 ```json
 {
