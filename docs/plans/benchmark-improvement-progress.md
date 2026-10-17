@@ -15,3 +15,5 @@ Original backlog: [R0–R7](benchmark-driven-improvement-plan.md). Baseline 0.14
 | R7 | Pending final four-platform package/marketplace verification and evidence-backed release. Global installed plugin unchanged. |
 
 See [R1 reviewed outcome](../evaluation/results/sql-server-samples-r1-20261017.md), [R0 diagnosis](../evidence/benchmark-r0-diagnosis-20261017.json), [R2 accounting](../evidence/benchmark-r2-coverage-20261017.json), [live probe](../evidence/benchmark-r3a-live-probe-20261017.json) and [restart probe](../evidence/benchmark-r3b-restart-probe-20261017.json). The discovery repair improves usability while the measured cold prescribed workflow still loses to Grep on latency/input.
+
+Combined-candidate validation also caught and repaired native Unix URI restoration in persisted snapshots, an integration test expecting the pre-compact response shape, and selected-file errors being hidden by unrelated files reaching the global diagnostic limit. Native CI and the disposable SQL Server job verify the first two; deterministic scope-before-limit regression tests cover the last. Failed CI attempts remain retained as evidence, not successful checks.

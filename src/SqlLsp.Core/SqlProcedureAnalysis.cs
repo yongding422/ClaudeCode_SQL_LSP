@@ -51,9 +51,14 @@ public sealed partial class SqlNavigationIndex
     {
         token.ThrowIfCancellationRequested();
         if (maxDepth is < 0 or > 4 || maxModules is < 1 or > 40) throw new ArgumentException("Analysis limits: depth 0..4, modules 1..40.");
-        SqlProcedureReport Empty(ResolutionStatus status, string message, ImmutableArray<SqlNavigationTarget> candidates = default) =>
-            new(status, message, candidates.IsDefault ? [] : candidates, [], SourceParseIssues(token).Where(i => i.Location?.Uri == uri).ToImmutableArray(),
+        SqlProcedureReport Empty(ResolutionStatus status, string message, ImmutableArray<SqlNavigationTarget> candidates = default)
+        {
+            var issues = ParseIssuePage(uri, 0, MaxAnalysisFacts, token).ToImmutableArray();
+            if (ParseIssueCounts(uri).Count > issues.Length)
+                issues = issues.Add(new("parse-issue-limit", "Selected file has additional parse errors; request its paged discovery issues for the remaining details.", null));
+            return new(status, message, candidates.IsDefault ? [] : candidates, [], issues,
                 AnalysisLimitations, maxDepth, maxModules);
+        }
         var document = documents.FirstOrDefault(d => d.Uri == uri);
         if (document == null) return Empty(ResolutionStatus.Unresolved, "Document is not indexed or is excluded/unavailable.");
         try { document.Parse.Source.OffsetAt(position); }
