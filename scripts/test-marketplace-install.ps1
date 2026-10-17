@@ -9,7 +9,8 @@ $previousExecutable = $env:SQLLSP_TEST_SERVER_EXE
 $previousMcpExecutable = $env:SQLLSP_TEST_MCP_EXE
 try {
     $env:CLAUDE_CONFIG_DIR = Join-Path $fixture 'config'
-    & npx --yes --package '@anthropic-ai/claude-code@2.1.224' claude plugin marketplace add yongding422/ClaudeCode_SQL_LSP
+    # Explicit public HTTPS avoids shorthand selecting SSH on runners without a GitHub SSH key.
+    & npx --yes --package '@anthropic-ai/claude-code@2.1.224' claude plugin marketplace add 'https://github.com/yongding422/ClaudeCode_SQL_LSP.git'
     if ($LASTEXITCODE -ne 0) { throw 'Marketplace registration failed.' }
     & npx --yes --package '@anthropic-ai/claude-code@2.1.224' claude plugin install "sqlscriptdom-lsp-$Runtime@sqlscriptdom-lsp-marketplace"
     if ($LASTEXITCODE -ne 0) { throw 'Archive plugin installation failed.' }
