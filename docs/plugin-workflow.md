@@ -31,3 +31,5 @@ For an Ohio question, the usual explanation workflow is one discovery request an
 The [compact report](compact-reports.md) shares source evidence and exposes ready-to-cite lines. An external, explicitly run [evaluation runner](procedure-analysis.md#measure-against-grepread) can collect request timings separately from task latency, tool calls, model usage and independently reviewed accuracy. There is no background metric collector.
 
 Version 0.11.0 optionally saves canonical MCP reports as [private JSON files](persistent-analysis-cache.md). The MCP process validates the current loaded source context before reuse; LSP remains independent. The report cache does not restore the AST/navigation index.
+
+Version 0.12.0 optionally records numeric MCP request metrics in bounded local JSONL. The get_metrics tool reads current/retained summaries without SQL initialization. A standalone client-CSV importer compares actual model usage captured by the evaluation runner; no model tokens are inferred by the backend. See [metrics](plugin-metrics.md).

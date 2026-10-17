@@ -85,3 +85,7 @@ Collection remains local and aggregate-only by default. Transcripts/answers/SQL/
 For this project's stored-procedure understanding goal, prioritize the MCP reports and their SQL evidence. Keep existing LSP navigation available, with general M6 editor work deferred. LSP is useful when the task needs live buffers; it is not a prerequisite for folder/catalog analysis or persistence.
 
 The next performance work should follow profiling on large SQL repositories: incremental persistent semantic indexes and smaller task-specific retrieval may matter more than additional LSP methods. The current report cache still hashes the loaded source context and reparses at restart. Include tool-schema/skill overhead and any duplicated LSP/MCP indexing in measured costs. Verify exact T-SQL coverage in the installed codebase-memory build before claiming a competitive feature advantage. Its broader application graph and this SQL-specific engine may be complementary.
+
+## 0.12.0 collection implementation
+
+[Local plugin metrics](../plugin-metrics.md) now persist bounded numeric backend observations, provide get_metrics and standalone summary/compare commands, and import client CSV for descriptive paired token/time ratios. The capture runner is included in packages. This does not add competitor/LSP-ablation capture, independent grading or statistical confidence intervals, and it does not establish performance superiority.

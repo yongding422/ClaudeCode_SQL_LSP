@@ -1,6 +1,6 @@
 """Paired Claude task runner. Aggregate metrics omit SQL, paths, prompts and answers.
 
-No server telemetry or hooks. Accuracy scores require independent review; they are
+Does not enable persistent server metrics or hooks. Accuracy scores require independent review; they are
 never inferred from tool counts or a model's assertion that its answer is correct.
 """
 import argparse
@@ -156,6 +156,7 @@ def run_one(args, task, arm, repeat, index):
         env["CLAUDE_CONFIG_DIR"] = str(destination / "isolated-config")
         env.pop("SQLLSP_MCP_CONFIG", None)  # Frozen offline experiment; no accidental online profile.
         env.pop("SQLLSP_ANALYSIS_CACHE_DIR", None)  # A normal cold experiment must not inherit a local report cache.
+        env.pop("SQLLSP_METRICS_DIR", None)  # Keep unsolicited local metric writes out of the frozen experiment.
         env["ENABLE_LSP_TOOL"] = "1"
         start = time.perf_counter()
         raw, stderr, timed_out = "", "", False

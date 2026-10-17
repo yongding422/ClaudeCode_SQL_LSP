@@ -34,6 +34,8 @@ Copy-Item -LiteralPath (Join-Path $repo 'claude-plugin/skills') -Destination $st
 Copy-Item -LiteralPath (Join-Path $repo 'README.md') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $repo 'docs') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $repo 'samples') -Destination $stage -Recurse
+New-Item -ItemType Directory -Path (Join-Path $stage 'evaluation') | Out-Null
+Copy-Item -LiteralPath (Join-Path $repo 'scripts/evaluate-understanding.py') -Destination (Join-Path $stage 'evaluation')
 Copy-Item -LiteralPath (Join-Path $repo 'SqlScriptDOM_LSP_Implementation_Plan.md') -Destination $stage
 # Inventory bundled libraries and include the licenses supplied by their NuGet packages.
 $packages = @(@('server/sqlscriptdom-lsp.deps.json', 'mcp/sqlscriptdom-mcp.deps.json') | ForEach-Object {

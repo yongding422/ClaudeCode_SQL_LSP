@@ -71,3 +71,7 @@ Default output contains aggregate numeric measurements/task IDs, not SQL, paths,
 ## Persistent report reuse (0.11.0)
 
 Set SQLLSP_ANALYSIS_CACHE_DIR to an absolute private directory before launching Claude to save reports across MCP restarts. The standalone --build-cache command prebuilds bounded reports for a folder or configured catalog. Source acquisition, parsing and freshness validation still run. See [usage, format, limits and metrics](persistent-analysis-cache.md) and [the comparative evaluation design](evaluation/sql-tool-comparison.md).
+
+## Inspect local metrics (0.12.0)
+
+Set SQLLSP_METRICS_DIR to an absolute private directory before starting Claude, then ask it to call get_metrics. Current or retained-session summaries report cold/warm time, errors, cache hits, bytes and reported fact/issue counts. Standalone summary/compare and client evaluation CSV commands are available in the packaged MCP executable. See [commands, comparison rules and limits](plugin-metrics.md). This third read-only MCP tool does not initialize SQL. It cannot observe Grep or model tokens; client captures remain separate.

@@ -11,21 +11,30 @@ using SqlLsp.Server;
 
 namespace SqlLsp.Mcp;
 
-public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFile, string? CacheDirectory = null, bool BuildCache = false)
+public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFile, string? CacheDirectory = null, bool BuildCache = false,
+    string? MetricsDirectory = null, bool MetricsSummary = false, string? CompareMetricsDirectory = null, string? EvaluationCsv = null)
 {
     public static McpLaunchOptions Parse(string[] args)
     {
         var workspace = Directory.GetCurrentDirectory();
         var config = Environment.GetEnvironmentVariable("SQLLSP_MCP_CONFIG");
         var cache = Environment.GetEnvironmentVariable("SQLLSP_ANALYSIS_CACHE_DIR");
+        var metrics = Environment.GetEnvironmentVariable("SQLLSP_METRICS_DIR");
+        string? compare = null;
+        string? evaluation = null;
+        var summary = false;
         var build = false;
         for (var i = 0; i < args.Length; i++)
         {
             if (args[i] == "--stdio") continue;
             if (args[i] == "--build-cache") { build = true; continue; }
+            if (args[i] == "--metrics-summary") { summary = true; continue; }
             if (args[i] == "--workspace" && i + 1 < args.Length) workspace = args[++i];
             else if (args[i] == "--config" && i + 1 < args.Length) config = args[++i];
             else if (args[i] == "--cache-directory" && i + 1 < args.Length) cache = args[++i];
+            else if (args[i] == "--metrics-directory" && i + 1 < args.Length) metrics = args[++i];
+            else if (args[i] == "--compare-metrics" && i + 1 < args.Length) compare = args[++i];
+            else if (args[i] == "--evaluation-summary" && i + 1 < args.Length) evaluation = args[++i];
             else throw new ArgumentException("Unknown/missing argument.");
         }
         workspace = Path.GetFullPath(workspace);
@@ -33,7 +42,12 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         cache = string.IsNullOrWhiteSpace(cache) ? null : cache;
         if (cache != null && !Path.IsPathFullyQualified(cache)) throw new ArgumentException("Cache directory must be absolute.");
         if (build && (cache == null || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Build-cache requires a cache directory and cannot use stdio mode.");
-        return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build);
+        metrics = string.IsNullOrWhiteSpace(metrics) ? null : metrics;
+        if (metrics != null && !Path.IsPathFullyQualified(metrics) || compare != null && !Path.IsPathFullyQualified(compare)) throw new ArgumentException("Metric directories must be absolute.");
+        if (summary && (metrics == null || build || args.Contains("--stdio", StringComparer.Ordinal)) || compare != null && !summary) throw new ArgumentException("Metrics summary requires a directory and standalone mode; comparison requires summary.");
+        if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
+        return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
+            metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation);
     }
 }
 
@@ -44,6 +58,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     private ServerState? state;
     private string configurationStamp = "{}";
     private readonly PersistentAnalysisCache? cache = launch.CacheDirectory == null ? null : new(launch.CacheDirectory);
+    private readonly PluginMetrics metrics = new(launch.MetricsDirectory);
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -54,8 +69,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     public async Task<CallToolResult> FindProcedures([Description("Name substring; empty lists indexed modules.")] string query = "",
         [Description("Maximum results, 1..100.")] int maxResults = 30, CancellationToken cancellationToken = default)
     {
+        using var observation = metrics.Begin("find_procedures", "discovery", cancellationToken);
         if (query.Length > 256 || maxResults is < 1 or > 100) throw new McpException("Query/limit outside supported bounds.");
-        return await WithIndex((index, timings) =>
+        return observation.Complete(await WithIndex((index, timings) =>
         {
             var timer = Stopwatch.StartNew();
             var symbols = index.Search(query, cancellationToken).Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
@@ -85,7 +101,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 totalMatches = symbols.Length,
                 truncated = symbols.Length > maxResults
             }));
-        }, cancellationToken);
+        }, cancellationToken));
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
@@ -98,12 +114,13 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         [Description("Compact only: up to 8 variable names or expression snippets, each 1..64 characters. Case-insensitive literal substring selection and connected value dependencies; not semantic search. Omitted counts remain visible.")] string[]? focus = null,
         CancellationToken cancellationToken = default)
     {
+        using var observation = metrics.Begin("analyze_procedure", detail, cancellationToken);
         if (!Uri.TryCreate(documentUri, UriKind.Absolute, out var uri) || !uri.IsFile || uri.Query.Length != 0 || uri.Fragment.Length != 0 ||
             line < 0 || character < 0 || maxDepth is < 0 or > 4 || maxModules is < 1 or > 40 ||
             detail is not ("full" or "compact") || focus is { Length: > 8 } ||
             focus?.Any(f => string.IsNullOrWhiteSpace(f) || f.Length > 64) == true || (detail == "full" && focus is { Length: > 0 }))
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
-        return await WithIndex(async (index, timings) =>
+        return observation.Complete(await WithIndex(async (index, timings) =>
         {
             var context = CacheContext(index, timings, cancellationToken);
             var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
@@ -121,42 +138,51 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 report = presented,
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).ToArray()
             });
-        }, cancellationToken);
+        }, cancellationToken));
     }
 
+    [McpServerTool(Name = "get_metrics", ReadOnly = true, Destructive = false, OpenWorld = false)]
+    [Description("Inspect opt-in local SQL analysis metrics without initializing or scanning SQL. Shows cold/warm request times, cache hits, serialized report bytes, reported facts/issues and failures. No model tokens, Grep timing or answer correctness are observed. Previous sessions are limited to retained files; metrics reads do not count themselves.")]
+    public CallToolResult GetMetrics([Description("Include retained sessions from SQLLSP_METRICS_DIR instead of only this process's recent requests.")] bool includePreviousSessions = false) =>
+        Result(metrics.Get(includePreviousSessions));
+
     // Explicit CLI prewarm only; not a third MCP tool. One validated source snapshot, at most 256 modules.
-    public Task<CallToolResult> BuildCache(CancellationToken token) => WithIndex(async (index, timings) =>
+    public async Task<CallToolResult> BuildCache(CancellationToken token)
     {
-        var context = CacheContext(index, timings, token);
-        var symbols = index.Symbols.Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
-            .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
-        var entries = new List<(SqlObjectIdentity Identity, ResolutionStatus Status, AnalysisCacheUse Cache)>();
-        foreach (var symbol in symbols.Take(256))
+        using var observation = metrics.Begin("build_cache", "prebuild", token);
+        return observation.Complete(await WithIndex(async (index, timings) =>
         {
-            token.ThrowIfCancellationRequested();
-            var result = await AnalyzeCached(index, context, symbol.Target.Uri, symbol.Target.Range.Start, 2, 20, null, timings, token);
-            entries.Add((symbol.Identity, result.Report.Status, result.Use));
-        }
-        return Result(new
-        {
-            source = "Saved workspace/catalog snapshots; no analyzed SQL executed.",
-            indexedDocuments = index.DocumentCount,
-            sourceStatuses = state!.SourceStatuses,
-            sourceIssues = index.SourceParseIssues(token),
-            timings,
-            sourcesAvailable = !state.SourceStatuses.Any(s => s.Contains(": Unavailable", StringComparison.Ordinal)),
-            entries = entries.Select(e => new
+            var context = CacheContext(index, timings, token);
+            var symbols = index.Symbols.Where(s => s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View)
+                .OrderBy(s => s.Target.Uri.AbsoluteUri, StringComparer.Ordinal).ThenBy(s => s.Target.Range.Start.Line).ThenBy(s => s.Target.Range.Start.Character).ToArray();
+            var entries = new List<(SqlObjectIdentity Identity, ResolutionStatus Status, AnalysisCacheUse Cache)>();
+            foreach (var symbol in symbols.Take(256))
             {
-                e.Identity,
-                e.Status,
-                cache = e.Cache,
-                retained = e.Cache.Status is "Stored" or "Hit" && e.Cache.File != null && File.Exists(e.Cache.File)
-            }).ToArray(),
-            totalModules = symbols.Length,
-            truncated = symbols.Length > 256,
-            retention = "At most 256 reports / 128 MiB, 8 MiB per report. Older reports may be evicted; retained is checked at summary creation."
-        });
-    }, token);
+                token.ThrowIfCancellationRequested();
+                var result = await AnalyzeCached(index, context, symbol.Target.Uri, symbol.Target.Range.Start, 2, 20, null, timings, token);
+                entries.Add((symbol.Identity, result.Report.Status, result.Use));
+            }
+            return Result(new
+            {
+                source = "Saved workspace/catalog snapshots; no analyzed SQL executed.",
+                indexedDocuments = index.DocumentCount,
+                sourceStatuses = state!.SourceStatuses,
+                sourceIssues = index.SourceParseIssues(token),
+                timings,
+                sourcesAvailable = !state.SourceStatuses.Any(s => s.Contains(": Unavailable", StringComparison.Ordinal)),
+                entries = entries.Select(e => new
+                {
+                    e.Identity,
+                    e.Status,
+                    cache = e.Cache,
+                    retained = e.Cache.Status is "Stored" or "Hit" && e.Cache.File != null && File.Exists(e.Cache.File)
+                }).ToArray(),
+                totalModules = symbols.Length,
+                truncated = symbols.Length > 256,
+                retention = "At most 256 reports / 128 MiB, 8 MiB per report. Older reports may be evicted; retained is checked at summary creation."
+            });
+        }, token));
+    }
 
     private SqlAnalysisCacheContext? CacheContext(SqlNavigationIndex index, RequestTimings timings, CancellationToken token)
     {
@@ -228,6 +254,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                         options = JObject.Parse(await File.ReadAllTextAsync(launch.ConfigurationFile, token));
                     }
                     var config = ServerConfiguration.Parse(options);
+                    metrics.SourceMode = config.Mode;
                     configurationStamp = options?.ToString(Newtonsoft.Json.Formatting.None) ?? "{}";
                     var rootPath = launch.Workspace.EndsWith(Path.DirectorySeparatorChar) ? launch.Workspace : launch.Workspace + Path.DirectorySeparatorChar;
                     await candidate.InitializeSourcesAsync(config, [new Uri(rootPath)], token);

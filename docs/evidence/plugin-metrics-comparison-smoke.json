@@ -1,0 +1,184 @@
+{
+  "summaryFeatureVersion": "0.12.0",
+  "sourceDataPluginVersion": "0.10.0",
+  "sourceDataEvidence": "compact-reports-pair-windows.json",
+  "scope": "Reprocessed the existing public single-task paired CSV; no new model sessions run",
+  "summary": {
+    "format": "sqlscriptdom-client-evaluation-v1",
+    "provenance": "Explicit client evaluation CSV, not measurements inferred by the SQL server",
+    "qualityGate": "Not evaluated automatically; reviewer scores and task/source parity need independent assessment",
+    "validRows": 2,
+    "invalidRows": 0,
+    "duplicatePairKeys": 0,
+    "arms": [
+      {
+        "arm": "grep",
+        "runs": 1,
+        "successfulRuns": 1,
+        "failedOrIncompleteRuns": 0,
+        "measures": {
+          "elapsed_ms": {
+            "measuredRuns": 1,
+            "mean": 79493,
+            "median": 79493
+          },
+          "input_tokens": {
+            "measuredRuns": 1,
+            "mean": 4188,
+            "median": 4188
+          },
+          "output_tokens": {
+            "measuredRuns": 1,
+            "mean": 2094,
+            "median": 2094
+          },
+          "cache_read_tokens": {
+            "measuredRuns": 1,
+            "mean": 7168,
+            "median": 7168
+          },
+          "cache_write_tokens": {
+            "measuredRuns": 1,
+            "mean": 0,
+            "median": 0
+          },
+          "reported_cost_usd": {
+            "measuredRuns": 1,
+            "mean": 0.080679,
+            "median": 0.080679
+          },
+          "behavior_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "citation_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "dependency_precision": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "dependency_recall": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "unsupported_handling_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          }
+        }
+      },
+      {
+        "arm": "plugin",
+        "runs": 1,
+        "successfulRuns": 1,
+        "failedOrIncompleteRuns": 0,
+        "measures": {
+          "elapsed_ms": {
+            "measuredRuns": 1,
+            "mean": 135661,
+            "median": 135661
+          },
+          "input_tokens": {
+            "measuredRuns": 1,
+            "mean": 13487,
+            "median": 13487
+          },
+          "output_tokens": {
+            "measuredRuns": 1,
+            "mean": 3068,
+            "median": 3068
+          },
+          "cache_read_tokens": {
+            "measuredRuns": 1,
+            "mean": 35968,
+            "median": 35968
+          },
+          "cache_write_tokens": {
+            "measuredRuns": 1,
+            "mean": 0,
+            "median": 0
+          },
+          "reported_cost_usd": {
+            "measuredRuns": 1,
+            "mean": 0.166274,
+            "median": 0.166274
+          },
+          "behavior_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "citation_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "dependency_precision": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "dependency_recall": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "unsupported_handling_score": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          }
+        }
+      }
+    ],
+    "comparisonsWithGrep": [
+      {
+        "arm": "plugin",
+        "successfulMatchedPairs": 1,
+        "reductions": {
+          "elapsed_ms": {
+            "measuredRuns": 1,
+            "mean": -0.7065779376800474,
+            "median": -0.7065779376800474
+          },
+          "input_tokens": {
+            "measuredRuns": 1,
+            "mean": -2.220391595033429,
+            "median": -2.220391595033429
+          },
+          "output_tokens": {
+            "measuredRuns": 1,
+            "mean": -0.46513849092645665,
+            "median": -0.46513849092645665
+          },
+          "cache_read_tokens": {
+            "measuredRuns": 1,
+            "mean": -4.017857142857143,
+            "median": -4.017857142857143
+          },
+          "cache_write_tokens": {
+            "measuredRuns": 0,
+            "mean": null,
+            "median": null
+          },
+          "reported_cost_usd": {
+            "measuredRuns": 1,
+            "mean": -1.0609328325834482,
+            "median": -1.0609328325834482
+          }
+        }
+      }
+    ],
+    "unmatchedOrIncomparableNonBaselineRuns": 0,
+    "settingMismatchPairs": 0,
+    "failedOrIncompleteMatchedPairs": 0,
+    "limitations": "Descriptive paired ratios only, not proof of superiority or statistical significance. Duplicate pair keys excluded from pairing; failures remain in arm totals. Missing/invalid numbers stay null. Token cache categories remain separate; provider billing differs. Score fields are supplied by external reviewers and are not generated here. Match task source visibility and independently review correctness; recorded settings alone do not establish a controlled experiment."
+  }
+}

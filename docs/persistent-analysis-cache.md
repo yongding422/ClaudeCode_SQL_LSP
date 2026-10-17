@@ -65,3 +65,5 @@ Reports contain SQL-derived names, bounded snippets, source locations and metada
 [Local restart evidence](evidence/persistent-cache-windows.json) records eight stored reports then eight hits in a new process. [The study design](evaluation/sql-tool-comparison.md) separates backend work, usage and correctness.
 
 [Release 0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/v0.11.0) is public. [Final native and marketplace evidence](evidence/persistent-cache-ci.json) verifies clean package source, four-platform actual installs, checksums and executable modes. These checks do not measure model answer quality or token savings.
+
+Version 0.12.0 can separately record [local metrics](plugin-metrics.md), including cache-hit rates and validation/read/write intervals across sessions. Set SQLLSP_METRICS_DIR independently. This does not change cache freshness rules or infer model-token savings.

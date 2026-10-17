@@ -34,7 +34,7 @@ internal sealed class McpClient : IAsyncDisposable
         });
     }
     public static async Task<McpClient> Start(string sql, string? configuration = null, string? cacheDirectory = null,
-        string? rootDirectory = null, bool preserveWorkspace = false)
+        string? rootDirectory = null, bool preserveWorkspace = false, string? metricsDirectory = null, bool metricsViaEnvironment = false)
     {
         var root = rootDirectory ?? Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -42,6 +42,11 @@ internal sealed class McpClient : IAsyncDisposable
         var info = Command(root);
         info.ArgumentList.Add("--stdio");
         if (cacheDirectory != null) { info.ArgumentList.Add("--cache-directory"); info.ArgumentList.Add(cacheDirectory); }
+        if (metricsDirectory != null)
+        {
+            if (metricsViaEnvironment) info.Environment["SQLLSP_METRICS_DIR"] = metricsDirectory;
+            else { info.ArgumentList.Add("--metrics-directory"); info.ArgumentList.Add(metricsDirectory); }
+        }
         if (configuration != null)
         {
             var config = Path.Combine(root, "config.json");
@@ -82,6 +87,7 @@ internal sealed class McpClient : IAsyncDisposable
         }
         info.Environment.Remove("SQLLSP_MCP_CONFIG");
         info.Environment.Remove("SQLLSP_ANALYSIS_CACHE_DIR");
+        info.Environment.Remove("SQLLSP_METRICS_DIR");
         return info;
     }
     public Task<JsonElement> Tool(string name, object arguments) => Call("tools/call", new { name, arguments });

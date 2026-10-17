@@ -109,7 +109,7 @@ public class ProcedureTests
             "EXEC sys.sp_executesql N'PRIVATE_SQL_CANARY',N'@p varchar(2)',@p=@state; END;\nGO\n" +
             "CREATE TABLE dbo.A(state varchar(2));\nGO\nCREATE TABLE dbo.B(state varchar(2));");
         var tools = (await client.Call("tools/list", new { })).GetProperty("result").GetProperty("tools");
-        Assert.Equal(2, tools.GetArrayLength());
+        Assert.Equal(3, tools.GetArrayLength());
         Assert.All(tools.EnumerateArray(), tool => Assert.True(tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean()));
         var discovery = McpClient.Data(await client.Tool("find_procedures", new { query = "dbo.P" }));
         var selected = Assert.Single(discovery.GetProperty("modules").EnumerateArray());

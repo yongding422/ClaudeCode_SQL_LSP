@@ -288,3 +288,11 @@ Release [0.11.0](https://github.com/yongding422/ClaudeCode_SQL_LSP/releases/tag/
 [Actual 0.11.0 marketplace installation](https://github.com/yongding422/ClaudeCode_SQL_LSP/actions/runs/38682159117) passed on Windows, Linux, Apple Silicon and Intel Mac with strict validation. Installed packages passed 60 LSP tests each, plus 30 MCP tests on Windows (one Unix-link skip) or 31 on Unix; the optional performance case was skipped. Mac executable modes survived without repair. [Final evidence](evidence/persistent-cache-ci.json) records source, checksums, native/installation jobs and the corrected initial Linux failure.
 
 A duplicate tag-triggered CI run 38682112819 for the already-tested released source was cancelled to free installation runners. No published assets were rebuilt or replaced. The final native run, installed-package checks and initial failed candidate remain separately recorded.
+
+## Inspectable local metrics (0.12.0)
+
+Implemented opt-in fixed-field MCP metrics with bounded private JSONL segments, get_metrics (no SQL initialization), current/retained summaries, cold/warm latency/error/cache/byte/fact counts, standalone backend comparisons and client evaluation CSV import. Packages include the existing Python capture runner. There are now three read-only MCP tools. Source behavior, report caching and general M6 deferral remain unchanged. See [metrics usage](plugin-metrics.md) and [ADR 0014](adr/0014-local-comparable-metrics.md).
+
+Local default Release verification passed 272 cases: 147 Core, 60 LSP, 36 MCP and 29 deterministic provider/catalog. Seventeen deliberate skips cover 14 opt-in live cases, two Unix link cases and one performance benchmark. An attempted opt-in live run failed all 14 live cases at fixture startup because the Docker Desktop daemon was unavailable; no existing SQL Server was used. Native CI's disposable fixture is the live gate. Locked restore, zero-warning build, formatting, eight-project dependency audit, client collector and marketplace checks passed; no new NuGet dependencies.
+
+The [comparison smoke](evidence/plugin-metrics-comparison-smoke.json) reprocesses the existing 0.10.0 public paired CSV through the new importer. It preserves negative time/input-token reductions and unknown reviewer scores. It is not a new 0.12.0 model-performance benchmark or superiority claim.
