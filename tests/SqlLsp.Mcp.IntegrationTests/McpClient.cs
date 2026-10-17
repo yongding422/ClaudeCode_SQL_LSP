@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Channels;
 
 namespace SqlLsp.Mcp.IntegrationTests;
@@ -93,6 +94,56 @@ internal sealed class McpClient : IAsyncDisposable
         return info;
     }
     public Task<JsonElement> Tool(string name, object arguments) => Call("tools/call", new { name, arguments });
+
+    // Compatibility tests explicitly reconstruct retained DTOs via real bounded wire pages.
+    public async Task<JsonElement> AnalyzeExpanded(object arguments)
+    {
+        var wire = await Tool("analyze_procedure", arguments);
+        if (wire.GetProperty("result").TryGetProperty("isError", out var error) && error.GetBoolean()) return wire;
+        var data = Data(wire);
+        var report = data.GetProperty("report");
+        if (!report.TryGetProperty("format", out var format) || format.GetString() != "paged-report-v1") return wire;
+        var reference = report.GetProperty("reportRef").GetString();
+        var requests = 0;
+        async Task<JsonNode?> Expand(string section)
+        {
+            JsonNode? result = null;
+            var offset = 0;
+            var text = new System.Text.StringBuilder();
+            while (true)
+            {
+                Assert.InRange(++requests, 1, 10000);
+                var pageWire = await Tool("analyze_procedure", new { reportRef = reference, section, offset, maxItems = 100 });
+                Assert.InRange(System.Text.Encoding.UTF8.GetByteCount(pageWire.GetRawText()), 1, 65536);
+                var page = Data(pageWire).GetProperty("report");
+                if (page.GetProperty("format").GetString() == "report-text-page-v1") text.Append(page.GetProperty("text").GetString());
+                else
+                {
+                    var kind = page.GetProperty("kind").GetString();
+                    result ??= kind == "Array" ? new JsonArray() : kind == "Object" ? new JsonObject() : null;
+                    foreach (var item in page.GetProperty("items").EnumerateArray())
+                    {
+                        var path = item.GetProperty("path").GetString()!;
+                        var value = item.TryGetProperty("expand", out _) ? await Expand(path) : JsonNode.Parse(item.GetProperty("value").GetRawText());
+                        if (result is JsonArray array) array.Add(value);
+                        else if (result is JsonObject obj) obj[path[(path.LastIndexOf('/') + 1)..].Replace("~1", "/").Replace("~0", "~")] = value;
+                        else result = value;
+                    }
+                }
+                if (page.GetProperty("nextOffset").ValueKind == JsonValueKind.Null)
+                    return page.GetProperty("format").GetString() == "report-text-page-v1" ? JsonValue.Create(text.ToString()) : result;
+                var next = page.GetProperty("nextOffset").GetInt32();
+                Assert.True(next > offset);
+                offset = next;
+            }
+        }
+        var completed = JsonNode.Parse(data.GetRawText())!.AsObject();
+        completed["report"] = await Expand("");
+        var message = JsonNode.Parse(wire.GetRawText())!.AsObject();
+        message["result"]!["structuredContent"] = completed;
+        message["result"]!["content"]![0]!["text"] = completed.ToJsonString();
+        return JsonSerializer.SerializeToElement(message);
+    }
     public async Task<JsonElement> Call(string method, object parameters)
     {
         var requestId = ++id;

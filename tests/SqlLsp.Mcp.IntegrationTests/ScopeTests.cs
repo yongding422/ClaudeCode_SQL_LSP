@@ -24,9 +24,9 @@ public class ScopeTests
             var scoped = McpClient.Data(await client.Tool("find_procedures", new { query = "P", scopeId }));
             Assert.Single(scoped.GetProperty("modules").EnumerateArray());
             Assert.Equal(1, scoped.GetProperty("scope").GetProperty("indexedDocuments").GetInt32());
-            var analyzed = McpClient.Data(await client.Tool("analyze_procedure", new
+            var analyzed = McpClient.Data(await client.AnalyzeExpanded( new
             {
-                documentUri = module.GetProperty("target").GetProperty("uri").GetString(), line = 0, character = 16
+                documentUri = module.GetProperty("target").GetProperty("uri").GetString(), line = 0, character = 16, detail = "full"
             })).GetProperty("report");
             Assert.Equal("Resolved", analyzed.GetProperty("status").GetString());
             var access = Assert.Single(analyzed.GetProperty("modules")[0].GetProperty("accesses").EnumerateArray());
@@ -56,7 +56,7 @@ public class ScopeTests
         var discovery = McpClient.Data(await client.Tool("find_procedures", new { scopeId = "a" }));
         Assert.Equal(2, discovery.GetProperty("totalMatches").GetInt32());
         Assert.Equal(1, discovery.GetProperty("coverage").GetProperty("excludedPolicy").GetInt32());
-        var analyzed = McpClient.Data(await client.Tool("analyze_procedure", new { documentUri = new Uri(Path.Combine(root, "A", "caller.sql")).AbsoluteUri, line = 0, character = 12 })).GetProperty("report");
+        var analyzed = McpClient.Data(await client.AnalyzeExpanded( new { documentUri = new Uri(Path.Combine(root, "A", "caller.sql")).AbsoluteUri, line = 0, character = 12, detail = "full" })).GetProperty("report");
         var calls = analyzed.GetProperty("modules")[0].GetProperty("calls");
         Assert.Equal(2, calls.GetArrayLength());
         Assert.All(calls.EnumerateArray(), c => Assert.Equal("Resolved", c.GetProperty("status").GetString()));

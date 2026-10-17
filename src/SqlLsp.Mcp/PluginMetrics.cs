@@ -36,10 +36,12 @@ internal sealed class PluginMetrics(string? directory)
         private readonly Stopwatch watch = Stopwatch.StartNew();
         private JsonElement? data;
         private long? frameBytes;
+        private SqlProcedureReport? analysis;
+        public void AnalyzerReport(SqlProcedureReport report) { if (owner.store != null) analysis = report; }
         public CallToolResult Complete(CallToolResult result)
         {
             data = result.StructuredContent;
-            frameBytes = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = long.MaxValue, result }, ProcedureTools.JsonOptions).Length;
+            if (owner.store != null) frameBytes = JsonSerializer.SerializeToUtf8Bytes(new { jsonrpc = "2.0", id = long.MaxValue, result }, ProcedureTools.JsonOptions).Length;
             return result;
         }
         public void Dispose()
@@ -67,6 +69,7 @@ internal sealed class PluginMetrics(string? directory)
             var cacheEnabled = 0;
             void Cache(JsonElement cache)
             {
+                if (cache.ValueKind != JsonValueKind.Object) return;
                 if (cache.TryGetProperty("enabled", out var enabled) && enabled.ValueKind == JsonValueKind.True) cacheEnabled++;
                 if (cache.TryGetProperty("status", out var status) && CacheNames.Contains(status.GetString(), StringComparer.Ordinal))
                 {
@@ -86,8 +89,8 @@ internal sealed class PluginMetrics(string? directory)
                 {
                     reportBytes = Encoding.UTF8.GetByteCount(report.GetRawText());
                     if (report.TryGetProperty("status", out var status) && Enum.TryParse<ResolutionStatus>(status.GetString(), out var parsed)) resolution = parsed.ToString();
-                    issues += report.GetProperty("expansionIssues").GetArrayLength();
-                    foreach (var module in report.GetProperty("modules").EnumerateArray())
+                    if (report.TryGetProperty("expansionIssues", out var expansionIssues)) issues += expansionIssues.GetArrayLength();
+                    foreach (var module in report.TryGetProperty("modules", out var reportModules) ? reportModules.EnumerateArray() : Enumerable.Empty<JsonElement>())
                     {
                         modules++;
                         if (module.GetProperty("truncated").GetBoolean()) truncated++;
@@ -102,6 +105,17 @@ internal sealed class PluginMetrics(string? directory)
                             if (module.TryGetProperty(section, out var summary) && summary.ValueKind == JsonValueKind.Object) issues += summary.GetProperty("issues").GetArrayLength();
                     }
                 }
+            }
+            if (analysis != null)
+            {
+                resolution = analysis.Status.ToString();
+                modules = analysis.Modules.Length;
+                calls = analysis.Modules.Sum(m => m.Calls.Length);
+                resolvedCalls = analysis.Modules.Sum(m => m.Calls.Count(c => c.Status == ResolutionStatus.Resolved));
+                accesses = analysis.Modules.Sum(m => m.Accesses.Length);
+                resolvedAccesses = analysis.Modules.Sum(m => m.Accesses.Count(a => a.Status == ResolutionStatus.Resolved));
+                issues = analysis.ExpansionIssues.Length + analysis.Modules.Sum(m => m.Issues.Length + (m.ControlFlow?.Issues.Length ?? 0) + (m.ValueFlow?.Issues.Length ?? 0));
+                truncated = analysis.Modules.Count(m => m.Truncated);
             }
             var metric = new MetricEvent(1, Version, typeof(ProcedureTools).Module.ModuleVersionId.ToString("N"), owner.session, DateTimeOffset.UtcNow,
                 operation, detail is "full" or "compact" or "discovery" or "prebuild" ? detail : "Invalid",

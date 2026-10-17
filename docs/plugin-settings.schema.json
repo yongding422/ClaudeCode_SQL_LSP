@@ -13,7 +13,8 @@
     "responses": {
       "type": "object", "additionalProperties": false,
       "properties": {
-        "discoveryMaxBytes": { "type": "integer", "minimum": 8192, "maximum": 16384, "default": 16384 }
+        "discoveryMaxBytes": { "type": "integer", "minimum": 8192, "maximum": 16384, "default": 16384 },
+        "analysisMaxBytes": { "type": "integer", "minimum": 16384, "maximum": 65536, "default": 32768 }
       }
     }
   },

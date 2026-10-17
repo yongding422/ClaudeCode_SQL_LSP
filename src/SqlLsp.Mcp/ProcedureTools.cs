@@ -18,6 +18,7 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
     public bool AutoInitializeSettings { get; init; }
     public int DiscoveryMaxBytes { get; init; } = 16384;
     public string? IndexCacheDirectory { get; init; }
+    public int AnalysisMaxBytes { get; init; } = 32768;
 
     public static McpLaunchOptions Parse(string[] args)
     {
@@ -60,7 +61,8 @@ public sealed record McpLaunchOptions(string Workspace, string? ConfigurationFil
         if (evaluation != null && (!Path.IsPathFullyQualified(evaluation) || summary || build || args.Contains("--stdio", StringComparer.Ordinal))) throw new ArgumentException("Evaluation summary requires an absolute CSV path and standalone mode.");
         return new(workspace, string.IsNullOrWhiteSpace(config) ? null : Path.GetFullPath(config), cache == null ? null : Path.GetFullPath(cache), build,
             metrics == null ? null : Path.GetFullPath(metrics), summary, compare == null ? null : Path.GetFullPath(compare), evaluation)
-        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes, IndexCacheDirectory = settings.IndexCacheDirectory };
+        { AutoInitializeSettings = settingsFile == null, DiscoveryMaxBytes = settings.DiscoveryMaxBytes, IndexCacheDirectory = settings.IndexCacheDirectory,
+            AnalysisMaxBytes = settings.AnalysisMaxBytes };
     }
 }
 
@@ -73,6 +75,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     private readonly PersistentAnalysisCache? cache = launch.CacheDirectory == null ? null : new(launch.CacheDirectory);
     private readonly PluginMetrics metrics = new(launch.MetricsDirectory);
     private readonly DiscoveryCursor discoveryCursors = new();
+    private readonly ModuleSelections moduleSelections = new();
+    private readonly AnalysisPages analysisPages = new();
     private MaterializedWorkspace? materialized;
     private WorkspaceCoverage? Coverage => materialized?.Coverage ?? state?.Documents?.Coverage;
     private WorkspaceFiles? SourceFiles => materialized?.Files ?? state?.Files;
@@ -113,6 +117,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 return new
                 {
                     symbol.Identity,
+                    moduleRef = moduleSelections.Register(new(generation, symbol.Target.Uri, symbol.Target.Range.Start, metadata.Revision)),
                     context = SourceFiles?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
@@ -128,6 +133,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             var entries = new List<object>();
             var consumed = 0;
             var omittedOversized = 0;
+            string? recoveryModuleRef = null;
             object Payload() => new
             {
                 formatVersion = 2,
@@ -148,11 +154,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 totalMatches = total,
                 returned = entries.Count,
                 omittedOversized,
+                recoveryModuleRef,
                 truncated = offset + consumed < total || omittedOversized > 0,
                 hasMore = offset + consumed < total,
                 nextCursor = offset + consumed < total ? discoveryCursors.Encode(generation, options, offset + consumed) : null,
                 truncationReason = omittedOversized > 0 ? "entry-exceeds-budget" : offset + consumed < total ? "page-or-byte-limit" : null,
-                recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Use a known file URI and selection for direct analysis or inspect the source; omitted count is explicit." : null
+                recovery = omittedOversized > 0 ? "An entry exceeds the response budget. Analyze recoveryModuleRef when supplied, or inspect a known source file. Omitted count is explicit; do not retry this identical query." : null
             };
             var candidates = section == "issues" ? index.ParseIssuePage(file, offset, maxResults, cancellationToken, scopeId).Cast<object>() :
                 section == "files" ? CoverageFiles(offset, maxResults, file).Cast<object>() :
@@ -164,7 +171,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 consumed++;
                 if (FitsWireBudget(Result(Payload()), launch.DiscoveryMaxBytes)) continue;
                 entries.RemoveAt(entries.Count - 1);
-                if (entries.Count == 0) { omittedOversized++; break; }
+                if (entries.Count == 0)
+                {
+                    omittedOversized++;
+                    if (section == "modules") recoveryModuleRef = JsonSerializer.SerializeToElement(entry, JsonOptions).GetProperty("moduleRef").GetString();
+                    break;
+                }
                 consumed--;
                 break;
             }
@@ -176,43 +188,81 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Analyze a verified T-SQL procedure/function/view with bounded callee expansion. Prefer detail=compact for shared evidence, ready-to-cite file:line text and module references; reuse expanded modules before another discovery/analysis call. Optional focus narrows connected value details only; all calls, table effects and unknowns remain. Full reports retain the original DTO. Reports include structural contexts, possible definitions and verified EXEC bindings, never known runtime values, complete guards or SQL execution. Use find_procedures first; input positions are zero-based UTF-16.")]
-    public async Task<CallToolResult> AnalyzeProcedure(string documentUri, int line, int character,
-        [Description("Call/view expansion levels, 0..4; default 2.")] int maxDepth = 2,
-        [Description("Maximum modules including entry point, 1..40; default 20.")] int maxModules = 20,
-        [Description("Optional revision from discovery; reject changed source instead of analyzing silently.")] string? expectedRevision = null,
-        [Description("full (compatible default) or compact (shared evidence, one-based citations, deduplicated explanations).")] string detail = "full",
+    [Description("Explain a saved T-SQL module with citeable static evidence. Known file: use documentUri plus declaration (exact P or dbo.P), or zero-based UTF-16 line/character. After discovery copy moduleRef alone; no discovery is required for known files. Compact default, small expansion. Oversized evidence returns reportRef/sections: request only relevant pages. Use Read/Grep for literals or ad-hoc scripts. Empty/omitted facts never prove no effects. Does not execute SQL or require LSP.")]
+    public async Task<CallToolResult> AnalyzeProcedure(string documentUri = "", int line = 0, int character = 0,
+        [Description("Expansion levels, 0..4; default 1.")] int maxDepth = 1,
+        [Description("Maximum expanded modules, 1..40; default 8.")] int maxModules = 8,
+        [Description("Optional exact revision; copy the entire returned value including suffixes.")] string? expectedRevision = null,
+        [Description("compact (default); full retains original DTO fields. Both use deliberate pages when oversized.")] string detail = "compact",
         [Description("Compact only: up to 8 variable names or expression snippets, each 1..64 characters. Case-insensitive literal substring selection and connected value dependencies; not semantic search. Omitted counts remain visible.")] string[]? focus = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, string? declaration = null, string? moduleRef = null,
+        string? reportRef = null, string section = "", int offset = 0, int maxItems = 20)
     {
-        using var observation = metrics.Begin("analyze_procedure", detail, cancellationToken);
+        using var observation = metrics.Begin(reportRef == null ? "analyze_procedure" : "expand_report", detail, cancellationToken);
+        ModuleSelection? selectedModule = moduleRef == null ? null : moduleSelections.Get(moduleRef);
+        if (selectedModule != null)
+        {
+            if (documentUri.Length != 0 && !Uri.TryCreate(documentUri, UriKind.Absolute, out var supplied) || declaration != null || reportRef != null)
+                throw new McpException("Use moduleRef alone, or a file/declaration selection, or reportRef expansion.");
+            if (documentUri.Length != 0 && new Uri(documentUri) != selectedModule.Uri) throw new McpException("moduleRef and documentUri disagree.");
+            documentUri = selectedModule.Uri.AbsoluteUri;
+            line = selectedModule.Position.Line; character = selectedModule.Position.Character;
+            expectedRevision ??= selectedModule.Revision;
+        }
+        if (reportRef != null)
+        {
+            if (declaration != null || moduleRef != null) throw new McpException("Report expansion cannot include another selector.");
+            documentUri = analysisPages.Source(reportRef).AbsoluteUri;
+        }
         if (!Uri.TryCreate(documentUri, UriKind.Absolute, out var uri) || !uri.IsFile || uri.Query.Length != 0 || uri.Fragment.Length != 0 ||
             line < 0 || character < 0 || maxDepth is < 0 or > 4 || maxModules is < 1 or > 40 ||
             detail is not ("full" or "compact") || focus is { Length: > 8 } ||
-            focus?.Any(f => string.IsNullOrWhiteSpace(f) || f.Length > 64) == true || (detail == "full" && focus is { Length: > 0 }))
+            focus?.Any(f => string.IsNullOrWhiteSpace(f) || f.Length > 64) == true || (detail == "full" && focus is { Length: > 0 }) ||
+            declaration?.Length > 256 || offset < 0 || maxItems is < 1 or > 100 || section.Length > 2048)
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
         return observation.Complete(await WithIndex(async (index, timings) =>
         {
+            var generation = materialized?.Index.Generation ?? index.Generation;
+            if (selectedModule != null && selectedModule.Generation != generation) throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
+            if (declaration != null)
+            {
+                var rules = SourceFiles?.Contexts.Rules(SourceFiles.ContextId(uri), state?.Resolution ?? new()) ?? new();
+                var candidates = index.Symbols.Where(s => s.Target.Uri == uri && (rules.Comparer.Equals(s.Declaration.Name, declaration) || rules.Comparer.Equals(s.Identity.Name, declaration)) &&
+                    s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View).ToArray();
+                if (candidates.Length != 1) throw new McpException("File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates.");
+                line = candidates[0].Target.Range.Start.Line; character = candidates[0].Target.Range.Start.Character;
+            }
+            CallToolResult Envelope(object reportValue, AnalysisCacheUse? use = null) => Result(new
+            {
+                formatVersion = 2, source = "Saved snapshots; this process does not receive LSP unsaved buffers or execute SQL. Effects are static possibilities.",
+                indexedDocuments = materialized?.Index.DocumentCount ?? index.DocumentCount, parsedDocuments = index.DocumentCount,
+                coverage = Coverage, sourceContext = SourceFiles?.Contexts.Describe(uri, SourceFiles.ContextId(uri)),
+                sourceStatuses = SourceStatuses.Take(4).Select(s => s.Length > 256 ? s[..256] + "…" : s).ToArray(), indexCache = materialized?.Use,
+                timings, cache = use, report = reportValue, drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
+            });
+            if (reportRef != null)
+            {
+                var page = analysisPages.Page(reportRef, generation, section, offset, maxItems, value => FitsWireBudget(Envelope(value), launch.AnalysisMaxBytes));
+                var response = Envelope(page);
+                if (!FitsWireBudget(response, launch.AnalysisMaxBytes)) throw new McpException("Section exceeds the wire budget; choose a shorter parent section or a smaller page.");
+                return response;
+            }
             var context = CacheContext(index, timings, cancellationToken);
             var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
             var report = analyzed.Report;
+            observation.AnalyzerReport(report);
             var timer = Stopwatch.StartNew();
             var presented = detail == "compact" ? new CompactProcedureReport(report, launch.Workspace, focus ?? [], cancellationToken).Create() : (object)report;
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
-            return Result(new
+            var responseValue = Envelope(presented, analyzed.Use);
+            if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
+            var reference = analysisPages.Register(generation, uri, presented);
+            for (var count = Math.Min(8, report.Modules.Length); count >= 0; count--)
             {
-                source = "Saved workspace/catalog snapshots; this process does not receive LSP unsaved buffers.",
-                indexedDocuments = materialized?.Index.DocumentCount ?? index.DocumentCount,
-                parsedDocuments = index.DocumentCount,
-                coverage = Coverage,
-                sourceContext = SourceFiles?.Contexts.Describe(uri, SourceFiles.ContextId(uri)),
-                sourceStatuses = SourceStatuses,
-                indexCache = materialized?.Use,
-                timings,
-                cache = analyzed.Use,
-                report = presented,
-                drift = index.Drifts.Where(d => d.Local.Uri == uri).ToArray()
-            });
+                responseValue = Envelope(analysisPages.Overview(reference, generation, count), analyzed.Use);
+                if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
+            }
+            throw new McpException("Analysis metadata exceeds wire budget; use a narrower source/depth or direct source inspection.");
         }, cancellationToken, uri, maxDepth, maxModules));
     }
 

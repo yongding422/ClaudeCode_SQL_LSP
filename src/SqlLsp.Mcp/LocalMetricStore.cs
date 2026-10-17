@@ -92,7 +92,7 @@ internal sealed class LocalMetricStore(string directory)
 
     private static bool Hex(string? value) => value is { Length: 32 } && value.All(char.IsAsciiHexDigit);
     private static bool Valid(MetricEvent e) => e.Format == 1 && e.Version is { Length: > 0 and < 24 } && e.Version.All(c => char.IsAsciiDigit(c) || c == '.') && Hex(e.Build) && Hex(e.Session) &&
-        e.Operation is "find_procedures" or "analyze_procedure" or "build_cache" && e.Detail is "full" or "compact" or "discovery" or "prebuild" or "Invalid" &&
+        e.Operation is "find_procedures" or "analyze_procedure" or "expand_report" or "build_cache" && e.Detail is "full" or "compact" or "discovery" or "prebuild" or "Invalid" &&
         e.Outcome is "Success" or "Error" or "Canceled" && e.SourceMode is "offline" or "online" or "hybrid" or "NotInitialized" &&
         double.IsFinite(e.DurationMs) && e.DurationMs is >= 0 and <= 1e12 && e.IndexedDocuments is null or >= 0 && e.PayloadUtf8Bytes is null or >= 0 and <= 1L << 32 && e.ReportUtf8Bytes is null or >= 0 and <= 1L << 32 &&
         e.Modules >= 0 && e.Calls >= 0 && e.ResolvedCalls >= 0 && e.ResolvedCalls <= e.Calls && e.Accesses >= 0 && e.ResolvedAccesses >= 0 && e.ResolvedAccesses <= e.Accesses &&
