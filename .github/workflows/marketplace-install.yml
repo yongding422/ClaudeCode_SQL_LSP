@@ -1,5 +1,11 @@
 name: marketplace-install
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      marketplaceSource:
+        description: 'Marketplace Git URL or HTTPS catalog URL; use a candidate catalog before main rollout'
+        type: string
+        default: 'https://github.com/yongding422/ClaudeCode_SQL_LSP.git'
 permissions:
   contents: read
 jobs:
@@ -17,6 +23,8 @@ jobs:
           - os: macos-15-intel
             rid: osx-x64
     runs-on: ${{ matrix.os }}
+    env:
+      SQLLSP_TEST_MARKETPLACE_SOURCE: ${{ inputs.marketplaceSource }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -28,4 +36,4 @@ jobs:
       - run: dotnet restore --locked-mode
       - run: dotnet build --no-restore -c Release
       - shell: pwsh
-        run: ./scripts/test-marketplace-install.ps1 -Runtime '${{ matrix.rid }}'
+        run: ./scripts/test-marketplace-install.ps1 -Runtime '${{ matrix.rid }}' -MarketplaceSource $env:SQLLSP_TEST_MARKETPLACE_SOURCE
