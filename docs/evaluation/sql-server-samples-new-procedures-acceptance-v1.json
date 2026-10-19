@@ -1,0 +1,91 @@
+{
+  "format": "sql-answer-acceptance-v1",
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "suite_sha256": "0dbcbda5d561b9568493665ef8034babd7b8fc6136aa4f6c8703c5c9093f90b0",
+  "purpose": "New primary procedures on a familiar corpus; not an independent blinded holdout. No model sessions have been run for this cohort.",
+  "decisions": [
+    "accept_as_written",
+    "minor_edits",
+    "major_correction",
+    "reject"
+  ],
+  "grading": "Score essential facts/evidence/uncertainty/relevance 0/0.5/1; review every consequential extra claim. Failed and missing answers remain assigned. Optional detail cannot block acceptance. Acceptance is explicit review, never inferred from tool delivery.",
+  "tasks": [
+    {
+      "task_id": "N01-receipt-scope-review",
+      "developer_goal": "Review DataLoadSimulation.ReceivePurchaseOrders under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt. A maintainer says each cursor iteration adjusts stock only for the currently received purchase order. Verify that claim from the predicates and joins, summarize persistent writes and transaction boundaries, and propose a minimal regression scenario before changing the code. Do not modify or execute SQL, and distinguish a source-level defect risk from an observed production incident.",
+      "essential_facts": [
+        "Cursor selects Purchasing.PurchaseOrders with IsOrderFinalized=0 and ExpectedDeliveryDate >= @StartingWhen; the loop fetches PurchaseOrderID and SupplierID.",
+        "PurchaseOrderLines and PurchaseOrders updates and StockItemTransactions INSERT are restricted to the current PurchaseOrderID; StockItemHoldings UPDATE joins all PurchaseOrderLines and StockItems without that restriction. Do not claim all holdings rows or any exact quantity necessarily change.",
+        "Direct persistent writes are updates to Purchasing.PurchaseOrderLines, Warehouse.StockItemHoldings and Purchasing.PurchaseOrders, plus inserts to Warehouse.StockItemTransactions and Purchasing.SupplierTransactions.",
+        "BEGIN TRAN and COMMIT are inside the cursor loop, with XACT_ABORT ON and no shown CATCH. Per-iteration syntax does not prove ownership of or a commit of a caller's ambient transaction.",
+        "Proposes separate current and non-selected purchase orders with different stock items and nonzero receipt quantities to check unintended stock changes. Exact affected rows, join multiplicity, quantities and failure outcome require data/session evidence; the scenario is proposed, not executed."
+      ],
+      "critical_errors": [
+        "Claims the holdings UPDATE filters to the current PurchaseOrderID.",
+        "Guarantees an exact affected row count or quantity from these joins alone.",
+        "Treats each COMMIT as proof that a caller transaction ends."
+      ],
+      "required_evidence": [
+        "Cite cursor selection, all five persistent write targets, the unfiltered holdings joins and loop transaction positions."
+      ],
+      "expected_uncertainty": [
+        "Separate the unfiltered source predicate from actual data-dependent effects; proposed checks are not executed tests."
+      ],
+      "optional_detail": [
+        "Formatting, exact wording and other details not necessary to the requested developer decision."
+      ]
+    },
+    {
+      "task_id": "N02-supplier-payment-handover",
+      "developer_goal": "Write a handover for DataLoadSimulation.PaySuppliers under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt. Explain how it selects transactions, separates its local work list from persistent writes, aggregates payment amounts, and obtains lookup IDs. Would moving the work-list load inside BEGIN TRAN alone prove the payments are safe from concurrent changes? Explain the source evidence and missing runtime facts without running SQL.",
+      "essential_facts": [
+        "Loads Purchasing.SupplierTransactions rows with IsFinalized=0 into local @TransactionsToPay before BEGIN TRAN; stored IDs and balances are subsequently read from that work list.",
+        "Updates selected Purchasing.SupplierTransactions to OutstandingBalance=0 and sets finalization/edit fields, then inserts payment rows into the same persistent table; the work list is not another persistent target.",
+        "Groups work-list balances by SupplierID and inserts 0-SUM(OutstandingBalance); new payment rows have NULL PurchaseOrderID/SupplierInvoiceNumber, zero outstanding balance and use @StartingWhen for dates.",
+        "GetTransactionTypeID receives Supplier Payment Issued and reads Application.TransactionTypes; GetPaymentMethodID receives EFT and reads Application.PaymentMethods. Both helpers filter the name and ValidTo='99991231 23:59:59.9999999'. These are transitive lookup reads, not additional persistent writes.",
+        "BEGIN TRAN/COMMIT and XACT_ABORT ON are declared, but caller transaction, isolation/locking and concurrent modifications are unknown. Moving a statement into the transaction alone does not prove race freedom; do not invent a locking or retry guarantee."
+      ],
+      "critical_errors": [
+        "Treats @TransactionsToPay as a persistent table.",
+        "Claims one payment per purchase order rather than per supplier.",
+        "Guarantees race freedom solely from moving the load inside BEGIN TRAN."
+      ],
+      "required_evidence": [
+        "Cite the pre-transaction local insert, subsequent local reads, grouped persistent writes and both helper definitions."
+      ],
+      "expected_uncertainty": [
+        "Runtime amounts, isolation/locking, concurrent changes and ambient transaction are unknown."
+      ],
+      "optional_detail": [
+        "Formatting, exact wording and other details not necessary to the requested developer decision."
+      ]
+    },
+    {
+      "task_id": "N03-delivery-status-investigation",
+      "developer_goal": "A delivery simulation reports Receiver not present but an invoice can still look delivered. Investigate DataLoadSimulation.RecordInvoiceDeliveries and the Sales.Invoices table under samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt. Trace the branch, JSON updates and confirmed-delivery field, explain selection and the driver dependency, and propose a source-backed regression check. Do not claim you reproduced the incident or execute SQL.",
+      "essential_facts": [
+        "Cursor selects invoices with ConfirmedDeliveryTime IS NULL and InvoiceDate before CAST(@StartingWhen AS date), joined to Sales.Customers, Application.Cities and Application.People.",
+        "GetRandomEmployeePerson writes its EmployeePersonID OUTPUT into DeliveryDriverPersonID; the helper selects an employee from Application.People with the ValidTo sentinel and ORDER BY NEWID. The exact driver is unknown.",
+        "RAND()<0.1 records Receiver not present and leaves IsDelivered=0; the other branch sets Status=Delivered and IsDelivered=1. IsDelivered is not used to guard the later JSON modifications or invoice update.",
+        "After either branch, code appends an Events item and sets DeliveredWhen and ReceivedBy, then updates Sales.Invoices.ReturnedDeliveryData/edit fields. ConfirmedDeliveryTime is computed by TRY_CONVERT over JSON_VALUE(ReturnedDeliveryData,'$.DeliveredWhen'); it is not directly assigned by this procedure.",
+        "Proposes exercising both branches with suitable existing delivery JSON and inspecting the resulting JSON/computed fields. RAND outcome, actual JSON/data, execution success and caller transaction are unknown; no explicit BEGIN TRAN/COMMIT appears in this body. A plausible source explanation is not proof of the reported production cause."
+      ],
+      "critical_errors": [
+        "Claims the non-delivery branch skips DeliveredWhen or the invoice update.",
+        "Claims ConfirmedDeliveryTime is explicitly assigned by the UPDATE.",
+        "Claims the production incident was reproduced or its cause proved."
+      ],
+      "required_evidence": [
+        "Cite selection, output argument binding/helper definition, both branches, unguarded JSON writes and the computed-column expression."
+      ],
+      "expected_uncertainty": [
+        "RAND, existing JSON, successful persistence and caller transaction are unknown; proposed regression checks have not run."
+      ],
+      "optional_detail": [
+        "Formatting, exact wording and other details not necessary to the requested developer decision."
+      ]
+    }
+  ]
+}

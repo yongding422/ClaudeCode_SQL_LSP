@@ -251,10 +251,21 @@ class AcceptanceTests(unittest.TestCase):
     def test_shipped_rubrics_match_their_suites_and_keep_historical_cohort_separate(self):
         directory = Path(__file__).resolve().parents[1] / "docs/evaluation"
         for suite_name, rubric_name, count in (("sql-server-samples-suite.json", "sql-server-samples-acceptance-v1.json", 12),
-            ("sql-server-samples-investigations-v1.json", "sql-server-samples-investigations-acceptance-v1.json", 5)):
+            ("sql-server-samples-investigations-v1.json", "sql-server-samples-investigations-acceptance-v1.json", 5),
+            ("sql-server-samples-new-procedures-v1.json", "sql-server-samples-new-procedures-acceptance-v1.json", 3)):
             suite, rubric = acceptance.read(directory / suite_name), acceptance.read(directory / rubric_name)
             acceptance.validate_rubric(rubric, suite, hashlib.sha256(json.dumps(suite, sort_keys=True).encode()).hexdigest())
             self.assertEqual(count, len(rubric["tasks"]))
+
+    def test_new_primary_procedures_do_not_reuse_previous_cohort_evidence_targets(self):
+        directory = Path(__file__).resolve().parents[1] / "docs/evaluation"
+        old_sources = {evidence[0] for name in ("sql-server-samples-suite.json", "sql-server-samples-additional-suite.json",
+                      "sql-server-samples-investigations-v1.json") for task in acceptance.read(directory / name)["tasks"] for evidence in task["evidence"]}
+        suite = acceptance.read(directory / "sql-server-samples-new-procedures-v1.json")
+        primary = [task["primary_source"] for task in suite["tasks"]]
+        self.assertEqual(3, len(set(primary)))
+        self.assertFalse(set(primary) & old_sources)
+        self.assertTrue(all(task["primary_source"] in {entry[0] for entry in task["evidence"]} for task in suite["tasks"]))
 
 
 if __name__ == "__main__":
