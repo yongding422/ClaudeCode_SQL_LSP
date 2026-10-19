@@ -18,7 +18,7 @@ def analysis_statuses(events):
     references = {}
     for event in events:
         for block in blocks(event):
-            if block.get("type") != "tool_result":
+            if block.get("type") != "tool_result" or block.get("is_error"):
                 continue
             content = block.get("content")
             texts = [content] if isinstance(content, str) else [item.get("text", "") for item in content
@@ -30,6 +30,11 @@ def analysis_statuses(events):
                     continue
                 if isinstance(payload, dict) and isinstance(payload.get("report"), dict):
                     report = payload["report"]
+                    brief = payload.get("brief")
+                    if isinstance(brief, dict) and brief.get("format") == "procedure-brief-v1" and isinstance(brief.get("facts"), list) and any(
+                            isinstance(fact, dict) and isinstance(fact.get("citation"), str) and fact["citation"] for fact in brief["facts"]):
+                        # Delivery is observable; correctness and developer acceptance require review.
+                        statuses.append("Brief" + report.get("status", "unknown"))
                     kind = report.get("format")
                     if kind == "paged-report-v1":
                         status = report.get("status", "unknown")
@@ -78,7 +83,8 @@ def aggregate(rows):
               "oversized_tool_results": sum(row["oversized_tool_results"] for row in rows),
               "runs_with_mcp_calls": sum(row["mcp_calls"] > 0 for row in rows),
               "runs_with_analysis_reports": sum(row["analysis_reports"] > 0 for row in rows),
-              "runs_with_supported_analysis": sum(any(status in ("Resolved", "Partial", "ExpandedResolved", "ExpandedPartial") for status in row.get("analysis_statuses", [])) for row in rows),
+              "runs_with_supported_analysis": sum(any(status in ("Resolved", "Partial", "ExpandedResolved", "ExpandedPartial", "BriefResolved", "BriefPartial") for status in row.get("analysis_statuses", [])) for row in rows),
+              "runs_with_cited_brief": sum(any(status.startswith("Brief") for status in row.get("analysis_statuses", [])) for row in rows),
               "runs_with_paged_summary": sum(any(status.startswith("Paged") for status in row.get("analysis_statuses", [])) for row in rows)}
     for key in ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens", "reported_total_input_tokens", "reported_cost_usd"):
         known = [row[key] for row in rows if row.get(key) is not None]
@@ -155,7 +161,8 @@ def report(study, grades_path):
                ("Tool failures", "tool_failures", "{}"), ("Oversized tool results", "oversized_tool_results", "{}"),
                ("Sessions invoking SQL MCP", "runs_with_mcp_calls", "{}"), ("Sessions receiving analysis JSON (may include summary/pages)", "runs_with_analysis_reports", "{}"),
                ("Sessions receiving a bounded summary", "runs_with_paged_summary", "{}")]
-    metrics.append(("Sessions with Resolved/Partial analysis (not Unresolved)", "runs_with_supported_analysis", "{}"))
+    metrics.append(("Sessions receiving cited brief facts (not an accuracy score)", "runs_with_cited_brief", "{}"))
+    metrics.append(("Sessions with Resolved/Partial evidence delivery (includes brief; not answer accuracy)", "runs_with_supported_analysis", "{}"))
     for label, key, formatting in metrics:
         values = [grouped[arm][key] for arm in ("grep", "plugin")]
         if key.endswith("elapsed_ms"):

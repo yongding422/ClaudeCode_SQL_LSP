@@ -261,6 +261,32 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             intent is not ("overview" or "transactions" or "dependencies"))
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
         var selector = declaration == null ? null : ModuleSelector.Parse(declaration);
+        if (reportRef != null)
+        {
+            // Saved pages need a current generation check, not another rich body/navigation load.
+            return observation.Complete(await WithDiscovery((index, timings) =>
+            {
+                var root = RequestScope(scopeUri);
+                if (root != null && !root.IsBaseOf(uri)) throw new McpException("Selected file is outside the requested scope.");
+                var generation = ScopedGeneration(index.Generation, root);
+                if (selectedModule != null && selectedModule.Generation != generation)
+                    throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
+                CallToolResult Envelope(object value) => Result(new
+                {
+                    formatVersion = 2,
+                    responseKind = "report-expansion",
+                    contextRef = reportRef,
+                    context = "Saved evidence; use the original response's coverage, sourceContext, scope and limitations. No SQL execution. Expand /evidence and /sources for compact citations.",
+                    timings,
+                    brief = (object?)null,
+                    report = value
+                });
+                var page = analysisPages.Page(reportRef, generation, section, offset, maxItems, value => FitsWireBudget(Envelope(value), launch.AnalysisMaxBytes));
+                var response = Envelope(page);
+                if (!FitsWireBudget(response, launch.AnalysisMaxBytes)) throw new McpException("Section exceeds the wire budget; choose a shorter parent section or a smaller page.");
+                return Task.FromResult(response);
+            }, cancellationToken));
+        }
         return observation.Complete(await WithIndex(async (index, timings) =>
         {
             var root = RequestScope(scopeUri);
@@ -302,13 +328,6 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 report = reportValue,
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
             });
-            if (reportRef != null)
-            {
-                var page = analysisPages.Page(reportRef, generation, section, offset, maxItems, value => FitsWireBudget(Envelope(value), launch.AnalysisMaxBytes));
-                var response = Envelope(page);
-                if (!FitsWireBudget(response, launch.AnalysisMaxBytes)) throw new McpException("Section exceeds the wire budget; choose a shorter parent section or a smaller page.");
-                return response;
-            }
             var context = CacheContext(index, timings, cancellationToken, root?.AbsoluteUri);
             var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
             var report = analyzed.Report;

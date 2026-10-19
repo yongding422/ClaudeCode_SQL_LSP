@@ -4,6 +4,8 @@ Local candidate after 0.16.0; not yet a published marketplace update. This slice
 
 `analyze_procedure` now adds a `brief` object alongside the existing `report`. The compact default and explicit full DTO remain available. Oversized reports still return `reportRef` and bounded pages; the first response also carries selected citeable facts instead of only module counts. Expansion responses set `brief` to null so it is not retransmitted on every page.
 
+The follow-up expansion envelope sets `responseKind=report-expansion` and `contextRef` to its original report reference. It inherits coverage, source context, scope and limitations from that initial response rather than retransmitting them on each page. Keep the initial response when interpreting pages. Each page retains its generation, section, pagination, evidence IDs/spans and per-request timings; compact citation tables remain expandable. The server still refreshes source generation before serving a page. With persisted indexing it verifies current file bytes without loading rich bodies again. A changed generation still rejects the saved report, including same-length edits with restored timestamps.
+
 Optional `intent` is `overview` (default), `transactions` or `dependencies`. It changes presentation priority only. Analysis depth/module budgets, resolution, cache identity and the retained report are unchanged by intent. There is no semantic question interpreter and no additional tool.
 
 ```json
@@ -39,6 +41,8 @@ At most eight facts are initially selected. The server measures the complete str
 `totalFacts`/`omittedFacts` count the eligible observation, RETURN issue, access, call and transaction/error-node candidates, not all SQL behavior or every retained value fact. Other control/value/parameter facts remain in `report`. `truncated`, issue/expansion counts and the source coverage envelope remain visible. Even zero eligible omissions never proves complete behavior. Unknown triggers, external implementations, actual row counts, predicate truth and ambient transaction outcomes remain unknown.
 
 The findings are deliberately source-bound and read-only. Persistent index/report storage and metrics remain separately configured opt-ins. No hook, database connection or LSP startup is introduced.
+
+Benchmark instrumentation distinguishes canonical complete SQL-tool payload bytes (`sql_payload_utf8_bytes`), exact returned text bytes (`sql_result_text_utf8_bytes`), report-only bytes and brief-only bytes. These count one correlated successful response per call ID; they are neither JSON-RPC wire-frame sizes nor tokenizer measurements. Cited brief facts are recorded separately from summary metadata and expanded evidence. Delivery does not establish that the model read the facts or answered correctly. Failed responses and missing usage remain visible; historical result files are unchanged. Actual model usage and explicit source-based acceptance review remain the outcomes needed to demonstrate improvement.
 
 ## Verification
 

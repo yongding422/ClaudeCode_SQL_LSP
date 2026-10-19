@@ -50,6 +50,7 @@ def summarize(events):
     counts = dict.fromkeys(("lsp", "grep", "read", "glob", "skill", "mcp", "other"), 0)
     failures, missing, oversized = 0, 0, 0
     server_timings, report_bytes, analysis_caches = [], [], []
+    payload_bytes, result_text_bytes, brief_bytes, brief_facts = [], [], [], []
     for call_id, name in calls.items():
         counts[category(name)] += 1
         result = results.get(call_id)
@@ -71,12 +72,22 @@ def summarize(events):
                     continue
                 if not isinstance(payload, dict):
                     continue
+                # Entire parsed SQL-tool payload, including brief and envelope. Neither number
+                # is a wire-frame or tokenizer measurement; exact text preserves its escaping.
+                payload_bytes.append(len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+                result_text_bytes.append(len(text.encode("utf-8")))
                 timings = payload.get("timings")
                 if isinstance(timings, dict):
                     server_timings.append(timings)
                 if name.endswith("__analyze_procedure") and isinstance(payload.get("report"), dict):
                     # Canonical report bytes, not wire frame size or model token usage. No contents retained.
                     report_bytes.append(len(json.dumps(payload["report"], ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+                    brief = payload.get("brief")
+                    if isinstance(brief, dict) and brief.get("format") == "procedure-brief-v1":
+                        brief_bytes.append(len(json.dumps(brief, ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+                        facts = brief.get("facts")
+                        brief_facts.append(sum(isinstance(fact, dict) and isinstance(fact.get("citation"), str) and bool(fact["citation"])
+                                               for fact in facts) if isinstance(facts, list) else 0)
                     cache = payload.get("cache")
                     if isinstance(cache, dict) and isinstance(cache.get("enabled"), bool):
                         analysis_caches.append((cache["enabled"], cache.get("status")))
@@ -103,7 +114,11 @@ def summarize(events):
                 ("cache_validation", "cacheValidationMs"), ("cache_read", "cacheReadMs"), ("cache_write", "cacheWriteMs"))},
             "analysis_cache_enabled_calls": sum(enabled for enabled, _ in analysis_caches) if analysis_caches else None,
             "analysis_cache_hits": sum(status == "Hit" for _, status in analysis_caches) if analysis_caches else None,
-            "analysis_reports": len(report_bytes), "analysis_report_utf8_bytes": sum(report_bytes) if report_bytes else None}
+            "analysis_reports": len(report_bytes), "analysis_report_utf8_bytes": sum(report_bytes) if report_bytes else None,
+            "sql_payloads": len(payload_bytes), "sql_payload_utf8_bytes": sum(payload_bytes) if payload_bytes else None,
+            "sql_result_text_utf8_bytes": sum(result_text_bytes) if result_text_bytes else None,
+            "analysis_briefs": len(brief_bytes), "analysis_brief_utf8_bytes": sum(brief_bytes) if brief_bytes else None,
+            "analysis_cited_brief_facts": sum(brief_facts)}
 
 
 def copy_sql(source, destination):

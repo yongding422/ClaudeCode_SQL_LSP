@@ -12,6 +12,36 @@ spec.loader.exec_module(evaluation)
 
 
 class MetricsTests(unittest.TestCase):
+    def test_complete_payload_and_brief_delivery_are_counted_without_claiming_accuracy(self):
+        brief = {"format": "procedure-brief-v1", "facts": [{"citation": "private 中文.sql:3", "detail": "SECRET"}, {"detail": "uncited"}]}
+        payload = {"report": {"format": "paged-report-v1", "status": "Resolved"}, "brief": brief,
+                   "coverage": {"limitation": "SECRET"}, "timings": {"coldStart": True}}
+        text = json.dumps(payload, ensure_ascii=True, indent=2)
+        events = [{"message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__sql__analyze_procedure"}]}},
+                  {"message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": text}]}}]
+        metrics = evaluation.summarize(events + events)
+        canonical = lambda value: len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+        self.assertEqual(1, metrics["sql_payloads"])
+        self.assertEqual(canonical(payload), metrics["sql_payload_utf8_bytes"])
+        self.assertEqual(len(text.encode("utf-8")), metrics["sql_result_text_utf8_bytes"])
+        self.assertEqual(canonical(payload["report"]), metrics["analysis_report_utf8_bytes"])
+        self.assertEqual(canonical(brief), metrics["analysis_brief_utf8_bytes"])
+        self.assertEqual(1, metrics["analysis_briefs"])
+        self.assertEqual(1, metrics["analysis_cited_brief_facts"])
+        self.assertNotIn("SECRET", str(metrics))
+        self.assertNotIn("private", str(metrics))
+        self.assertIsNone(metrics["input_tokens"])
+
+    def test_null_missing_and_malformed_briefs_are_not_evidence_delivery(self):
+        for brief in (None, {}, {"format": "unknown", "facts": [{"citation": "p.sql:1"}]},
+                      {"format": "procedure-brief-v1", "facts": None}):
+            events = [{"message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__sql__analyze_procedure"}]}},
+                      {"message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": json.dumps({"report": {}, "brief": brief})}]}}]
+            metrics = evaluation.summarize(events)
+            self.assertEqual(0, metrics["analysis_cited_brief_facts"])
+            self.assertEqual(1, metrics["sql_payloads"])
+        self.assertIsNone(evaluation.summarize([])["sql_payload_utf8_bytes"])
+
     def test_client_oversize_result_is_a_failure_even_without_is_error_flag(self):
         call = {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "a", "name": "mcp__sql__find_procedures"}]}}
         result = {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a", "content": "Error: result (217707 characters) exceeds maximum allowed tokens. Output saved."}]}}

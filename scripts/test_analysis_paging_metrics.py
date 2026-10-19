@@ -9,6 +9,16 @@ spec.loader.exec_module(report)
 
 
 class PagedEvidenceMetrics(unittest.TestCase):
+    def test_cited_brief_is_distinct_from_summary_and_from_answer_accuracy(self):
+        def response(facts, error=False):
+            return {"message": {"content": [{"type": "tool_result", "is_error": error, "content": json.dumps({
+                "report": {"format": "paged-report-v1", "status": "Resolved", "reportRef": "r"},
+                "brief": {"format": "procedure-brief-v1", "facts": facts}})}]}}
+        self.assertEqual(["BriefResolved", "PagedResolved"], report.analysis_statuses([response([{"citation": "p.sql:1"}])]))
+        for facts in ([], None, [{"detail": "no citation"}], [{"citation": ""}]):
+            self.assertEqual(["PagedResolved"], report.analysis_statuses([response(facts)]))
+        self.assertEqual([], report.analysis_statuses([response([{"citation": "p.sql:1"}], True)]))
+
     def result(self, data):
         return {"message": {"content": [{"type": "tool_result", "content": json.dumps({"report": data})}]}}
 
