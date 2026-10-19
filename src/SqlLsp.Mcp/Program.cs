@@ -46,7 +46,7 @@ try
     builder.Services.AddMcpServer(options =>
         {
             options.ServerInfo = new() { Name = "sqlscriptdom-analysis", Version = PluginMetrics.Version };
-            options.ServerInstructions = "Use file Read/Grep for exact literals and ad-hoc scripts. For a known SQL module, analyze its file/declaration directly; discover only unknown locations, then copy moduleRef. When the developer specifies an application folder, use its scopeUri to exclude unrelated projects, especially in SQL-only copies. Compact defaults use small expansion; expand only relevant reportRef sections and source evidence. Lists are static extracted facts, never proof that triggers, CLR, dynamic SQL or implicit engine effects are absent. MCP works independently of LSP and never executes SQL.";
+            options.ServerInstructions = "Use Read/Grep for literals and ad-hoc scripts. Analyze known SQL files directly; discover unknown locations, then copy moduleRef. Ambiguous SQL-only copies may offer scopeChoice.moduleRef: select it only if its physical directory matches the requested source. The handle carries the source boundary; outside dependencies remain unknown. Configured project duplicates remain ambiguous. An explicit scopeUri is also supported. Use bounded evidence and only relevant reportRef pages. Extracted lists never prove absent trigger/CLR/dynamic/implicit effects. MCP is independent of LSP and never executes SQL.";
         })
         .WithStdioServerTransport().WithTools(tools);
     await builder.Build().RunAsync();

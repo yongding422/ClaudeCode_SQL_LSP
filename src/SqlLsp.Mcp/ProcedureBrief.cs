@@ -83,7 +83,7 @@ internal sealed class ProcedureBrief(SqlProcedureReport report, string workspace
             report.Status,
             report.Explanation,
             selectionRecovery = report.Status == ResolutionStatus.Ambiguous ?
-                "Duplicate identities remain ambiguous. Repeat discovery with scopeUri set to the developer's explicit project folder, then reuse its moduleRef. Selecting a file alone does not establish a separate database context." : null,
+                "Duplicate identities remain ambiguous. Use a discovery scopeChoice.moduleRef only when its physical directory matches the requested source, or repeat discovery with explicit scopeUri. Selecting a file alone does not establish a separate database context." : null,
             facts = ordered.Select(f => new
             {
                 moduleIndex = f.Module,

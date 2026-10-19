@@ -2,7 +2,10 @@ using System.Collections.Immutable;
 
 namespace SqlLsp.Core;
 
-public sealed record SqlModuleMetadata(string? Revision, ResolutionStatus Status);
+public sealed record SqlModuleMetadata(string? Revision, ResolutionStatus Status)
+{
+    public ImmutableArray<Uri> CandidateUris { get; init; } = [];
+}
 
 // Discovery depends on extracted facts, never an AST-shaped placeholder.
 public interface ISqlDiscoveryIndex

@@ -58,10 +58,11 @@ public sealed class SqlMaterializedIndex : ISqlDiscoveryIndex
         if (!files.TryGetValue(symbol.Target.Uri, out var file)) return new(null, ResolutionStatus.Unresolved);
         var identity = symbol.Identity;
         var comparer = file.Rules.Options.Comparer;
-        var duplicates = Symbols.Count(s => s.Identity.SourceContextId == identity.SourceContextId && s.Identity.Kind == identity.Kind &&
+        var duplicates = Symbols.Where(s => s.Identity.SourceContextId == identity.SourceContextId && s.Identity.Kind == identity.Kind &&
             comparer.Equals(s.Identity.Server, identity.Server) && comparer.Equals(s.Identity.Database, identity.Database) &&
-            comparer.Equals(s.Identity.Schema, identity.Schema) && comparer.Equals(s.Identity.Name, identity.Name));
-        return duplicates == 1 ? new(file.Revision, ResolutionStatus.Resolved) : new(null, ResolutionStatus.Ambiguous);
+            comparer.Equals(s.Identity.Schema, identity.Schema) && comparer.Equals(s.Identity.Name, identity.Name)).Select(s => s.Target.Uri).ToImmutableArray();
+        return duplicates.Length == 1 ? new(file.Revision, ResolutionStatus.Resolved) :
+            new(null, ResolutionStatus.Ambiguous) { CandidateUris = duplicates };
     }
 
     public ResolutionResult Resolve(SqlMaterializedFile file, SqlStaticReference reference)

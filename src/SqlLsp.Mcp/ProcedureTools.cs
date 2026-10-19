@@ -93,7 +93,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     };
 
     [McpServerTool(Name = "find_procedures", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Find saved T-SQL modules when their location is unknown. Bounded pages contain identities, revisions and zero-based UTF-16 selections. Reuse nextCursor with identical options. section=issues or files explicitly pages diagnostics/coverage; documentUri restricts to one file. Known files can be analyzed directly. No SQL execution.")]
+    [Description("Find saved T-SQL modules. Ambiguous SQL-only copies may offer scopeChoice with a ready-to-use moduleRef: choose it only when its physical directory matches the requested source. It restricts dependencies to that directory; it is not inferred project membership. Original unscoped handles remain ambiguous. Reuse nextCursor with identical options; section=issues/files pages coverage. Known files can be analyzed directly. No SQL execution.")]
     public async Task<CallToolResult> FindProcedures([Description("Name substring; empty lists indexed modules.")] string query = "",
         [Description("Maximum entries per page, 1..100; byte budget may return fewer.")] int maxResults = 30,
         CancellationToken cancellationToken = default, string? cursor = null, string section = "modules", string? documentUri = null,
@@ -123,16 +123,35 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             object Module(IndexedSqlSymbol symbol)
             {
                 var metadata = index.ModuleMetadata(symbol, cancellationToken);
+                var context = SourceFiles?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId);
+                object? choice = null;
+                if (root == null && symbol.Target.SourceKind == SqlSourceKind.Workspace && SourceFiles is { } files &&
+                    DiscoveryScopeChoice.DirectoryFor(symbol.Target.Uri, metadata, files, context, cancellationToken) is { } directory)
+                {
+                    var scopedMetadata = index.Within(directory).ModuleMetadata(symbol, cancellationToken);
+                    if (scopedMetadata.Status == ResolutionStatus.Resolved)
+                        choice = new
+                        {
+                            directoryUri = directory.AbsoluteUri,
+                            directory = Path.GetRelativePath(launch.Workspace, directory.LocalPath).Replace('\\', '/'),
+                            moduleRef = moduleSelections.Register(new(ScopedGeneration(index.Generation, directory), symbol.Target.Uri,
+                                symbol.Target.Range.Start, scopedMetadata.Revision, directory)),
+                            evidence = "Physical directory filter only; choose when it matches the requested source. Not verified project/database membership; outside dependencies stay unresolved."
+                        };
+                }
                 return new
                 {
                     symbol.Identity,
                     moduleRef = moduleSelections.Register(new(generation, symbol.Target.Uri, symbol.Target.Range.Start, metadata.Revision, root)),
-                    context = SourceFiles?.Contexts.Describe(symbol.Target.Uri, symbol.Identity.SourceContextId),
+                    context,
                     symbol.Target,
                     selection = symbol.Target.Range.Start,
                     revision = metadata.Revision,
                     status = metadata.Status,
-                    selectionHint = metadata.Status == ResolutionStatus.Ambiguous ? "Duplicate identity: set scopeUri to the developer's explicit project folder and repeat discovery; an unscoped moduleRef preserves ambiguity." : null,
+                    scopeChoice = choice,
+                    selectionHint = metadata.Status == ResolutionStatus.Ambiguous ?
+                        choice != null ? "Choose scopeChoice.moduleRef if its directory matches the requested source; otherwise supply explicit scopeUri. This unscoped moduleRef preserves ambiguity." :
+                        "Duplicate identity: supply the developer's explicit scopeUri. No directory choice can safely distinguish this candidate; an unscoped moduleRef preserves ambiguity." : null,
                     signature = symbol.Declaration.Documentation?.Signature
                 };
             }

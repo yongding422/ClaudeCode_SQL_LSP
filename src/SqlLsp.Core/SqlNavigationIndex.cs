@@ -32,11 +32,12 @@ public sealed partial class SqlNavigationIndex : ISqlDiscoveryIndex
         if (document == null) return new(null, ResolutionStatus.Unresolved);
         var rules = Rules(symbol.Target.Uri);
         var identity = symbol.Identity;
-        var count = Symbols.Count(s => s.Target.SourceKind == symbol.Target.SourceKind && s.Identity.Kind == identity.Kind &&
+        var candidates = Symbols.Where(s => s.Target.SourceKind == symbol.Target.SourceKind && s.Identity.Kind == identity.Kind &&
             s.Identity.SourceContextId == identity.SourceContextId && rules.Comparer.Equals(s.Identity.Server, identity.Server) &&
             rules.Comparer.Equals(s.Identity.Database, identity.Database) && rules.Comparer.Equals(s.Identity.Schema, identity.Schema) &&
-            rules.Comparer.Equals(s.Identity.Name, identity.Name));
-        return count == 1 ? new(AnalysisRevision(document), ResolutionStatus.Resolved) : new(null, ResolutionStatus.Ambiguous);
+            rules.Comparer.Equals(s.Identity.Name, identity.Name)).Select(s => s.Target.Uri).ToImmutableArray();
+        return candidates.Length == 1 ? new(AnalysisRevision(document), ResolutionStatus.Resolved) :
+            new(null, ResolutionStatus.Ambiguous) { CandidateUris = candidates };
     }
 
     public int DocumentCountFor(string? scopeId, Uri? uri = null) => documents.Count(d => (scopeId == null || context(d.Uri) == scopeId) && (uri == null || d.Uri == uri));
