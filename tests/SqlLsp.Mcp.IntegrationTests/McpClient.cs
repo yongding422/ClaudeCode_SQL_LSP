@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Channels;
@@ -12,6 +14,8 @@ internal sealed class McpClient : IAsyncDisposable
     private readonly Channel<JsonElement> messages = Channel.CreateUnbounded<JsonElement>();
     private readonly Task reader;
     private readonly Task<string> stderr;
+    private readonly ConcurrentQueue<string> failureFrames = new();
+    public string FailureDiagnostics => string.Join("\n", failureFrames.Take(12));
     private int id;
     private readonly bool preserveWorkspace;
     public string Root { get; } = Path.Combine(TestPaths.TempRoot, "sql-mcp 中文 " + Guid.NewGuid().ToString("N"));
@@ -19,7 +23,20 @@ internal sealed class McpClient : IAsyncDisposable
     private McpClient(Process process, string root, bool preserveWorkspace)
     {
         this.process = process; Root = root; this.preserveWorkspace = preserveWorkspace;
-        stderr = process.StandardError.ReadToEndAsync();
+        stderr = Task.Run(async () =>
+        {
+            var text = new StringBuilder();
+            while (await process.StandardError.ReadLineAsync() is { } line)
+            {
+                text.AppendLine(line);
+                // Test failures retain type/method names, never exception messages, source paths or SQL.
+                var type = System.Text.RegularExpressions.Regex.Match(line, @"\b(?:System|SqlLsp|ModelContextProtocol)\.[A-Za-z0-9_.]+Exception\b");
+                if (type.Success) failureFrames.Enqueue(type.Value);
+                var method = System.Text.RegularExpressions.Regex.Match(line, @"^\s+at (SqlLsp\.[A-Za-z0-9_.+<>]+)\(");
+                if (method.Success) failureFrames.Enqueue(method.Groups[1].Value);
+            }
+            return text.ToString();
+        });
         reader = Task.Run(async () =>
         {
             try
