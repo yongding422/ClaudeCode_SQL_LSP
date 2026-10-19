@@ -10,7 +10,17 @@ public sealed record SqlSourceObservation(string Kind, string? Name, SqlAnalysis
     public string? JsonPath { get; init; }
     public bool? AsJson { get; init; }
     public string? JsonKeyComparison { get; init; }
+    public string? Operation { get; init; }
+    public SqlFlowExpression? Expression { get; init; }
+    public ImmutableArray<SqlObservationInput> Inputs { get; init; } = [];
+    public bool? InputsComplete { get; init; }
+    public SqlTransactionSyntax? Transactions { get; init; }
+    public ImmutableArray<SqlDeclaredSourceOption> Options { get; init; } = [];
 }
+
+public sealed record SqlObservationInput(string Name, string Kind, SqlAnalysisLocation Location, bool VerifiedLocal);
+public sealed record SqlTransactionSyntax(int ExplicitBegins, int Commits, int Rollbacks, int AtomicBlocks, bool SyntaxComplete);
+public sealed record SqlDeclaredSourceOption(string Name, SqlFlowExpression Source);
 
 internal sealed class SqlSourceObservations(DocumentSnapshot document, int budget, int? firstTransactionOffset, CancellationToken token) : TSqlFragmentVisitor
 {
@@ -21,9 +31,11 @@ internal sealed class SqlSourceObservations(DocumentSnapshot document, int budge
     {
         if (body == null) return ([], false);
         var first = flow.Nodes.Where(n => n.Kind == SqlFlowKind.BeginTransaction).Select(n => (int?)document.Parse.Source.OffsetAt(n.Location.Range.Start)).Min();
-        var visitor = new SqlSourceObservations(document, Math.Clamp(budget, 0, 64), first, token);
+        var limit = Math.Clamp(budget, 0, 64);
+        var execution = SqlExecutionEvidence.Extract(body, document, limit / 2, token);
+        var visitor = new SqlSourceObservations(document, limit - execution.Facts.Length, first, token);
         body.Accept(visitor);
-        return (visitor.facts.ToImmutableArray(), visitor.truncated);
+        return (execution.Facts.AddRange(visitor.facts), visitor.truncated || execution.Truncated);
     }
     public override void Visit(TSqlFragment node) => token.ThrowIfCancellationRequested();
     private void Add(TSqlFragment node, string kind, string? name, string detail, bool? before = null,

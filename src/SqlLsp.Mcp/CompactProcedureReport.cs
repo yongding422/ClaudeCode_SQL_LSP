@@ -67,7 +67,14 @@ internal sealed class CompactProcedureReport(SqlProcedureReport report, string w
             ("issues", module.Issues.Select(Issue).ToArray()),
             ("observations", module.Observations.Select(o => Row(("kind", o.Kind), ("name", o.Name), ("at", Evidence(o.Location)),
                 ("beforeFirstExplicitTransaction", o.BeforeFirstExplicitTransaction), ("jsonPath", o.JsonPath), ("asJson", o.AsJson),
-                ("jsonKeyComparison", o.JsonKeyComparison), ("note", Note(o.Detail)))).ToArray()),
+                ("jsonKeyComparison", o.JsonKeyComparison), ("operation", o.Operation),
+                ("expression", IncludeObservationExpression(o) ? Expression(o.Expression) : null),
+                ("expressionOmitted", o.Expression != null && !IncludeObservationExpression(o) ? true : null),
+                ("inputs", o.Inputs.IsEmpty ? null : o.Inputs.Select(input => Row(("name", input.Name), ("kind", input.Kind),
+                    ("at", Evidence(input.Location)), ("verifiedLocal", input.VerifiedLocal))).ToArray()),
+                ("inputsComplete", o.InputsComplete), ("transactions", o.Transactions),
+                ("options", o.Options.IsEmpty ? null : o.Options.Select(option => Row(("name", option.Name), ("source", Expression(option.Source)))).ToArray()),
+                ("note", Note(o.Detail)))).ToArray()),
             ("controlFlow", module.ControlFlow == null ? null : Row(("bodyAvailable", module.ControlFlow.BodyAvailable),
                 ("truncated", module.ControlFlow.Truncated), ("limitations", module.ControlFlow.Limitations.Select(Note).ToArray()),
                 ("issues", module.ControlFlow.Issues.Select(Issue).ToArray()),
@@ -95,6 +102,10 @@ internal sealed class CompactProcedureReport(SqlProcedureReport report, string w
     }
 
     private sealed record Selection(Dictionary<string, HashSet<string>> Facts, bool Matched);
+
+    private bool IncludeObservationExpression(SqlSourceObservation observation) => focus.Length == 0 || observation.Kind == "AtomicOption" ||
+        focus.Any(term => observation.Name?.Contains(term, StringComparison.OrdinalIgnoreCase) == true ||
+            observation.Expression?.Preview.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
 
     private Selection SelectFacts()
     {

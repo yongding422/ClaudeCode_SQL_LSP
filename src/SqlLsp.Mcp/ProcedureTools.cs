@@ -314,7 +314,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             var report = analyzed.Report;
             observation.AnalyzerReport(report);
             var timer = Stopwatch.StartNew();
-            var briefBuilder = new ProcedureBrief(report, launch.Workspace, intent, cancellationToken);
+            var briefBuilder = new ProcedureBrief(report, launch.Workspace, intent, cancellationToken, focus);
             brief = briefBuilder.Create(8);
             var presented = detail == "compact" ? new CompactProcedureReport(report, launch.Workspace, focus ?? [], cancellationToken).Create() : (object)report;
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
