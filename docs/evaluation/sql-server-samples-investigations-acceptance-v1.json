@@ -1,0 +1,139 @@
+{
+  "format": "sql-answer-acceptance-v1",
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "suite_sha256": "4102d1b205a6f697f85a361ebbe9aef40c7d9abfea2c522b9c60491c68cceffc",
+  "purpose": "Five realistic developer investigations over previously studied SQL; extension cohort, not a holdout. Source-based proposed regression scenarios are not executed tests.",
+  "decisions": [
+    "accept_as_written",
+    "minor_edits",
+    "major_correction",
+    "reject"
+  ],
+  "grading": "Essential fact and evidence/uncertainty/relevance scores are 0/0.5/1. Optional detail is not required. Critical errors and material unsupported extra claims block acceptance. Review every final answer against the entire source context; checklist errors are examples, not exhaustive. Failed/missing answers remain assigned and rejected. No automatic user acceptance or keyword grading.",
+  "tasks": [
+    {
+      "task_id": "R01-order-handover",
+      "developer_goal": "You are taking ownership of Website.InsertCustomerOrders in the Wide World Importers SSDT project. Write a concise handover explaining its main processing steps, persistent writes, pricing dependency and transaction/failure boundaries. Highlight one consequential behavior a caller must understand and distinguish proven SQL behavior from runtime assumptions.",
+      "essential_facts": [
+        "Names Sales.Orders and Sales.OrderLines as direct inserts, and distinguishes local @OrdersToGenerate.",
+        "Traces pricing reads to Sales.Customers, Warehouse.StockItems, Sales.SpecialDeals and Warehouse.StockItemStockGroups.",
+        "Explains OrderID sequence allocation before TRY/transaction, successful commit, and XACT_STATE() <> 0 rollback/rethrow; RETURN after THROW is unreachable.",
+        "For a consequential caller caveat, explains that sequence allocation is outside the explicit transaction and failure rethrows; does not promise ambient transaction ownership or gapless IDs."
+      ],
+      "critical_errors": [
+        "Claims sequence values roll back with the inserts.",
+        "Treats RETURN -1 after THROW as the observed failure result.",
+        "Guarantees all effects are confined to these tables without inspecting external dependencies/triggers."
+      ],
+      "required_evidence": [
+        "Cite direct inserts, pricing function reads, sequence position and CATCH."
+      ],
+      "expected_uncertainty": [
+        "Describe proven source-level effects; do not guarantee runtime rows or absent trigger/ambient-transaction effects."
+      ],
+      "optional_detail": [
+        "Exact wording, formatting and optional details that do not change the decision."
+      ]
+    },
+    {
+      "task_id": "R02-invoice-change-review",
+      "developer_goal": "A developer proposes changing Website.InvoiceCustomerOrders in the Wide World Importers SSDT project to skip invalid orders and continue. Explain how that differs from current behavior, identify the successful write footprint and stock adjustment, and recommend source-backed regression checks before implementing the change. Do not modify or execute SQL.",
+      "essential_facts": [
+        "Requires an existing order, no existing invoice and non-NULL PickingCompletedWhen.",
+        "An ineligible requested order causes THROW before the explicit transaction, rather than being skipped.",
+        "Lists writes to Sales.Invoices, Sales.InvoiceLines, Warehouse.StockItemTransactions, Sales.CustomerTransactions and Warehouse.StockItemHoldings.",
+        "Explains grouped stock quantity subtraction and negative issue quantities.",
+        "Identifies skip-and-continue as a behavioral change and proposes checks for a mixed valid/invalid batch, eligibility cases and grouped stock changes; these are proposed tests, not claimed executed results."
+      ],
+      "critical_errors": [
+        "Claims invalid orders are skipped and the rest always commit.",
+        "Omits a persistent write target while presenting a complete impact list.",
+        "Claims failed validation has no sequence allocation effect."
+      ],
+      "required_evidence": [
+        "Cite eligibility checks, THROW/transaction boundary, each write target and quantity expressions."
+      ],
+      "expected_uncertainty": [
+        "Row counts, concurrency and extra trigger effects need runtime/catalog evidence; table-write absence does not imply sequence rollback."
+      ],
+      "optional_detail": [
+        "Exact wording, formatting and optional details that do not change the decision."
+      ]
+    },
+    {
+      "task_id": "R03-password-investigation",
+      "developer_goal": "A user reports that changing their password does nothing in the Wide World Importers SSDT project. Explain the qualification and failure paths in Website.ChangePassword, what source evidence can and cannot tell us about this particular user, and how Website.ActivateWebsiteLogon differs. Do not claim a root cause without the missing runtime facts.",
+      "essential_facts": [
+        "Both routines target the supplied PersonID excluding 1; activation requires disabled login, password change checks the old hash.",
+        "Explains password plus FullName SHA2_256 hashing and person 1 as activation preference template.",
+        "Activation sets LogonName/enables login; zero qualifying rows throws, with no reachable RETURN -1 afterward.",
+        "Lists runtime evidence needed to distinguish no matching person, excluded person 1 and old-hash mismatch; does not assert which cause actually occurred."
+      ],
+      "critical_errors": [
+        "Says either procedure can modify person 1.",
+        "Omits the old-password check or promises a normal returned -1 on rejection.",
+        "Invents privileges or an administrative role for person 1."
+      ],
+      "required_evidence": [
+        "Cite both WHERE predicates, hashing, activation assignments and zero-row error handling."
+      ],
+      "expected_uncertainty": [
+        "Do not infer authorization/security guarantees beyond the shown predicates."
+      ],
+      "optional_detail": [
+        "Exact wording, formatting and optional details that do not change the decision."
+      ]
+    },
+    {
+      "task_id": "R04-fulfillment-review",
+      "developer_goal": "Review the two dbo.usp_FulfillOrders variants under the in-memory order-processing benchmark. A colleague says the in-memory version atomically fulfills ten different orders per call and the disk version has the same transaction guarantee. Evaluate both claims, trace the selection and writes, and propose a regression scenario for the loop without modifying or running SQL.",
+      "essential_facts": [
+        "Keeps DiskBasedDB and InMemDB variants separate: one TOP 1 selection versus a ten-iteration counter loop.",
+        "Both select oldest unfulfilled orders, update dbo.Orders and insert dbo.Fulfillment only for a non-NULL OrderID.",
+        "Identifies native/owner/schema-bound ATOMIC SNAPSHOT only in memory; the disk routine has no explicit transaction block.",
+        "Explains that no-row SELECT assignment can retain stale variables, so ten distinct fulfilled orders are not guaranteed.",
+        "Proposes an initially small or exhausted unfulfilled-order set to expose stale variable reuse; a regression scenario is not evidence of an executed test."
+      ],
+      "critical_errors": [
+        "Guarantees ten distinct orders are processed.",
+        "Says each empty SELECT resets OrderID to NULL.",
+        "Claims the entire disk routine is one atomic transaction from its declarations alone."
+      ],
+      "required_evidence": [
+        "Cite both database contexts, loop, selection predicates, guarded writes and transaction options."
+      ],
+      "expected_uncertainty": [
+        "Number of distinct orders, concurrency and exact rows remain data-dependent; stale variable reuse is possible."
+      ],
+      "optional_detail": [
+        "Exact wording, formatting and optional details that do not change the decision."
+      ]
+    },
+    {
+      "task_id": "R05-reseed-operations",
+      "developer_goal": "Using the Wide World Importers SSDT project, explain whether saved SQL alone is sufficient to tell an operator the final TransactionID value after Sequences.ReseedAllSequences. Trace the relevant table-column bindings and comparison rule, identify the missing runtime evidence, and explain why the last helper call does not necessarily determine the final value. Do not connect to a database.",
+      "essential_facts": [
+        "Binds TransactionID reseeding to SupplierTransactions.SupplierTransactionID, CustomerTransactions.CustomerTransactionID and StockItemTransactions.StockItemTransactionID in their correct schemas.",
+        "Reads the named Sequences schema sequence current_value and dynamic COALESCE(MAX(column),0) from each bound table into a temporary result.",
+        "If table max >= sequence current, restarts at max + 1; distinguishes temporary writes from ALTER SEQUENCE.",
+        "States that an exact final numeric value cannot be obtained without live maxima and sequence state.",
+        "Explains that later helpers only restart when their max is at least the current sequence value, so a lower later maximum need not overwrite an earlier larger restart."
+      ],
+      "critical_errors": [
+        "Invents an exact runtime restart value from saved source.",
+        "Claims the final helper call always overwrites previous higher values.",
+        "Describes temporary-table writes as direct persistent business-table updates."
+      ],
+      "required_evidence": [
+        "Cite all three bound calls, sys.sequences lookup and dynamic MAX/ALTER comparison."
+      ],
+      "expected_uncertainty": [
+        "Live maxima, sequence state and intervening activity remain unknown."
+      ],
+      "optional_detail": [
+        "Exact wording, formatting and optional details that do not change the decision."
+      ]
+    }
+  ]
+}

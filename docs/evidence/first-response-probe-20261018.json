@@ -1,0 +1,914 @@
+{
+  "format": "first-response-no-model-probe-v1",
+  "probe_sha256": "47f58d64a4cb29c3d6ac35b60960398fa9d82a932e51f273792c970408b507ff",
+  "source_manifest_sha256": "19d2df9832cca575c8295fcfc8bea24274feaec65f681c00f9aa37a3367522df",
+  "source_files": 1099,
+  "old": {
+    "backend": "released_native_0.16.0",
+    "binary_sha256": "4ba35fce5d00405f08b21ce0503b5c1e228bf9ab1e1b701180c0bb62e4579961",
+    "cases": [
+      {
+        "case": "quoted_unscoped",
+        "wire_bytes": 243,
+        "tool_error": true,
+        "error": [
+          {
+            "type": "text",
+            "text": "An error occurred invoking 'analyze_procedure': File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates."
+          }
+        ],
+        "status": null,
+        "format": null,
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": null,
+        "brief_omitted_eligible": null,
+        "brief_truncated": null,
+        "selection_recovery": null
+      },
+      {
+        "case": "quoted_scoped",
+        "wire_bytes": 243,
+        "tool_error": true,
+        "error": [
+          {
+            "type": "text",
+            "text": "An error occurred invoking 'analyze_procedure': File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates."
+          }
+        ],
+        "status": null,
+        "format": null,
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": null,
+        "brief_omitted_eligible": null,
+        "brief_truncated": null,
+        "selection_recovery": null
+      },
+      {
+        "case": "canonical_scoped",
+        "wire_bytes": 8843,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": null,
+        "brief_omitted_eligible": null,
+        "brief_truncated": null,
+        "selection_recovery": null
+      },
+      {
+        "case": "order_initial",
+        "wire_bytes": 8813,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": null,
+        "brief_omitted_eligible": null,
+        "brief_truncated": null,
+        "selection_recovery": null
+      },
+      {
+        "case": "fulfillment_initial",
+        "wire_bytes": 7509,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": null,
+        "brief_omitted_eligible": null,
+        "brief_truncated": null,
+        "selection_recovery": null
+      }
+    ]
+  },
+  "new": {
+    "backend": "local_candidate",
+    "binary_sha256": "2d11e441c88868c62260a51c9ad85c6217e3e3e5bfcd91c6a3b91c8847b4190d",
+    "cases": [
+      {
+        "case": "quoted_unscoped",
+        "wire_bytes": 13706,
+        "tool_error": false,
+        "error": null,
+        "status": "Ambiguous",
+        "format": "compact-v1",
+        "brief_facts": [],
+        "brief_modules": [],
+        "brief_sources": [],
+        "brief_total_eligible": 0,
+        "brief_omitted_eligible": 0,
+        "brief_truncated": false,
+        "selection_recovery": "Duplicate identities remain ambiguous. Repeat discovery with scopeUri set to the developer's explicit project folder, then reuse its moduleRef. Selecting a file alone does not establish a separate database context."
+      },
+      {
+        "case": "quoted_scoped",
+        "wire_bytes": 23717,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [
+          {
+            "moduleIndex": 0,
+            "kind": "Call",
+            "name": "[Sequences].[ReseedSequenceBeyondTableValues]",
+            "detail": "Unique qualified source target.",
+            "source": "b0",
+            "line": 7,
+            "column": 10,
+            "endLine": 7,
+            "endColumn": 51,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql:7",
+            "section": "/modules/0/calls/0",
+            "data": {
+              "status": "Resolved",
+              "target": {
+                "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+                "server": null,
+                "database": null,
+                "schema": "Sequences",
+                "name": "ReseedSequenceBeyondTableValues",
+                "kind": "Procedure"
+              },
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "Call",
+            "name": "[Sequences].[ReseedSequenceBeyondTableValues]",
+            "detail": "Unique qualified source target.",
+            "source": "b0",
+            "line": 8,
+            "column": 10,
+            "endLine": 8,
+            "endColumn": 51,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql:8",
+            "section": "/modules/0/calls/1",
+            "data": {
+              "status": "Resolved",
+              "target": {
+                "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+                "server": null,
+                "database": null,
+                "schema": "Sequences",
+                "name": "ReseedSequenceBeyondTableValues",
+                "kind": "Procedure"
+              },
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[sys].[sequences]",
+            "detail": "No verified declaration in this source context/database.",
+            "source": "b1",
+            "line": 15,
+            "column": 54,
+            "endLine": 15,
+            "endColumn": 67,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:15",
+            "section": "/modules/1/accesses/0",
+            "data": {
+              "operation": "Read",
+              "status": "Unresolved",
+              "local": false,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[#CurrentValue]",
+            "detail": "Verified local binding.",
+            "source": "b1",
+            "line": 18,
+            "column": 18,
+            "endLine": 18,
+            "endColumn": 31,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:18",
+            "section": "/modules/1/accesses/1",
+            "data": {
+              "operation": "Create",
+              "status": "Resolved",
+              "local": true,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "Call",
+            "name": "Unsupported invocation",
+            "detail": "Dynamic SQL target is unsupported.",
+            "source": "b1",
+            "line": 24,
+            "column": 14,
+            "endLine": 24,
+            "endColumn": 18,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:24",
+            "section": "/modules/1/calls/0",
+            "data": {
+              "status": "Unsupported",
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[#CurrentValue]",
+            "detail": "Verified local binding.",
+            "source": "b1",
+            "line": 25,
+            "column": 63,
+            "endLine": 25,
+            "endColumn": 76,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:25",
+            "section": "/modules/1/accesses/2",
+            "data": {
+              "operation": "Read",
+              "status": "Resolved",
+              "local": true,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "Call",
+            "name": "Unsupported invocation",
+            "detail": "Dynamic SQL target is unsupported.",
+            "source": "b1",
+            "line": 32,
+            "column": 18,
+            "endLine": 32,
+            "endColumn": 22,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:32",
+            "section": "/modules/1/calls/1",
+            "data": {
+              "status": "Unsupported",
+              "target": null,
+              "flowContext": [
+                "flow-1085-If",
+                "flow-1151-Then"
+              ]
+            }
+          }
+        ],
+        "brief_modules": [
+          {
+            "index": 0,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Sequences",
+              "name": "ReseedAllSequences",
+              "kind": "Procedure"
+            },
+            "revision": "113D5F9DBB5821A1C5AE3826B5DAD365020074AC13E59B22FA3F5FE871429C97::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          },
+          {
+            "index": 1,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Sequences",
+              "name": "ReseedSequenceBeyondTableValues",
+              "kind": "Procedure"
+            },
+            "revision": "7353EC4B9F9D2F0C5BA85766890BDAA932F3F8DC075BAD29E59D1DB3B134690F::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          }
+        ],
+        "brief_sources": [
+          {
+            "id": "b0",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored%20Procedures/ReseedAllSequences.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql"
+          },
+          {
+            "id": "b1",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored%20Procedures/ReseedSequenceBeyondTableValues.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql"
+          }
+        ],
+        "brief_total_eligible": 34,
+        "brief_omitted_eligible": 27,
+        "brief_truncated": true,
+        "selection_recovery": null
+      },
+      {
+        "case": "canonical_scoped",
+        "wire_bytes": 23715,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [
+          {
+            "moduleIndex": 0,
+            "kind": "Call",
+            "name": "[Sequences].[ReseedSequenceBeyondTableValues]",
+            "detail": "Unique qualified source target.",
+            "source": "b0",
+            "line": 7,
+            "column": 10,
+            "endLine": 7,
+            "endColumn": 51,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql:7",
+            "section": "/modules/0/calls/0",
+            "data": {
+              "status": "Resolved",
+              "target": {
+                "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+                "server": null,
+                "database": null,
+                "schema": "Sequences",
+                "name": "ReseedSequenceBeyondTableValues",
+                "kind": "Procedure"
+              },
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "Call",
+            "name": "[Sequences].[ReseedSequenceBeyondTableValues]",
+            "detail": "Unique qualified source target.",
+            "source": "b0",
+            "line": 8,
+            "column": 10,
+            "endLine": 8,
+            "endColumn": 51,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql:8",
+            "section": "/modules/0/calls/1",
+            "data": {
+              "status": "Resolved",
+              "target": {
+                "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+                "server": null,
+                "database": null,
+                "schema": "Sequences",
+                "name": "ReseedSequenceBeyondTableValues",
+                "kind": "Procedure"
+              },
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[sys].[sequences]",
+            "detail": "No verified declaration in this source context/database.",
+            "source": "b1",
+            "line": 15,
+            "column": 54,
+            "endLine": 15,
+            "endColumn": 67,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:15",
+            "section": "/modules/1/accesses/0",
+            "data": {
+              "operation": "Read",
+              "status": "Unresolved",
+              "local": false,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[#CurrentValue]",
+            "detail": "Verified local binding.",
+            "source": "b1",
+            "line": 18,
+            "column": 18,
+            "endLine": 18,
+            "endColumn": 31,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:18",
+            "section": "/modules/1/accesses/1",
+            "data": {
+              "operation": "Create",
+              "status": "Resolved",
+              "local": true,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "Call",
+            "name": "Unsupported invocation",
+            "detail": "Dynamic SQL target is unsupported.",
+            "source": "b1",
+            "line": 24,
+            "column": 14,
+            "endLine": 24,
+            "endColumn": 18,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:24",
+            "section": "/modules/1/calls/0",
+            "data": {
+              "status": "Unsupported",
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "RelationAccess",
+            "name": "[#CurrentValue]",
+            "detail": "Verified local binding.",
+            "source": "b1",
+            "line": 25,
+            "column": 63,
+            "endLine": 25,
+            "endColumn": 76,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:25",
+            "section": "/modules/1/accesses/2",
+            "data": {
+              "operation": "Read",
+              "status": "Resolved",
+              "local": true,
+              "target": null,
+              "flowContext": []
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "Call",
+            "name": "Unsupported invocation",
+            "detail": "Dynamic SQL target is unsupported.",
+            "source": "b1",
+            "line": 32,
+            "column": 18,
+            "endLine": 32,
+            "endColumn": 22,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql:32",
+            "section": "/modules/1/calls/1",
+            "data": {
+              "status": "Unsupported",
+              "target": null,
+              "flowContext": [
+                "flow-1085-If",
+                "flow-1151-Then"
+              ]
+            }
+          }
+        ],
+        "brief_modules": [
+          {
+            "index": 0,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Sequences",
+              "name": "ReseedAllSequences",
+              "kind": "Procedure"
+            },
+            "revision": "113D5F9DBB5821A1C5AE3826B5DAD365020074AC13E59B22FA3F5FE871429C97::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          },
+          {
+            "index": 1,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Sequences",
+              "name": "ReseedSequenceBeyondTableValues",
+              "kind": "Procedure"
+            },
+            "revision": "7353EC4B9F9D2F0C5BA85766890BDAA932F3F8DC075BAD29E59D1DB3B134690F::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          }
+        ],
+        "brief_sources": [
+          {
+            "id": "b0",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored%20Procedures/ReseedAllSequences.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql"
+          },
+          {
+            "id": "b1",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored%20Procedures/ReseedSequenceBeyondTableValues.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql"
+          }
+        ],
+        "brief_total_eligible": 34,
+        "brief_omitted_eligible": 27,
+        "brief_truncated": true,
+        "selection_recovery": null
+      },
+      {
+        "case": "order_initial",
+        "wire_bytes": 25457,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [
+          {
+            "moduleIndex": 0,
+            "kind": "return-after-throw",
+            "name": null,
+            "detail": "RETURN immediately follows THROW in the same statement list. Ordinary flow from that THROW does not deliver this return value; alternative entry/GOTO and runtime error routing are not solved.",
+            "source": "b0",
+            "line": 61,
+            "column": 9,
+            "endLine": 61,
+            "endColumn": 19,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:61",
+            "section": "/modules/0/issues/0",
+            "data": null
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "SequenceAllocation",
+            "name": "[Sequences].[OrderID]",
+            "detail": "NEXT VALUE FOR allocates sequence state independently of transaction rollback. Source order relative to BEGIN TRAN is syntax only: ambient transactions, predicate truth, row count, values and gaps are not determined.",
+            "source": "b0",
+            "line": 22,
+            "column": 28,
+            "endLine": 22,
+            "endColumn": 60,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:22",
+            "section": "/modules/0/observations/0",
+            "data": {
+              "beforeFirstExplicitTransaction": true,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "SelectAssignment",
+            "name": "@BuyingGroupID",
+            "detail": "Ordinary SELECT assignment with zero returned rows retains the previous variable value; a scalar subquery returning no value is a different NULL case. Row cardinality/order and loop progress are not evaluated; never infer a fixed number of distinct successful rows or reset-to-NULL from missing data.",
+            "source": "b1",
+            "line": 21,
+            "column": 12,
+            "endLine": 21,
+            "endColumn": 42,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql:21",
+            "section": "/modules/1/observations/0",
+            "data": {
+              "beforeFirstExplicitTransaction": null,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 1,
+            "kind": "SelectAssignment",
+            "name": "@CustomerCategoryID",
+            "detail": "Ordinary SELECT assignment with zero returned rows retains the previous variable value; a scalar subquery returning no value is a different NULL case. Row cardinality/order and loop progress are not evaluated; never infer a fixed number of distinct successful rows or reset-to-NULL from missing data.",
+            "source": "b1",
+            "line": 22,
+            "column": 12,
+            "endLine": 22,
+            "endColumn": 52,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql:22",
+            "section": "/modules/1/observations/1",
+            "data": {
+              "beforeFirstExplicitTransaction": null,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "BeginTransaction",
+            "name": null,
+            "detail": "BEGIN TRANSACTION observed; state/outcome unknown.",
+            "source": "b0",
+            "line": 27,
+            "column": 9,
+            "endLine": 27,
+            "endColumn": 20,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:27",
+            "section": "/modules/0/controlFlow/nodes/2",
+            "data": {
+              "id": "flow-628-BeginTransaction",
+              "parentId": "flow-628-Try",
+              "subject": null,
+              "throw": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "CommitTransaction",
+            "name": null,
+            "detail": "COMMIT observed; successful commit, nesting balance and durability are not proven.",
+            "source": "b0",
+            "line": 54,
+            "column": 9,
+            "endLine": 54,
+            "endColumn": 16,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:54",
+            "section": "/modules/0/controlFlow/nodes/3",
+            "data": {
+              "id": "flow-2213-CommitTransaction",
+              "parentId": "flow-628-Try",
+              "subject": null,
+              "throw": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "RollbackTransaction",
+            "name": null,
+            "detail": "ROLLBACK observed; a name can denote a transaction/savepoint or a runtime variable. Outcome is unknown.",
+            "source": "b0",
+            "line": 58,
+            "column": 30,
+            "endLine": 58,
+            "endColumn": 39,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:58",
+            "section": "/modules/0/controlFlow/nodes/7",
+            "data": {
+              "id": "flow-2283-RollbackTransaction",
+              "parentId": "flow-2283-Then",
+              "subject": null,
+              "throw": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "Throw",
+            "name": null,
+            "detail": "Bare THROW rethrows the caught exception; its severity/state are inherited, not inferred here.",
+            "source": "b0",
+            "line": 60,
+            "column": 9,
+            "endLine": 60,
+            "endColumn": 15,
+            "citation": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql:60",
+            "section": "/modules/0/controlFlow/nodes/8",
+            "data": {
+              "id": "flow-2359-Throw",
+              "parentId": "flow-2262-Catch",
+              "subject": null,
+              "throw": {
+                "kind": "Rethrow",
+                "errorNumber": null,
+                "message": null,
+                "state": null
+              }
+            }
+          }
+        ],
+        "brief_modules": [
+          {
+            "index": 0,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Website",
+              "name": "InsertCustomerOrders",
+              "kind": "Procedure"
+            },
+            "revision": "3CCE8C409DE63D3E14765C836F41244555046C8D1A3765E969B85B7EC534FB39::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          },
+          {
+            "index": 1,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": null,
+              "schema": "Website",
+              "name": "CalculateCustomerPrice",
+              "kind": "Function"
+            },
+            "revision": "61BDB163E2EE06A9DA107CFCB877D934303B71333F72B8F3458748447712A702::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          }
+        ],
+        "brief_sources": [
+          {
+            "id": "b0",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored%20Procedures/InsertCustomerOrders.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql"
+          },
+          {
+            "id": "b1",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql",
+            "path": "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql"
+          }
+        ],
+        "brief_total_eligible": 29,
+        "brief_omitted_eligible": 21,
+        "brief_truncated": true,
+        "selection_recovery": null
+      },
+      {
+        "case": "fulfillment_initial",
+        "wire_bytes": 20511,
+        "tool_error": false,
+        "error": null,
+        "status": "Resolved",
+        "format": "paged-report-v1",
+        "brief_facts": [
+          {
+            "moduleIndex": 0,
+            "kind": "AtomicTransaction",
+            "name": null,
+            "detail": "BEGIN ATOMIC is declared here; read its stated isolation option, do not assume SNAPSHOT is the only supported option. An existing session transaction can remain active; block rollback/commit and caught versus uncaught errors do not prove the entire ambient transaction ends.",
+            "source": "b0",
+            "line": 20,
+            "column": 4,
+            "endLine": 54,
+            "endColumn": 4,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:20",
+            "section": "/modules/0/observations/0",
+            "data": {
+              "beforeFirstExplicitTransaction": null,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "SelectAssignment",
+            "name": "@OrderID",
+            "detail": "Ordinary SELECT assignment with zero returned rows retains the previous variable value; a scalar subquery returning no value is a different NULL case. Row cardinality/order and loop progress are not evaluated; never infer a fixed number of distinct successful rows or reset-to-NULL from missing data.",
+            "source": "b0",
+            "line": 33,
+            "column": 17,
+            "endLine": 33,
+            "endColumn": 35,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:33",
+            "section": "/modules/0/observations/1",
+            "data": {
+              "beforeFirstExplicitTransaction": null,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "SelectAssignment",
+            "name": "@OrderCID",
+            "detail": "Ordinary SELECT assignment with zero returned rows retains the previous variable value; a scalar subquery returning no value is a different NULL case. Row cardinality/order and loop progress are not evaluated; never infer a fixed number of distinct successful rows or reset-to-NULL from missing data.",
+            "source": "b0",
+            "line": 34,
+            "column": 17,
+            "endLine": 34,
+            "endColumn": 37,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:34",
+            "section": "/modules/0/observations/2",
+            "data": {
+              "beforeFirstExplicitTransaction": null,
+              "jsonPath": null,
+              "asJson": null
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "RelationAccess",
+            "name": "[dbo].[Orders]",
+            "detail": "No verified declaration in this source context/database.",
+            "source": "b0",
+            "line": 42,
+            "column": 21,
+            "endLine": 42,
+            "endColumn": 31,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:42",
+            "section": "/modules/0/accesses/1",
+            "data": {
+              "operation": "Update",
+              "status": "Unresolved",
+              "local": false,
+              "target": null,
+              "flowContext": [
+                "flow-835-While",
+                "flow-869-LoopBody",
+                "flow-1096-If",
+                "flow-1129-Then"
+              ]
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "RelationAccess",
+            "name": "[dbo].[Fulfillment]",
+            "detail": "No verified declaration in this source context/database.",
+            "source": "b0",
+            "line": 47,
+            "column": 25,
+            "endLine": 47,
+            "endColumn": 40,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:47",
+            "section": "/modules/0/accesses/2",
+            "data": {
+              "operation": "Insert",
+              "status": "Unresolved",
+              "local": false,
+              "target": null,
+              "flowContext": [
+                "flow-835-While",
+                "flow-869-LoopBody",
+                "flow-1096-If",
+                "flow-1129-Then"
+              ]
+            }
+          },
+          {
+            "moduleIndex": 0,
+            "kind": "RelationAccess",
+            "name": "[dbo].[Orders]",
+            "detail": "No verified declaration in this source context/database.",
+            "source": "b0",
+            "line": 35,
+            "column": 17,
+            "endLine": 35,
+            "endColumn": 27,
+            "citation": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql:35",
+            "section": "/modules/0/accesses/0",
+            "data": {
+              "operation": "Read",
+              "status": "Unresolved",
+              "local": false,
+              "target": null,
+              "flowContext": [
+                "flow-835-While",
+                "flow-869-LoopBody"
+              ]
+            }
+          }
+        ],
+        "brief_modules": [
+          {
+            "index": 0,
+            "identity": {
+              "sourceContextId": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/",
+              "server": null,
+              "database": "InMemDB",
+              "schema": "dbo",
+              "name": "usp_FulfillOrders",
+              "kind": "Procedure"
+            },
+            "revision": "E7AA16C028A2C38179711F9956DE3D2149F431036A5693F929CDEB1C6C98B9B6::Workspace",
+            "sourceKind": "Workspace",
+            "capturedAt": null,
+            "bodyAvailable": true,
+            "implementationKind": "TransactSql"
+          }
+        ],
+        "brief_sources": [
+          {
+            "id": "b0",
+            "uri": "file:///D:/Project/SqlScriptDOM_LSP/artifacts/acceptance-investigations-prepared-20261018/sql-snapshot/samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql",
+            "path": "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql"
+          }
+        ],
+        "brief_total_eligible": 6,
+        "brief_omitted_eligible": 0,
+        "brief_truncated": false,
+        "selection_recovery": null
+      }
+    ]
+  },
+  "model_calls": 0,
+  "sql_execution": false,
+  "limits": "Functional/fact-delivery comparison only. Native and framework-dependent runtimes differ; no causal latency, token or answer-acceptance claim. Explicit source folders only; genuine ambiguity remains."
+}

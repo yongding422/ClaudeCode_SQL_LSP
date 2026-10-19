@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "source_repository": "https://github.com/microsoft/sql-server-samples",
+  "grading": "Each criterion is 0 (missing/wrong), 0.5 (partly correct), or 1 (correct). Equal-weight mean within task, then across tasks. Score source citation support separately (0/0.5/1). A passing answer needs all criteria correct, supported citations, no material unsupported claim, and a successful client result. Review answers against source; do not grade by keyword presence or self-reported confidence. Reviewer is the implementing Codex agent, not an independent human. Failures stay in the denominator. This extension uses new realistic prompts over previously studied procedures, not a holdout. Report separately from the historical cohort and additionally use the acceptance-v1 overlay.",
+  "tasks": [
+    {
+      "id": "R01-order-handover",
+      "category": "onboarding",
+      "question": "You are taking ownership of Website.InsertCustomerOrders in the Wide World Importers SSDT project. Write a concise handover explaining its main processing steps, persistent writes, pricing dependency and transaction/failure boundaries. Highlight one consequential behavior a caller must understand and distinguish proven SQL behavior from runtime assumptions.",
+      "criteria": [
+        "Names Sales.Orders and Sales.OrderLines as direct inserts, and distinguishes local @OrdersToGenerate.",
+        "Traces pricing reads to Sales.Customers, Warehouse.StockItems, Sales.SpecialDeals and Warehouse.StockItemStockGroups.",
+        "Explains OrderID sequence allocation before TRY/transaction, successful commit, and XACT_STATE() <> 0 rollback/rethrow; RETURN after THROW is unreachable.",
+        "For a consequential caller caveat, explains that sequence allocation is outside the explicit transaction and failure rethrows; does not promise ambient transaction ownership or gapless IDs."
+      ],
+      "evidence": [
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InsertCustomerOrders.sql",
+          19,
+          64
+        ],
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Functions/CalculateCustomerPrice.sql",
+          21,
+          85
+        ]
+      ]
+    },
+    {
+      "id": "R02-invoice-change-review",
+      "category": "change impact",
+      "question": "A developer proposes changing Website.InvoiceCustomerOrders in the Wide World Importers SSDT project to skip invalid orders and continue. Explain how that differs from current behavior, identify the successful write footprint and stock adjustment, and recommend source-backed regression checks before implementing the change. Do not modify or execute SQL.",
+      "criteria": [
+        "Requires an existing order, no existing invoice and non-NULL PickingCompletedWhen.",
+        "An ineligible requested order causes THROW before the explicit transaction, rather than being skipped.",
+        "Lists writes to Sales.Invoices, Sales.InvoiceLines, Warehouse.StockItemTransactions, Sales.CustomerTransactions and Warehouse.StockItemHoldings.",
+        "Explains grouped stock quantity subtraction and negative issue quantities.",
+        "Identifies skip-and-continue as a behavioral change and proposes checks for a mixed valid/invalid batch, eligibility cases and grouped stock changes; these are proposed tests, not claimed executed results."
+      ],
+      "evidence": [
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/InvoiceCustomerOrders.sql",
+          22,
+          150
+        ]
+      ]
+    },
+    {
+      "id": "R03-password-investigation",
+      "category": "branch debugging",
+      "question": "A user reports that changing their password does nothing in the Wide World Importers SSDT project. Explain the qualification and failure paths in Website.ChangePassword, what source evidence can and cannot tell us about this particular user, and how Website.ActivateWebsiteLogon differs. Do not claim a root cause without the missing runtime facts.",
+      "criteria": [
+        "Both routines target the supplied PersonID excluding 1; activation requires disabled login, password change checks the old hash.",
+        "Explains password plus FullName SHA2_256 hashing and person 1 as activation preference template.",
+        "Activation sets LogonName/enables login; zero qualifying rows throws, with no reachable RETURN -1 afterward.",
+        "Lists runtime evidence needed to distinguish no matching person, excluded person 1 and old-hash mismatch; does not assert which cause actually occurred."
+      ],
+      "evidence": [
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/ActivateWebsiteLogon.sql",
+          12,
+          25
+        ],
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Website/Stored Procedures/ChangePassword.sql",
+          12,
+          24
+        ]
+      ]
+    },
+    {
+      "id": "R04-fulfillment-review",
+      "category": "bug investigation",
+      "question": "Review the two dbo.usp_FulfillOrders variants under the in-memory order-processing benchmark. A colleague says the in-memory version atomically fulfills ten different orders per call and the disk version has the same transaction guarantee. Evaluate both claims, trace the selection and writes, and propose a regression scenario for the loop without modifying or running SQL.",
+      "criteria": [
+        "Keeps DiskBasedDB and InMemDB variants separate: one TOP 1 selection versus a ten-iteration counter loop.",
+        "Both select oldest unfulfilled orders, update dbo.Orders and insert dbo.Fulfillment only for a non-NULL OrderID.",
+        "Identifies native/owner/schema-bound ATOMIC SNAPSHOT only in memory; the disk routine has no explicit transaction block.",
+        "Explains that no-row SELECT assignment can retain stale variables, so ten distinct fulfilled orders are not guaranteed.",
+        "Proposes an initially small or exhausted unfulfilled-order set to expose stale variable reuse; a regression scenario is not evidence of an executed test."
+      ],
+      "evidence": [
+        [
+          "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/DiskBased_StoredProcedures.sql",
+          12,
+          47
+        ],
+        [
+          "samples/features/in-memory-database/in-memory-oltp/benchmark-order-processing/stored-procedures/InMem_StoredProcedures.sql",
+          11,
+          54
+        ]
+      ]
+    },
+    {
+      "id": "R05-reseed-operations",
+      "category": "operational uncertainty",
+      "question": "Using the Wide World Importers SSDT project, explain whether saved SQL alone is sufficient to tell an operator the final TransactionID value after Sequences.ReseedAllSequences. Trace the relevant table-column bindings and comparison rule, identify the missing runtime evidence, and explain why the last helper call does not necessarily determine the final value. Do not connect to a database.",
+      "criteria": [
+        "Binds TransactionID reseeding to SupplierTransactions.SupplierTransactionID, CustomerTransactions.CustomerTransactionID and StockItemTransactions.StockItemTransactionID in their correct schemas.",
+        "Reads the named Sequences schema sequence current_value and dynamic COALESCE(MAX(column),0) from each bound table into a temporary result.",
+        "If table max >= sequence current, restarts at max + 1; distinguishes temporary writes from ALTER SEQUENCE.",
+        "States that an exact final numeric value cannot be obtained without live maxima and sequence state.",
+        "Explains that later helpers only restart when their max is at least the current sequence value, so a lower later maximum need not overwrite an earlier larger restart."
+      ],
+      "evidence": [
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedAllSequences.sql",
+          31,
+          33
+        ],
+        [
+          "samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql",
+          14,
+          32
+        ]
+      ]
+    }
+  ]
+}

@@ -37,6 +37,8 @@ Cold means the request initialized that MCP process's SQL source state. It says 
 
 Metrics cover MCP, not the separate LSP process. They do not observe Grep, model input/output tokens, end-to-end final-answer time, correctness or complete SQL coverage. Summary `modelTokens` and `finalAnswerCorrectness` remain null. Enable [report caching](persistent-analysis-cache.md) separately with `analysisCache.enabled` if wanted; a hit skips Core report work but does not eliminate source validation or model input.
 
+For answer correctness and developer usability, use the separate [acceptance evaluation workflow](evaluation/answer-acceptance.md). It records explicit reviewer decisions, consequential errors, source evidence, correction effort and optional direct developer feedback. These are local benchmark review records; `get_metrics` does not infer them from backend timings or cache hits.
+
 ## Compare backend runs
 
 Record the same questions against the same saved SQL in fresh sessions, first using a `baseline` metrics directory, then a `current` directory. Keep parser/resolution settings and source visibility fixed. Change only the condition being tested, such as full versus compact reports or report caching. Repeat and alternate order; keep cold/warm groups separate. The server does not retain question text or source hashes to verify experimental parity.

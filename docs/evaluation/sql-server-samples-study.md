@@ -1,5 +1,7 @@
 # SQL Server Samples: paired SQL understanding study
 
+For new runs, use the separate [answer acceptance workflow](answer-acceptance.md) to prioritize correctness, critical errors and developer usability. It adds versioned acceptance reviews and realistic investigation tasks; the historical protocol and scores below remain unchanged.
+
 This study answers a practical question: does **Claude Code plus SqlScriptDOM 0.14.0** answer saved-SQL questions more accurately, faster, or with fewer reported tokens than the same model using Read/Grep/Glob? The baseline includes source reading and model reasoning. It is not a comparison against the execution time of a single `grep` command.
 
 For a candidate rerun, use the [benchmark-sql-plugin maintainer skill](../../.claude/skills/benchmark-sql-plugin/SKILL.md) and `scripts/rerun-sample-study.py`. Its runbook preserves these controls, fingerprints candidate bits, creates blank review templates and generates a separate historical comparison. The original 0.14.0 evidence remains unchanged. Planned performance/quality repairs are in the [improvement plan](../plans/benchmark-driven-improvement-plan.md).

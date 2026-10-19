@@ -1,0 +1,87 @@
+{
+  "format": "first-response-validation-v1",
+  "checked_utc": "2026-10-18T19:59:07.521960+00:00",
+  "status": "local unreleased source; no marketplace update or new model benchmark",
+  "git_head": "53686fb97ad6eb5af27069e408161abe80c57ac6",
+  "dirty_source": true,
+  "files": {
+    "src/SqlLsp.Mcp/ModuleSelector.cs": "74f9fc2d7851c06d04abe9dcc19373a47154c2da485fa704e949e7aea641c0b9",
+    "src/SqlLsp.Mcp/ProcedureBrief.cs": "cf9abb971832ec1dfe5943b588522c41a31c5c831378ca8e13e6bf2375b0e306",
+    "src/SqlLsp.Mcp/ProcedureTools.cs": "804aafbfa334558c6f55c1b1681ec7631f5f092db75731c47166144f80707018",
+    "tests/SqlLsp.Mcp.IntegrationTests/BriefResponseTests.cs": "c4006e4e39b456d670a25c4591e22e355d0c830b80b0718c249e6bf4f43a1d74",
+    "tests/SqlLsp.Mcp.IntegrationTests/MetricsTests.cs": "e2bae5dcc0040deaee4cba0c8970af5a90f17898f0e90d30a2f1a1abeac8bfa7",
+    "claude-plugin/skills/explain-procedure/SKILL.md": "07680f7bf48638d7da52cbfa76a726d487d3e08e1a3c48e76cf0c2a543c71f1d"
+  },
+  "dependencies": {
+    "locked_restore_passed": true,
+    "new_runtime_dependencies": false,
+    "package_versions_changed": false
+  },
+  "tests": {
+    "core": {
+      "passed": 162,
+      "skipped": 0
+    },
+    "lsp_protocol": {
+      "passed": 60,
+      "skipped": 1
+    },
+    "sqlserver_provider": {
+      "passed": 29,
+      "skipped": 14
+    },
+    "mcp_protocol": {
+      "passed": 95,
+      "skipped": 3
+    },
+    "csharp_total_passed": 346,
+    "csharp_total_skipped": 18,
+    "new_stdio_cases": 17,
+    "python": {
+      "passed": 52,
+      "skipped": 1
+    },
+    "skip_notes": "Live SQL credentials, optional performance fixture and Windows permissions/symlink cases are unavailable/opt-in."
+  },
+  "checks": {
+    "release_build_passed": true,
+    "formatting_passed": true,
+    "diff_check_passed": true,
+    "claude_plugin_manifest_valid": true,
+    "claude_skill_yaml_valid": true,
+    "codex_skill_validator_note": "Generic Codex validator rejects the existing Claude-only argument-hint key. It was preserved; Claude manifest and YAML validation passed."
+  },
+  "probe": {
+    "primary": "docs/evidence/first-response-probe-20261018.json",
+    "retained_complete_successes": 4,
+    "additional_repeats": [
+      "artifacts/first-response-repeat1-20261018.json",
+      "artifacts/first-response-repeat2-20261018.json",
+      "artifacts/first-response-repeat3-20261018.json"
+    ],
+    "assertions": [
+      "Quoted scoped selector resolves",
+      "Unscoped duplicate remains Ambiguous with scope recovery",
+      "Canonical selector still resolves",
+      "Initial order response includes RETURN-after-THROW and sequence observations",
+      "Initial fulfillment response includes SELECT-retention observation",
+      "All responses within 32 KiB"
+    ],
+    "initial_failure": {
+      "assertion": "Expected scoped quoted analysis status Resolved",
+      "response_retained": false,
+      "cause": "not established",
+      "note": "First attempt failed before diagnostic response logging was added. No intentional product source change preceded the retained successful rerun; initial binary fingerprint was not recorded. Do not infer a fix or absence of intermittent source-state behavior."
+    },
+    "new_csharp_assembly_sha256": "2d11e441c88868c62260a51c9ad85c6217e3e3e5bfcd91c6a3b91c8847b4190d",
+    "model_calls": 0,
+    "sql_execution": false
+  },
+  "limitations": [
+    "First responses are larger: about 25.5 KiB versus 8.8 KiB for the order case; they now include citeable observations. Fewer calls, token savings and improved acceptance are hypotheses pending a reviewed model run.",
+    "Native old package and framework-dependent local code differ in runtime; probes are functional, not causal performance comparisons.",
+    "An initial unclassified probe assertion remains disclosed; successful repeats do not identify its cause.",
+    "No full control-flow analysis, runtime evaluation, automatic project-boundary guessing or broader lineage implementation.",
+    "No four-platform native/install CI or publication for this local change yet."
+  ]
+}

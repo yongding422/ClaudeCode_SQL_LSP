@@ -27,6 +27,8 @@ Use `prepare --suite docs/evaluation/sql-server-samples-additional-suite.json --
 
 ## Review and compare
 
+For new runs, additionally use [acceptance review](acceptance.md), freezing its rubric before the preceding execution step. It is the primary quality outcome; the factual-grade workflow below remains available for historical comparability. No actual user acceptance can be reported without direct developer feedback.
+
 ```powershell
 python scripts/rerun-sample-study.py grade-template --study artifacts/sample-study-candidate-UNIQUE
 ```

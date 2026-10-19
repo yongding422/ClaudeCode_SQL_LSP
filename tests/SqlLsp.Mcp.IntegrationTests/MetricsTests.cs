@@ -110,9 +110,10 @@ public class MetricsTests
             await using var client = await McpClient.Start(Sql, rootDirectory: root, preserveWorkspace: true, metricsDirectory: blocked);
             await Analyze(client, await Find(client));
             var metrics = await Metrics(client);
-            Assert.Equal(2, metrics.GetProperty("observedInProcess").GetInt32());
-            Assert.Equal(2, metrics.GetProperty("persistenceWriteFailures").GetInt32());
-            Assert.Equal(2, metrics.GetProperty("report").GetProperty("requests").GetInt32());
+            var requests = metrics.GetProperty("observedInProcess").GetInt32();
+            Assert.True(requests >= 2); // Discovery and analysis, plus any actual bounded expansion requests.
+            Assert.Equal(requests, metrics.GetProperty("persistenceWriteFailures").GetInt32());
+            Assert.Equal(requests, metrics.GetProperty("report").GetProperty("requests").GetInt32());
             Assert.Equal("Unavailable", (await Metrics(client, true)).GetProperty("report").GetProperty("storageStatus").GetString());
             var versionCollision = Path.Combine(root, "version-collision"); Directory.CreateDirectory(versionCollision);
             await File.WriteAllTextAsync(Path.Combine(versionCollision, "metrics-v1"), "PRIVATE_SQL_CANARY");

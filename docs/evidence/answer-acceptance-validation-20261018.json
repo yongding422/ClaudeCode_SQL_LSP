@@ -1,0 +1,51 @@
+{
+  "format": "answer-acceptance-validation-v1",
+  "checked_utc": "2026-10-18T14:17:27.888852+00:00",
+  "scope": "Acceptance benchmark tooling and skill; no product runtime changes, model calls, SQL execution or database access.",
+  "tests": {
+    "command": "python -m unittest discover -s scripts -p test_*.py -q",
+    "total": 53,
+    "passed": 52,
+    "skipped": 1,
+    "skip_reason": "Windows host cannot create symbolic links.",
+    "new_acceptance_cases": 17
+  },
+  "additional_checks": [
+    "Python compilation passed",
+    "Repository and installed benchmark skills passed quick_validate.py",
+    "Skill copies byte-identical",
+    "git diff --check passed",
+    "31 gold evidence line ranges valid against pinned SQL source"
+  ],
+  "historical_preservation": {
+    "original_12_question_suite_unchanged": true,
+    "original_cold_prepare_runner_report_unchanged": true,
+    "new_review_does_not_read_or_copy_old_grades": true
+  },
+  "new_extension": {
+    "questions": 5,
+    "prepared_sessions": 20,
+    "executed_sessions": 0,
+    "dry_run_passed": true,
+    "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+    "sql_files": 1099,
+    "corpus_sha256": "24023744adea38b138dd041e5134a66f5ac4fa211060f0ba6976e15aeebc00d7",
+    "candidate_fingerprint": "dc70df8d5b16a06c94ddaa1405d548b876e9e9f9a3bd2ff91a65873f611a9285",
+    "contract_timing": "prospective",
+    "prepared_study": "artifacts/acceptance-investigations-prepared-20261018",
+    "review": "artifacts/acceptance-investigations-review-20261018"
+  },
+  "existing_warm_review": {
+    "contract_timing": "retrospective",
+    "anonymous_answers": 48,
+    "all_review_scores_and_decisions_unfilled": true,
+    "review": "artifacts/acceptance-warm-retrospective-20261018",
+    "actual_developer_feedback_collected": false
+  },
+  "limitations": [
+    "Rubrics authored by implementing agent on previously studied SQL; not independently validated or a holdout.",
+    "Anonymous packets withhold labels, not guaranteed blinding; answers may reveal tools.",
+    "No new answer-acceptance advantage measured. Actual user acceptance remains unknown.",
+    "Cache freshness uses existing deterministic fixtures; no edited-source multi-turn model experiment or confidence intervals implemented."
+  ]
+}

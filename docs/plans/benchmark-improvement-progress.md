@@ -2,6 +2,8 @@
 
 Original backlog: [R0–R7](benchmark-driven-improvement-plan.md). Baseline 0.14.0 remains immutable; general IDE M6 is deferred.
 
+Local follow-up (unreleased): [first-response evidence and selector normalization](../first-response-evidence.md) refines R2/R4. Quoted selectors respect identifier boundaries/comparison rules; explicit scope recovery remains conservative. Bounded initial findings expose existing critical observations before report-page expansion. [Validation](../evidence/first-response-validation-20261018.json) records 346 C# passes, 18 skips, unchanged dependencies, actual corpus probes and an earlier unclassified probe failure. No new model benchmark, native rollout, automatic project guessing, full CFG or lineage claim accompanies this slice. The original R0–R7 delivery record below remains historical.
+
 | Slice | Current state |
 |---|---|
 | R0 | Rerunnable skill, file ledger/read-parse instrumentation and all baseline failures diagnosed; explicit enumeration/telemetry limits retained. |

@@ -1,9 +1,11 @@
 ---
 name: benchmark-sql-plugin
-description: Rerun or review the SqlScriptDOM plugin versus Grep benchmark after a candidate change, preserving the frozen SQL Server Samples suite and comparing reviewed accuracy, time and reported tokens with the retained 0.14.0 result. Use for this repository's evaluation workflow, not ordinary SQL investigation.
+description: Rerun or review the SqlScriptDOM plugin versus Grep benchmark, prioritizing answer correctness and developer acceptance before time and tokens. Preserve frozen SQL Server Samples cohorts and historical results. Use for this repository's evaluation workflow, not ordinary SQL investigation.
 ---
 
 Run a controlled developer-workflow comparison, not a benchmark designed to make the plugin win. This is a maintainer skill; it is separate from the distributed SQL plugin and must not enter participant workspaces.
+
+For new evaluations, read [acceptance review](references/acceptance.md): freeze the chosen cohort's acceptance rubric before model runs, generate anonymous packets afterward, and report reviewer acceptance, critical errors, evidence and correction effort ahead of tokens/time. Actual user acceptance requires direct developer feedback; missing feedback stays unknown. Preserve the historical factual-grade reports separately. Requests to change the evaluation workflow do not start paid sessions.
 
 Resolve the SqlScriptDOM_LSP repository from the current checkout or a user-supplied path. This machine's known checkout is `D:/Project/SqlScriptDOM_LSP`; the sample source is `D:/Project/sql-server-samples`. Verify paths and the pinned source revision. The executable helper is `<repo>/scripts/rerun-sample-study.py`. Read [the runbook](references/runbook.md) for commands, outputs and recovery.
 

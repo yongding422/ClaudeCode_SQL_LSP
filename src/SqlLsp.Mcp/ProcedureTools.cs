@@ -132,6 +132,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                     selection = symbol.Target.Range.Start,
                     revision = metadata.Revision,
                     status = metadata.Status,
+                    selectionHint = metadata.Status == ResolutionStatus.Ambiguous ? "Duplicate identity: set scopeUri to the developer's explicit project folder and repeat discovery; an unscoped moduleRef preserves ambiguity." : null,
                     signature = symbol.Declaration.Documentation?.Signature
                 };
             }
@@ -197,7 +198,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Explain a saved T-SQL module with citeable static evidence. Known file: use documentUri plus declaration (exact P or dbo.P), or zero-based UTF-16 line/character. After discovery copy moduleRef alone; no discovery is required for known files. Compact default, small expansion. Oversized evidence returns reportRef/sections: request only relevant pages. Use Read/Grep for literals or ad-hoc scripts. Empty/omitted facts never prove no effects. Does not execute SQL or require LSP.")]
+    [Description("Explain saved T-SQL with citeable evidence. Known file: documentUri plus declaration (P, dbo.P or quoted identifiers), or zero-based UTF-16 position. When the project folder is known pass scopeUri; duplicate identities need scoped discovery then moduleRef. First response includes brief facts/citations; intent selects overview, transactions or dependencies. Compact report remains available through reportRef/section pages. Read/Grep covers literals and scripts; omitted facts never prove no effects. No SQL execution or LSP required.")]
     public async Task<CallToolResult> AnalyzeProcedure(string documentUri = "", int line = 0, int character = 0,
         [Description("Expansion levels, 0..4; default 1.")] int maxDepth = 1,
         [Description("Maximum expanded modules, 1..40; default 8.")] int maxModules = 8,
@@ -207,7 +208,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         CancellationToken cancellationToken = default, string? declaration = null, string? moduleRef = null,
         [Description("Expand saved evidence. No selector needed; a redundant matching root moduleRef is accepted.")] string? reportRef = null,
         [Description("Copy a returned JSON Pointer section; empty selects the report root.")] string section = "", int offset = 0, int maxItems = 20,
-        [Description("Physical folder URI explicitly defining this investigation's source boundary. Outside dependencies stay unresolved.")] string? scopeUri = null)
+        [Description("Physical folder URI explicitly defining this investigation's source boundary. Outside dependencies stay unresolved.")] string? scopeUri = null,
+        [Description("Prioritize the first-response brief: overview, transactions or dependencies. Does not change analysis, expansion limits or retained report facts.")] string intent = "overview")
     {
         using var observation = metrics.Begin(reportRef == null ? "analyze_procedure" : "expand_report", detail, cancellationToken);
         ModuleSelection? selectedModule = moduleRef == null ? null : moduleSelections.Get(moduleRef);
@@ -236,8 +238,10 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             line < 0 || character < 0 || maxDepth is < 0 or > 4 || maxModules is < 1 or > 40 ||
             detail is not ("full" or "compact") || focus is { Length: > 8 } ||
             focus?.Any(f => string.IsNullOrWhiteSpace(f) || f.Length > 64) == true || (detail == "full" && focus is { Length: > 0 }) ||
-            declaration?.Length > 256 || offset < 0 || maxItems is < 1 or > 100 || section.Length > 2048)
+            declaration?.Length > 256 || offset < 0 || maxItems is < 1 or > 100 || section.Length > 2048 ||
+            intent is not ("overview" or "transactions" or "dependencies"))
             throw new McpException("Expected an indexed file URI, zero-based UTF-16 position and bounded expansion limits.");
+        var selector = declaration == null ? null : ModuleSelector.Parse(declaration);
         return observation.Complete(await WithIndex(async (index, timings) =>
         {
             var root = RequestScope(scopeUri);
@@ -248,14 +252,15 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 index = index.RestrictedTo(root);
             }
             if (selectedModule != null && selectedModule.Generation != generation) throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
-            if (declaration != null)
+            if (selector != null)
             {
                 var rules = SourceFiles?.Contexts.Rules(SourceFiles.ContextId(uri), state?.Resolution ?? new()) ?? new();
-                var candidates = index.Symbols.Where(s => s.Target.Uri == uri && (rules.Comparer.Equals(s.Declaration.Name, declaration) || rules.Comparer.Equals(s.Identity.Name, declaration)) &&
+                var candidates = index.Symbols.Where(s => s.Target.Uri == uri && selector.Matches(s.Identity, rules.Comparer) &&
                     s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View).ToArray();
                 if (candidates.Length != 1) throw new McpException("File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates.");
                 line = candidates[0].Target.Range.Start.Line; character = candidates[0].Target.Range.Start.Character;
             }
+            object? brief = null;
             CallToolResult Envelope(object reportValue, AnalysisCacheUse? use = null) => Result(new
             {
                 formatVersion = 2,
@@ -274,6 +279,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 indexCache = materialized?.Use,
                 timings,
                 cache = use,
+                brief,
                 report = reportValue,
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
             });
@@ -289,6 +295,8 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             var report = analyzed.Report;
             observation.AnalyzerReport(report);
             var timer = Stopwatch.StartNew();
+            var briefBuilder = new ProcedureBrief(report, launch.Workspace, intent, cancellationToken);
+            brief = briefBuilder.Create(8);
             var presented = detail == "compact" ? new CompactProcedureReport(report, launch.Workspace, focus ?? [], cancellationToken).Create() : (object)report;
             timings.PresentationMs = timer.Elapsed.TotalMilliseconds;
             var responseValue = Envelope(presented, analyzed.Use);
@@ -297,6 +305,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             for (var count = Math.Min(8, report.Modules.Length); count >= 0; count--)
             {
                 responseValue = Envelope(analysisPages.Overview(reference, generation, count), analyzed.Use);
+                if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
+            }
+            for (var count = 7; count >= 0; count--)
+            {
+                brief = briefBuilder.Create(count);
+                responseValue = Envelope(analysisPages.Overview(reference, generation, 0), analyzed.Use);
                 if (FitsWireBudget(responseValue, launch.AnalysisMaxBytes)) return responseValue;
             }
             throw new McpException("Analysis metadata exceeds wire budget; use a narrower source/depth or direct source inspection.");

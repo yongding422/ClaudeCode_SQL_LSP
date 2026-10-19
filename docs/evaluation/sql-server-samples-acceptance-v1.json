@@ -1,0 +1,295 @@
+{
+  "format": "sql-answer-acceptance-v1",
+  "version": 1,
+  "source_revision": "e5d7bb90ca0b695ac14f61458047bfb5a498459e",
+  "suite_sha256": "80c817c2b74b3d2107428c3856bda9e9b61db399193395bcd91af29ecbc33776",
+  "purpose": "Versioned acceptance overlay for the unchanged historical 12-question cohort; previously seen tasks, not a holdout. Freeze before new model runs. Retrospective review must be labeled.",
+  "decisions": [
+    "accept_as_written",
+    "minor_edits",
+    "major_correction",
+    "reject"
+  ],
+  "grading": "Essential fact and evidence/uncertainty/relevance scores are 0/0.5/1. Optional detail is not required. Critical errors and material unsupported extra claims block acceptance. Review every final answer against the entire source context; checklist errors are examples, not exhaustive. Failed/missing answers remain assigned and rejected. No automatic user acceptance or keyword grading.",
+  "tasks": [
+    {
+      "task_id": "Q01-order-footprint",
+      "developer_goal": "Assess the persistent footprint and failure boundary before changing order creation.",
+      "essential_facts": [
+        "Names Sales.Orders and Sales.OrderLines as direct inserts, and distinguishes local @OrdersToGenerate.",
+        "Traces pricing reads to Sales.Customers, Warehouse.StockItems, Sales.SpecialDeals and Warehouse.StockItemStockGroups.",
+        "Explains OrderID sequence allocation before TRY/transaction, successful commit, and XACT_STATE() <> 0 rollback/rethrow; RETURN after THROW is unreachable."
+      ],
+      "critical_errors": [
+        "Claims sequence values roll back with the inserts.",
+        "Treats RETURN -1 after THROW as the observed failure result.",
+        "Guarantees all effects are confined to these tables without inspecting external dependencies/triggers."
+      ],
+      "required_evidence": [
+        "Cite direct inserts, pricing function reads, sequence position and CATCH."
+      ],
+      "expected_uncertainty": [
+        "Describe proven source-level effects; do not guarantee runtime rows or absent trigger/ambient-transaction effects."
+      ],
+      "optional_detail": [
+        "Exact local variable declarations and formatting; numeric sequence start value."
+      ]
+    },
+    {
+      "task_id": "Q02-invoice-eligibility",
+      "developer_goal": "Decide which orders can be invoiced and identify successful and failing write paths.",
+      "essential_facts": [
+        "Requires an existing order, no existing invoice and non-NULL PickingCompletedWhen.",
+        "An ineligible requested order causes THROW before the explicit transaction, rather than being skipped.",
+        "Lists writes to Sales.Invoices, Sales.InvoiceLines, Warehouse.StockItemTransactions, Sales.CustomerTransactions and Warehouse.StockItemHoldings.",
+        "Explains grouped stock quantity subtraction and negative issue quantities."
+      ],
+      "critical_errors": [
+        "Claims invalid orders are skipped and the rest always commit.",
+        "Omits a persistent write target while presenting a complete impact list.",
+        "Claims failed validation has no sequence allocation effect."
+      ],
+      "required_evidence": [
+        "Cite eligibility checks, THROW/transaction boundary, each write target and quantity expressions."
+      ],
+      "expected_uncertainty": [
+        "Row counts, concurrency and extra trigger effects need runtime/catalog evidence; table-write absence does not imply sequence rollback."
+      ],
+      "optional_detail": [
+        "Exact error-message wording and variable names."
+      ]
+    },
+    {
+      "task_id": "Q03-price-formula",
+      "developer_goal": "Predict the actual price under supplied inputs and explain competing discounts.",
+      "essential_facts": [
+        "Returns 30.00 for the supplied 100/30 inputs and identifies percentage times base as a candidate final price.",
+        "Explains minimum explicit price, base minus maximum fixed discount, and selection of lower candidates without stacking discounts."
+      ],
+      "critical_errors": [
+        "Returns 70 or substitutes intended business behavior for the actual formula.",
+        "Stacks discounts against an already reduced price."
+      ],
+      "required_evidence": [
+        "Cite the percentage formula and explicit/fixed candidate comparisons."
+      ],
+      "expected_uncertainty": [
+        "The numeric answer is conditional on the given valid item and applicable-deal assumptions, not a live price lookup."
+      ],
+      "optional_detail": [
+        "Exact intermediate variable spelling or every deal-filter predicate."
+      ]
+    },
+    {
+      "task_id": "Q04-login-password",
+      "developer_goal": "Understand who can have login credentials changed and how rejection behaves.",
+      "essential_facts": [
+        "Both routines target the supplied PersonID excluding 1; activation requires disabled login, password change checks the old hash.",
+        "Explains password plus FullName SHA2_256 hashing and person 1 as activation preference template.",
+        "Activation sets LogonName/enables login; zero qualifying rows throws, with no reachable RETURN -1 afterward."
+      ],
+      "critical_errors": [
+        "Says either procedure can modify person 1.",
+        "Omits the old-password check or promises a normal returned -1 on rejection.",
+        "Invents privileges or an administrative role for person 1."
+      ],
+      "required_evidence": [
+        "Cite both WHERE predicates, hashing, activation assignments and zero-row error handling."
+      ],
+      "expected_uncertainty": [
+        "Do not infer authorization/security guarantees beyond the shown predicates."
+      ],
+      "optional_detail": [
+        "Full error-message text and formatting of the hash expression."
+      ]
+    },
+    {
+      "task_id": "Q05-sensor-upsert",
+      "developer_goal": "Explain sensor ingestion and its write/error boundaries to a maintainer.",
+      "essential_facts": [
+        "Describes MIN-to-MAX input-ID iteration and increment, rather than a set-based MERGE.",
+        "Updates by ColdRoomSensorNumber and inserts only when UPDATE affects zero rows.",
+        "Identifies native/schema-bound ATOMIC SNAPSHOT and rethrown error 51000; the following RETURN is unreachable."
+      ],
+      "critical_errors": [
+        "Treats THROW state as severity or a reachable return code.",
+        "Claims a missing input ID resets all assignment variables to NULL.",
+        "Guarantees one updated row per sensor without a uniqueness constraint."
+      ],
+      "required_evidence": [
+        "Cite loop/TVP selection, UPDATE/@@ROWCOUNT/INSERT, ATOMIC options and CATCH."
+      ],
+      "expected_uncertainty": [
+        "Input-ID gaps and actual sensor matches depend on data; avoid assuming contiguous IDs or unique sensor numbers."
+      ],
+      "optional_detail": [
+        "Exact THROW state number 2 if error propagation is otherwise explained correctly."
+      ]
+    },
+    {
+      "task_id": "Q06-dynamic-reseed",
+      "developer_goal": "Assess reseeding dependencies and distinguish source-derived rules from runtime values.",
+      "essential_facts": [
+        "Binds TransactionID reseeding to SupplierTransactions.SupplierTransactionID, CustomerTransactions.CustomerTransactionID and StockItemTransactions.StockItemTransactionID in their correct schemas.",
+        "Reads the named Sequences schema sequence current_value and dynamic COALESCE(MAX(column),0) from each bound table into a temporary result.",
+        "If table max >= sequence current, restarts at max + 1; distinguishes temporary writes from ALTER SEQUENCE.",
+        "States that an exact final numeric value cannot be obtained without live maxima and sequence state."
+      ],
+      "critical_errors": [
+        "Invents an exact runtime restart value from saved source.",
+        "Claims the final helper call always overwrites previous higher values.",
+        "Describes temporary-table writes as direct persistent business-table updates."
+      ],
+      "required_evidence": [
+        "Cite all three bound calls, sys.sequences lookup and dynamic MAX/ALTER comparison."
+      ],
+      "expected_uncertainty": [
+        "Live maxima, sequence state and intervening activity remain unknown."
+      ],
+      "optional_detail": [
+        "Explain QUOTENAME protection when discussing dynamic SQL safety; exact generated text is not mandatory for this question."
+      ]
+    },
+    {
+      "task_id": "Q07-price-callers",
+      "developer_goal": "Find actual pricing callers without confusing deployment text with runtime calls.",
+      "essential_facts": [
+        "Identifies Website.InsertCustomerOrders and DataLoadSimulation.CreateCustomerOrders as direct static callers within the requested project.",
+        "Classifies the two configuration mentions as calls inside generated CREATE PROCEDURE text, not immediate outer-procedure pricing calls.",
+        "Excludes the function declaration and provides contextual source evidence."
+      ],
+      "critical_errors": [
+        "Lists configuration procedures as direct pricing invocations.",
+        "Counts declarations as call sites or presents a repository-wide list while ignoring the requested project scope.",
+        "Claims one continuous dynamic SQL string spans unrelated SET assignments."
+      ],
+      "required_evidence": [
+        "Cite both real call sites and the surrounding dynamic definition/assignment/execution boundaries."
+      ],
+      "expected_uncertainty": [
+        "Saved static callers do not prove all runtime dynamic callers are known."
+      ],
+      "optional_detail": [
+        "Exact PRINT messages and full generated definition text."
+      ]
+    },
+    {
+      "task_id": "Q08-ticket-bindings",
+      "developer_goal": "Trace reservation inputs through the helper to writes and failure handling.",
+      "essential_facts": [
+        "Maps CurrentSeq to TicketReservationID, RowsPerTransaction to LineCount, Char_TS to Comment and ThreadID to FlightID.",
+        "Identifies transitive dbo.TicketReservationDetail inserts with Quantity = loop % 8 + 1.",
+        "Explains per-loop BEGIN/COMMIT, sequence allocation, rollback only at XACT_STATE()=-1, then rethrow.",
+        "Distinguishes active traditional T-SQL from the commented-out native alternative."
+      ],
+      "critical_errors": [
+        "Swaps positional parameter bindings.",
+        "Claims CATCH always rolls back or that execution continues after THROW.",
+        "Treats the commented native implementation as active."
+      ],
+      "required_evidence": [
+        "Cite invocation, helper signature/inserts, caller transaction/CATCH and comment boundaries."
+      ],
+      "expected_uncertainty": [
+        "Actual reservation rows and sequence values depend on runtime inputs; rollback guard does not guarantee cleanup of every ambient state."
+      ],
+      "optional_detail": [
+        "Exact generated comment text and every local declaration."
+      ]
+    },
+    {
+      "task_id": "Q09-json-update",
+      "developer_goal": "Predict which JSON update fields are overwritten or preserved.",
+      "essential_facts": [
+        "Targets product 28 using the supplied example; identifies provided Name, Price and Quantity.",
+        "Omitted Color and Size become NULL and are assigned directly.",
+        "Omitted Data and Tags are preserved using AS JSON/ISNULL; CompanyID is not assigned.",
+        "Identifies Name and Price strict paths without asserting all fields are mandatory."
+      ],
+      "critical_errors": [
+        "Claims every omitted property is preserved.",
+        "Claims CompanyID changes in this update.",
+        "Presents a later script JSON literal as the actual current stored row."
+      ],
+      "required_evidence": [
+        "Cite example invocation, OPENJSON projections and update assignments."
+      ],
+      "expected_uncertainty": [
+        "Describe assignments conditional on the example and existing row; exact current stored values require execution state."
+      ],
+      "optional_detail": [
+        "Trailing decimal zeros or unchanged property enumeration beyond the question."
+      ]
+    },
+    {
+      "task_id": "Q10-json-format",
+      "developer_goal": "Explain a JSON serialization bug and the script-level JSON mutation.",
+      "essential_facts": [
+        "Explains escaped string values versus embedded JSON values when using JSON_QUERY around Data and Tags.",
+        "Identifies product 16 ManufacturingCost numeric 10 and append of string new to Tags, rather than replacement."
+      ],
+      "critical_errors": [
+        "Claims GO commits transactions.",
+        "Guarantees no cascades, triggers or other effects from the visible UPDATE alone.",
+        "Claims append necessarily creates a valid array for every NULL/non-array input."
+      ],
+      "required_evidence": [
+        "Cite both FOR JSON queries and the product 16 update expressions."
+      ],
+      "expected_uncertainty": [
+        "Actual preexisting JSON values and trigger effects are not established by those statements alone."
+      ],
+      "optional_detail": [
+        "Exact output JSON text or behavior of unrelated demonstration statements."
+      ]
+    },
+    {
+      "task_id": "Q11-external-clr",
+      "developer_goal": "Identify the CLR boundary and explain what the SQL declarations cannot prove.",
+      "essential_facts": [
+        "Gives XGET H nvarchar(max), url nvarchar(4000), RETURNS nvarchar(max), external SqlClrCurl.Curl.Get.",
+        "Gives XPOST H/d nvarchar(max), url nvarchar(4000), external SqlClrCurl.Curl.Post; no scalar SQL RETURNS declaration here.",
+        "Identifies external DLL assembly with EXTERNAL_ACCESS.",
+        "Explicitly leaves exact HTTP headers, external implementation and possible table effects unknown from SQL alone."
+      ],
+      "critical_errors": [
+        "Invents exact .NET HTTP APIs, headers or external table effects.",
+        "Equates absent SQL RETURNS with no possible procedure return status/result behavior.",
+        "Claims an empty T-SQL body proves no side effects."
+      ],
+      "required_evidence": [
+        "Cite both external declarations and CREATE ASSEMBLY permission setting."
+      ],
+      "expected_uncertainty": [
+        "External behavior requires implementation/runtime evidence excluded by this task; a candid source limitation is a valid answer."
+      ],
+      "optional_detail": [
+        "Machine-specific DLL directory spelling."
+      ]
+    },
+    {
+      "task_id": "Q12-fulfill-variants",
+      "developer_goal": "Compare fulfillment variants without hiding repeated-selection or transaction hazards.",
+      "essential_facts": [
+        "Keeps DiskBasedDB and InMemDB variants separate: one TOP 1 selection versus a ten-iteration counter loop.",
+        "Both select oldest unfulfilled orders, update dbo.Orders and insert dbo.Fulfillment only for a non-NULL OrderID.",
+        "Identifies native/owner/schema-bound ATOMIC SNAPSHOT only in memory; the disk routine has no explicit transaction block.",
+        "Explains that no-row SELECT assignment can retain stale variables, so ten distinct fulfilled orders are not guaranteed."
+      ],
+      "critical_errors": [
+        "Guarantees ten distinct orders are processed.",
+        "Says each empty SELECT resets OrderID to NULL.",
+        "Claims the entire disk routine is one atomic transaction from its declarations alone."
+      ],
+      "required_evidence": [
+        "Cite both database contexts, loop, selection predicates, guarded writes and transaction options."
+      ],
+      "expected_uncertainty": [
+        "Number of distinct orders, concurrency and exact rows remain data-dependent; stale variable reuse is possible."
+      ],
+      "optional_detail": [
+        "Exact timestamp sentinel spelling if its unfulfilled-order role is correctly explained."
+      ]
+    }
+  ]
+}
