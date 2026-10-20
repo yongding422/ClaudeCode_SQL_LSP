@@ -9,16 +9,17 @@ using SqlLsp.Server;
 namespace SqlLsp.Mcp;
 
 // Offline-only persisted fact index. Every request verifies current contents; rich ASTs are separate and bounded.
-internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfiguration configuration, string stamp)
+internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfiguration configuration, string stamp, long priorBodyParses = 0)
 {
     public WorkspaceFiles Files { get; } = new(configuration.Workspace);
     public SqlMaterializedIndex Index { get; private set; } = new([]);
     public WorkspaceCoverage Coverage { get; private set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    private readonly MaterializedSnapshotStore store = new(launch.IndexCacheDirectory!, launch.Workspace);
+    private readonly MaterializedSnapshotStore store = new(launch.IndexCacheDirectory!, launch.Workspace, configuration.Workspace.ScanScope);
     private WorkspaceFileCoverage[] ledger = [];
     private Dictionary<Uri, SqlMaterializedFile>? prior;
     private readonly Dictionary<Uri, (SqlMaterializedFile Facts, DocumentSnapshot Document)> parsed = new();
     private long reads, parseAttempts, bodyParses;
+    public long TotalBodyParses => priorBodyParses + bodyParses;
     private double readMs, parseMs, enumerationMs;
     private int reused, extracted;
     public object Use => new
@@ -28,7 +29,7 @@ internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfi
         verification = "Current file bytes hashed; metadata alone is never trusted",
         reusedFiles = reused,
         extractedFiles = extracted,
-        bodyParses,
+        bodyParses = TotalBodyParses,
         parsedBodiesRetained = parsed.Count,
         format = "materialized-v1",
         onlineCatalogs = false
@@ -45,7 +46,7 @@ internal sealed class MaterializedWorkspace(McpLaunchOptions launch, ServerConfi
         if (Files.Roots.Count != 1) throw new McpException("Workspace must be an accessible physical directory.");
         if (uris.Length > 10000) throw new McpException("Verified index exceeds 10,000 input files; configure a smaller source scope.");
         enumerationMs += timer.Elapsed.TotalMilliseconds;
-        var key = SqlAnalysisCacheContext.Hash(stamp + Path.GetFullPath(launch.Workspace) +
+        var key = SqlAnalysisCacheContext.Hash(stamp + Path.GetFullPath(launch.Workspace) + configuration.Workspace.ScanScope?.AbsoluteUri +
             typeof(SqlParser).Module.ModuleVersionId + typeof(MaterializedWorkspace).Module.ModuleVersionId +
             typeof(Microsoft.SqlServer.TransactSql.ScriptDom.TSqlFragment).Module.ModuleVersionId + "materialized-v1");
         prior ??= (await store.ReadAsync(key, token)).GroupBy(f => f.Uri).ToDictionary(g => g.Key, g => g.First());

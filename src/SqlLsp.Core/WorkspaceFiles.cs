@@ -8,6 +8,8 @@ public sealed record WorkspaceOptions(int MaxFileSizeBytes = 2_097_152)
 {
     public System.Collections.Immutable.ImmutableArray<OfflineProjectScope> ProjectScopes { get; init; } = [];
     public bool AutoDetectProjects { get; init; } = true;
+    // MCP may load only an explicit investigation folder. Context roots remain authoritative.
+    public Uri? ScanScope { get; init; }
     public void Validate()
     {
         if (MaxFileSizeBytes is < 1 or > 16_777_216)
@@ -25,6 +27,7 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     private readonly List<string> roots = new();
     public WorkspaceContexts Contexts { get; } = new(options.ProjectScopes, options.AutoDetectProjects);
     public IReadOnlyList<string> Roots => roots;
+    public bool IsInScanScope(Uri uri) => options.ScanScope == null || uri.IsFile && IsContained(options.ScanScope.LocalPath, uri.LocalPath);
     public bool CanScope(Uri uri) => uri.IsFile && Directory.Exists(uri.LocalPath) &&
         roots.Any(root => IsContained(root, uri.LocalPath)) && !HasLinkedAncestor(uri.LocalPath) && CanTraverse(uri);
     public string ContextId(Uri uri)
@@ -38,7 +41,8 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
     public IEnumerable<Uri> EnumerateUris()
     {
         Contexts.Configure(roots.Where(Directory.Exists).SelectMany(r => Enumerate(r, ".sqlproj")));
-        return roots.Where(Directory.Exists).SelectMany(r => Enumerate(r)).Distinct().ToArray();
+        var scanRoots = options.ScanScope is { } scope ? new[] { scope.LocalPath } : roots.Where(Directory.Exists);
+        return scanRoots.SelectMany(r => Enumerate(r)).Distinct().ToArray();
     }
 
     public bool CanTraverse(Uri uri) => uri.IsFile && roots.Any(root => IsContained(root, uri.LocalPath) &&
@@ -61,12 +65,15 @@ public sealed class WorkspaceFiles(WorkspaceOptions options)
         }
         if (options.ProjectScopes.Any(s => !roots.Any(root => IsContained(root, s.Root.LocalPath)) || HasLinkedAncestor(s.Root.LocalPath)))
             throw new ArgumentException("Project scopes must remain in initialized physical workspace roots.");
+        if (options.ScanScope is { } scope && (scope.Query.Length != 0 || scope.Fragment.Length != 0 || !CanScope(scope)))
+            throw new ArgumentException("Scan scope must be an accessible physical directory inside the workspace.");
         return EnumerateUris().OrderBy(u => u.AbsoluteUri, StringComparer.Ordinal).ToArray();
     }
 
     public bool CanRead(Uri uri)
     {
         if (!uri.IsFile || !string.Equals(Path.GetExtension(uri.LocalPath), ".sql", StringComparison.OrdinalIgnoreCase) || !Contexts.Included(uri)) return false;
+        if (!IsInScanScope(uri)) return false;
         var path = Path.GetFullPath(uri.LocalPath);
         foreach (var root in roots)
         {

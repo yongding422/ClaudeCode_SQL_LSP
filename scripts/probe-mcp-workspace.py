@@ -61,7 +61,10 @@ def probe(args):
             send({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
             samples = []
             for _ in range(args.samples):
-                wire, elapsed, length = call("tools/call", {"name": "find_procedures", "arguments": {"query": args.query, "maxResults": 1}})
+                arguments = {"query": args.query, "maxResults": 1}
+                if args.scope:
+                    arguments["scopeUri"] = args.scope.resolve().as_uri()
+                wire, elapsed, length = call("tools/call", {"name": "find_procedures", "arguments": arguments})
                 result = wire["result"]
                 if result.get("isError"):
                     raise RuntimeError("Tool failed; values suppressed")
@@ -72,7 +75,8 @@ def probe(args):
                 time.sleep(.3)  # Observe normal startup reconciliation without hiding its recorded work.
             binary = args.assembly or args.server
             output = {"mode": "same-live-process, saved source, no model/SQL calls", "server_sha256": hashlib.sha256(Path(binary).read_bytes()).hexdigest(),
-                      "framework_dependent": args.assembly is not None, "stderr_lines": len(errors), "samples": samples,
+                      "framework_dependent": args.assembly is not None, "scope_uri": args.scope.resolve().as_uri() if args.scope else None,
+                      "stderr_lines": len(errors), "samples": samples,
                       "limits": "Wall times include competing machine load. These stage probes do not establish model latency, tokens or answer accuracy."}
             args.output.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
             print(json.dumps({"requests": len(samples), "elapsed_ms": [round(s["elapsed_ms"], 2) for s in samples],
@@ -93,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--query", default="InsertCustomerOrders")
+    parser.add_argument("--scope", type=Path, help="Explicit investigation folder inside workspace; do not infer project membership.")
     parser.add_argument("--index-cache", type=Path, help="Explicit opt-in snapshot directory, outside the source folder.")
     parser.add_argument("--samples", type=int, choices=range(2, 21), default=5)
     probe(parser.parse_args())

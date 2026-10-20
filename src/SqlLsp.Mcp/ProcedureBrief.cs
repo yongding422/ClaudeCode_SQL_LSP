@@ -24,8 +24,8 @@ internal sealed class ProcedureBrief(SqlProcedureReport report, string workspace
             for (var j = 0; j < module.Observations.Length; j++)
             {
                 var observation = module.Observations[j];
-                var priority = observation.Kind == "TransactionContract" ? 0 :
-                    observation.Kind is "SequenceAllocation" or "SelectAssignment" or "LocalTableTransfer" or "LocalTableRead" or "DynamicSqlConstruction" or "DeclaredExecutionOptions" ? 1 :
+                var priority = observation.Kind == "TransactionContract" ? i == 0 ? 0 : observation.Name == "CallerDependent" ? 4 : 1 :
+                    observation.Kind is "SequenceAllocation" or "SelectAssignment" or "UpdateFrom" or "LocalTableTransfer" or "LocalTableRead" or "DynamicSqlConstruction" or "DeclaredExecutionOptions" ? 1 :
                     observation.Kind == "AtomicOption" && intent == "transactions" ? 1 : 3;
                 facts.Add(new(priority, i, observation.Kind, observation.Name, observation.Detail, observation.Location,
                     $"/modules/{i}/observations/{j}", ObservationData(observation)));
@@ -84,8 +84,12 @@ internal sealed class ProcedureBrief(SqlProcedureReport report, string workspace
             intent,
             report.Status,
             report.Explanation,
-            selectionRecovery = report.Status == ResolutionStatus.Ambiguous ?
-                "Duplicate identities remain ambiguous. Use a discovery scopeChoice.moduleRef only when its physical directory matches the requested source, or repeat discovery with explicit scopeUri. Selecting a file alone does not establish a separate database context." : null,
+            selectionRecovery = report.Status switch
+            {
+                ResolutionStatus.Ambiguous => "Duplicate identities remain ambiguous. Use a discovery scopeChoice.moduleRef only when its physical directory matches the requested source, or repeat discovery with explicit scopeUri. Selecting a file alone does not establish a separate database context.",
+                ResolutionStatus.Unresolved => "Verify the file is indexed. Supply declaration or a discovery moduleRef; a supplied line/character is a zero-based UTF-16 position, not a file selector. File-only selection requires one supported declaration in completely parsed source.",
+                _ => null
+            },
             facts = ordered.Select(f => new
             {
                 moduleIndex = f.Module,
@@ -131,7 +135,7 @@ internal sealed class ProcedureBrief(SqlProcedureReport report, string workspace
 
     private bool IncludeExpression(SqlSourceObservation observation) => focus is not { Length: > 0 } || observation.Kind == "AtomicOption" ||
         focus.Any(term => observation.Name?.Contains(term, StringComparison.OrdinalIgnoreCase) == true ||
-            observation.Expression?.Preview.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
+            observation.Expressions().Any(expression => expression.Preview.Contains(term, StringComparison.OrdinalIgnoreCase)));
 
     private object ObservationData(SqlSourceObservation observation)
     {
@@ -140,7 +144,18 @@ internal sealed class ProcedureBrief(SqlProcedureReport report, string workspace
         Add("beforeFirstExplicitTransaction", observation.BeforeFirstExplicitTransaction);
         Add("jsonPath", observation.JsonPath); Add("asJson", observation.AsJson); Add("operation", observation.Operation);
         Add("expression", IncludeExpression(observation) ? Expression(observation.Expression) : null);
-        if (observation.Expression != null && !IncludeExpression(observation)) data["expressionOmitted"] = true;
+        if ((observation.Expression != null || observation.UpdateFrom != null) && !IncludeExpression(observation)) data["expressionOmitted"] = true;
+        if (observation.UpdateFrom is { } update && IncludeExpression(observation))
+            data["updateFrom"] = new
+            {
+                target = Expression(update.Target),
+                from = Expression(update.From),
+                wherePresent = update.Where != null,
+                where = Expression(update.Where),
+                assignments = update.Assignments.Select(Expression).ToArray(),
+                update.AssignmentsComplete,
+                update.SyntaxComplete
+            };
         if (!observation.Inputs.IsEmpty) data["inputs"] = observation.Inputs;
         Add("inputsComplete", observation.InputsComplete); Add("transactions", observation.Transactions);
         if (!observation.Options.IsEmpty) data["options"] = observation.Options;

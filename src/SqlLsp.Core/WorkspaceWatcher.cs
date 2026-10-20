@@ -52,7 +52,7 @@ public sealed class WorkspaceWatcher : IAsyncDisposable
         if (Directory.Exists(path) || documents.Index.Any(d => d.Uri.IsFile && folder.IsBaseOf(d.Uri)))
             events.Writer.TryWrite(null);
         else if (string.Equals(Path.GetExtension(path), ".sqlproj", StringComparison.OrdinalIgnoreCase)) events.Writer.TryWrite(null);
-        else if (string.Equals(Path.GetExtension(path), ".sql", StringComparison.OrdinalIgnoreCase)) events.Writer.TryWrite(uri);
+        else if (string.Equals(Path.GetExtension(path), ".sql", StringComparison.OrdinalIgnoreCase) && files.IsInScanScope(uri)) events.Writer.TryWrite(uri);
     }
 
     private async Task RunAsync()

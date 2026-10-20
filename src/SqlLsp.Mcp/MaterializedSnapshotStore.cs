@@ -8,14 +8,14 @@ namespace SqlLsp.Mcp;
 
 internal sealed record MaterializedSnapshot(int Format, string Configuration, SqlMaterializedFile[] Files, string Hash);
 
-// One immutable bounded snapshot per physical workspace; contention bypasses persistence.
-internal sealed class MaterializedSnapshotStore(string directory, string workspace)
+// One immutable bounded snapshot per physical workspace/source boundary; contention bypasses persistence.
+internal sealed class MaterializedSnapshotStore(string directory, string workspace, Uri? scope = null)
 {
     private const int MaxBytes = 32 * 1024 * 1024;
     private const int MaxDecodedBytes = 128 * 1024 * 1024;
     private const long MaxTotalBytes = 128L * 1024 * 1024;
     private readonly string root = Path.Combine(Path.GetFullPath(directory), "index-v1");
-    private readonly string name = "workspace-" + SqlAnalysisCacheContext.Hash(Path.GetFullPath(workspace)) + ".json.gz";
+    private readonly string name = "workspace-" + SqlAnalysisCacheContext.Hash(Path.GetFullPath(workspace) + (scope == null ? "" : "|" + scope.AbsoluteUri)) + ".json.gz";
     public string Status { get; private set; } = "NotRead";
     private string PathName => Path.Combine(root, name);
 

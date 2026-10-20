@@ -23,6 +23,10 @@ The follow-up implementation offers an actionable `scopeChoice` on ambiguous SQL
 
 Declaration selectors accept one identifier or schema/name, including brackets, escaped brackets, quoted dots and double-quoted identifiers. Comparison follows the source's configured identifier rules. They reject comments, statements, empty name parts and database/server qualifiers. This is identifier normalization over the pinned ScriptDOM lexer, not SQL execution. An unqualified selector matching multiple declarations in the selected file still fails rather than choosing one. Genuine duplicate identities inside a scope remain ambiguous.
 
+File-only analysis selects the sole supported procedure/function/view declaration only when that file has no parse diagnostics. It locates declarations after blank lines/comments; an explicitly supplied zero position retains its original meaning. Missing/multiple/partially parsed declarations return recovery instructions to use discovery filtered by `documentUri`, then `moduleRef` or an explicit declaration. Global duplicate identities remain ambiguous.
+
+For offline MCP requests, an explicit `scopeUri` now limits SQL enumeration and parsing before initialization. Project metadata is still read under the original workspace roots so a folder filter cannot invent a new project identity. Changing scope replaces the active inventory; a later unscoped request restores the full workspace. Scoped module/report handles are tied to the current contents inside their boundary and survive an unchanged full-to-scoped inventory switch. Outside edits do not invalidate scoped handles. Persisted inventories use distinct bounded snapshots for workspace/scope combinations and verify current bytes on reuse. Online/hybrid source acquisition retains its existing behavior.
+
 ## Brief contract
 
 `brief.format` is `procedure-brief-v1`. Each selected fact includes:

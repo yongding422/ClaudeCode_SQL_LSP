@@ -82,6 +82,9 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
     private readonly ModuleSelections moduleSelections = new();
     private readonly AnalysisPages analysisPages = new();
     private MaterializedWorkspace? materialized;
+    private ServerConfiguration? configuration;
+    private Uri? liveScanScope, materializedScanScope;
+    private long retiredBodyParses;
     private WorkspaceCoverage? Coverage => materialized?.Coverage ?? state?.Documents?.Coverage;
     private WorkspaceFiles? SourceFiles => materialized?.Files ?? state?.Files;
     private IEnumerable<string> SourceStatuses => materialized == null ? state?.SourceStatuses ?? [] : ["Offline verified materialized facts; rich bodies parsed on demand."];
@@ -110,7 +113,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         {
             var timer = Stopwatch.StartNew();
             var root = RequestScope(scopeUri);
-            var generation = ScopedGeneration(index.Generation, root);
+            var generation = ScopedGeneration(index, root);
             var fileLedger = section == "files" ? materialized?.CoverageSnapshot() ?? state?.Documents?.CoverageSnapshot() ?? [] : [];
             if (section == "files") generation = SqlAnalysisCacheContext.Hash(generation + JsonSerializer.Serialize(fileLedger, JsonOptions));
             if (root != null) index = index.Within(root);
@@ -134,7 +137,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                         {
                             directoryUri = directory.AbsoluteUri,
                             directory = Path.GetRelativePath(launch.Workspace, directory.LocalPath).Replace('\\', '/'),
-                            moduleRef = moduleSelections.Register(new(ScopedGeneration(index.Generation, directory), symbol.Target.Uri,
+                            moduleRef = moduleSelections.Register(new(ScopedGeneration(index, directory), symbol.Target.Uri,
                                 symbol.Target.Range.Start, scopedMetadata.Revision, directory)),
                             evidence = "Physical directory filter only; choose when it matches the requested source. Not verified project/database membership; outside dependencies stay unresolved."
                         };
@@ -213,12 +216,12 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             // Timing digits and the SDK envelope need headroom beyond the measured content.
             return Task.FromResult(Result(Payload()));
         }
-        return observation.Complete(await WithDiscovery(Discover, cancellationToken));
+        return observation.Complete(await WithDiscovery(Discover, cancellationToken, scopeUri));
     }
 
     [McpServerTool(Name = "analyze_procedure", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Explain saved T-SQL with citeable evidence. Known file: documentUri plus declaration (P, dbo.P or quoted identifiers), or zero-based UTF-16 position. When the project folder is known pass scopeUri; duplicate identities need scoped discovery then moduleRef. First response includes brief facts/citations; intent selects overview, transactions or dependencies. Compact report remains available through reportRef/section pages. Read/Grep covers literals and scripts; omitted facts never prove no effects. No SQL execution or LSP required.")]
-    public async Task<CallToolResult> AnalyzeProcedure(string documentUri = "", int line = 0, int character = 0,
+    [Description("Explain saved T-SQL with citeable evidence. A documentUri alone selects its only completely parsed supported declaration; otherwise supply declaration (P, dbo.P or quoted) or zero-based UTF-16 position. Pass the developer's project folder as scopeUri to limit offline loading; outside dependencies remain unknown. First response has brief facts/citations; retained reportRef/section pages expand omitted details. Before exact claims check UPDATE FROM predicates/uniqueness, SELECT initialization, JSON paths/NULL/constraints and caller transaction ownership in source. No SQL execution or LSP required.")]
+    public async Task<CallToolResult> AnalyzeProcedure(string documentUri = "", int? line = null, int? character = null,
         [Description("Expansion levels, 0..4; default 1.")] int maxDepth = 1,
         [Description("Maximum expanded modules, 1..40; default 8.")] int maxModules = 8,
         [Description("Optional exact revision; copy the entire returned value including suffixes.")] string? expectedRevision = null,
@@ -268,7 +271,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             {
                 var root = RequestScope(scopeUri);
                 if (root != null && !root.IsBaseOf(uri)) throw new McpException("Selected file is outside the requested scope.");
-                var generation = ScopedGeneration(index.Generation, root);
+                var generation = ScopedGeneration(index, root);
                 if (selectedModule != null && selectedModule.Generation != generation)
                     throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
                 CallToolResult Envelope(object value) => Result(new
@@ -285,24 +288,27 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 var response = Envelope(page);
                 if (!FitsWireBudget(response, launch.AnalysisMaxBytes)) throw new McpException("Section exceeds the wire budget; choose a shorter parent section or a smaller page.");
                 return Task.FromResult(response);
-            }, cancellationToken));
+            }, cancellationToken, scopeUri));
         }
         return observation.Complete(await WithIndex(async (index, timings) =>
         {
             var root = RequestScope(scopeUri);
-            var generation = ScopedGeneration(materialized?.Index.Generation ?? index.Generation, root);
+            var generation = ScopedGeneration((ISqlDiscoveryIndex?)materialized?.Index ?? index, root);
             if (root != null)
             {
                 if (!root.IsBaseOf(uri)) throw new McpException("Selected file is outside the requested scope.");
                 index = index.RestrictedTo(root);
             }
             if (selectedModule != null && selectedModule.Generation != generation) throw new McpException("moduleRef is stale: source generation changed. Request current discovery or select file/declaration.");
-            if (selector != null)
+            var fileOnly = selector == null && selectedModule == null && line == null && character == null;
+            if (selector != null || fileOnly)
             {
-                var rules = SourceFiles?.Contexts.Rules(SourceFiles.ContextId(uri), state?.Resolution ?? new()) ?? new();
-                var candidates = index.Symbols.Where(s => s.Target.Uri == uri && selector.Matches(s.Identity, rules.Comparer) &&
+                var rules = SourceFiles?.Contexts.Rules(SourceFiles.ContextId(uri), configuration?.Resolution ?? new()) ?? new();
+                var candidates = index.Symbols.Where(s => s.Target.Uri == uri && (selector == null || selector.Matches(s.Identity, rules.Comparer)) &&
                     s.Identity.Kind is SqlObjectKind.Procedure or SqlObjectKind.Function or SqlObjectKind.View).ToArray();
-                if (candidates.Length != 1) throw new McpException("File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates.");
+                if (candidates.Length != 1 || fileOnly && index.ParseIssueCounts(uri).Count != 0) throw new McpException(fileOnly ?
+                    "File-only selection needs exactly one supported declaration in completely parsed source. Use find_procedures with documentUri, then moduleRef, or supply declaration/zero-based position. No candidate was chosen." :
+                    "File/declaration selector is missing or ambiguous; use scoped discovery for explicit candidates.");
                 line = candidates[0].Target.Range.Start.Line; character = candidates[0].Target.Range.Start.Character;
             }
             object? brief = null;
@@ -329,7 +335,7 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
                 drift = index.Drifts.Where(d => d.Local.Uri == uri).Take(8).ToArray()
             });
             var context = CacheContext(index, timings, cancellationToken, root?.AbsoluteUri);
-            var analyzed = await AnalyzeCached(index, context, uri, new(line, character), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
+            var analyzed = await AnalyzeCached(index, context, uri, new(line ?? 0, character ?? 0), maxDepth, maxModules, expectedRevision, timings, cancellationToken);
             var report = analyzed.Report;
             observation.AnalyzerReport(report);
             var timer = Stopwatch.StartNew();
@@ -452,37 +458,49 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
         public double CacheWriteMs { get; set; }
     }
 
-    private async Task<CallToolResult> WithDiscovery(Func<ISqlDiscoveryIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token)
+    private async Task<CallToolResult> WithDiscovery(Func<ISqlDiscoveryIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token, string? scopeUri = null)
     {
-        if (launch.IndexCacheDirectory == null) return await WithIndex((index, timings) => action(index, timings), token);
+        if (launch.IndexCacheDirectory == null) return await WithIndex((index, timings) => action(index, timings), token, scopeUri: scopeUri);
         var timer = Stopwatch.StartNew();
         await gate.WaitAsync(token);
         var timings = new RequestTimings { QueueMs = timer.Elapsed.TotalMilliseconds, ColdStart = materialized == null };
         try
         {
             timer.Restart();
-            await RefreshMaterialized(token);
+            timings.ColdStart = materialized == null || materializedScanScope != ParseScope(scopeUri);
+            await RefreshMaterialized(token, scopeUri);
             timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
             return await action(materialized!.Index, timings);
         }
         finally { gate.Release(); }
     }
 
-    private async Task RefreshMaterialized(CancellationToken token)
+    private async Task<ServerConfiguration> Configuration(CancellationToken token)
     {
-        if (materialized != null) { await materialized.RefreshAsync(token); return; }
+        if (configuration != null) return configuration;
         JObject? options = null;
         if (launch.ConfigurationFile != null)
         {
             if (new FileInfo(launch.ConfigurationFile).Length > 1_048_576) throw new McpException("Configuration exceeds size limit.");
             options = JObject.Parse(await File.ReadAllTextAsync(launch.ConfigurationFile, token));
         }
-        var config = ServerConfiguration.Parse(options);
-        metrics.SourceMode = config.Mode;
+        configuration = ServerConfiguration.Parse(options);
+        metrics.SourceMode = configuration.Mode;
         configurationStamp = options?.ToString(Newtonsoft.Json.Formatting.None) ?? "{}";
-        var candidate = new MaterializedWorkspace(launch, config, configurationStamp);
+        return configuration;
+    }
+
+    private async Task RefreshMaterialized(CancellationToken token, string? scopeUri)
+    {
+        var config = await Configuration(token);
+        var scope = ParseScope(scopeUri);
+        if (materialized != null && materializedScanScope == scope) { await materialized.RefreshAsync(token); return; }
+        var priorBodyParses = materialized?.TotalBodyParses ?? retiredBodyParses;
+        var candidate = new MaterializedWorkspace(launch, config with { Workspace = config.Workspace with { ScanScope = scope } }, configurationStamp, priorBodyParses);
         await candidate.RefreshAsync(token);
+        if (state != null) { await state.DisposeAsync(); state = null; }
         materialized = candidate;
+        materializedScanScope = scope;
     }
 
     private async Task<CallToolResult> WithIndex(Func<SqlNavigationIndex, RequestTimings, Task<CallToolResult>> action, CancellationToken token,
@@ -496,39 +514,37 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             timer.Restart();
             if (launch.IndexCacheDirectory != null && selected != null)
             {
-                timings.ColdStart = materialized == null;
-                await RefreshMaterialized(token);
+                timings.ColdStart = materialized == null || materializedScanScope != ParseScope(scopeUri);
+                await RefreshMaterialized(token, scopeUri);
                 timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
                 timer.Restart();
                 var selectedIndex = await materialized!.NavigationAsync(selected, maxDepth, maxModules, token, RequestScope(scopeUri));
                 timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
                 return await action(selectedIndex, timings);
             }
-            if (state == null)
+            var config = await Configuration(token);
+            var scanScope = config.Mode == "offline" ? ParseScope(scopeUri) : null;
+            timings.ColdStart = state == null || liveScanScope != scanScope;
+            if (timings.ColdStart)
             {
                 var candidate = new ServerState();
                 try
                 {
-                    JObject? options = null;
-                    if (launch.ConfigurationFile != null)
-                    {
-                        if (new FileInfo(launch.ConfigurationFile).Length > 1_048_576) throw new McpException("Configuration exceeds size limit.");
-                        options = JObject.Parse(await File.ReadAllTextAsync(launch.ConfigurationFile, token));
-                    }
-                    var config = ServerConfiguration.Parse(options);
-                    metrics.SourceMode = config.Mode;
-                    configurationStamp = options?.ToString(Newtonsoft.Json.Formatting.None) ?? "{}";
                     var rootPath = launch.Workspace.EndsWith(Path.DirectorySeparatorChar) ? launch.Workspace : launch.Workspace + Path.DirectorySeparatorChar;
-                    await candidate.InitializeSourcesAsync(config, [new Uri(rootPath)], token);
+                    await candidate.InitializeSourcesAsync(config with { Workspace = config.Workspace with { ScanScope = scanScope } }, [new Uri(rootPath)], token);
                     if ((config.Mode != "online" || config.ScanInOnline) && candidate.Files?.Roots.Count != 1)
                         throw new McpException("Workspace is linked or inaccessible; use its physical directory.");
+                    if (state != null) await state.DisposeAsync();
                     state = candidate;
+                    liveScanScope = scanScope;
+                    retiredBodyParses = materialized?.TotalBodyParses ?? retiredBodyParses;
+                    materialized = null;
                 }
                 catch { await candidate.DisposeAsync(); throw; }
             }
             timings.InitializationMs = timer.Elapsed.TotalMilliseconds;
             timer.Restart();
-            var priorBuilds = state.NavigationBuilds;
+            var priorBuilds = state!.NavigationBuilds;
             var index = await state.NavigationAsync(token);
             timings.NavigationMs = timer.Elapsed.TotalMilliseconds;
             timings.NavigationReused = state.NavigationBuilds == priorBuilds && metrics.SourceMode == "offline";
@@ -560,7 +576,17 @@ public sealed class ProcedureTools(McpLaunchOptions launch) : IAsyncDisposable
             throw new McpException("scopeUri must name a physical directory inside the initialized workspace.");
         return new Uri(Path.TrimEndingDirectorySeparator(Path.GetFullPath(uri.LocalPath)) + Path.DirectorySeparatorChar);
     }
-    private static string ScopedGeneration(string generation, Uri? scope) => scope == null ? generation : SqlAnalysisCacheContext.Hash(generation + "|" + scope.AbsoluteUri);
+    private static Uri? ParseScope(string? value)
+    {
+        if (value == null) return null;
+        if (value.Length > 4096 || !Uri.TryCreate(value, UriKind.Absolute, out var uri) || !uri.IsFile || uri.Query.Length != 0 || uri.Fragment.Length != 0)
+            throw new McpException("scopeUri must name a physical directory inside the initialized workspace.");
+        return new Uri(Path.TrimEndingDirectorySeparator(Path.GetFullPath(uri.LocalPath)) + Path.DirectorySeparatorChar);
+    }
+
+    // A scoped handle survives full->scoped loading, but not edits within its source boundary.
+    private static string ScopedGeneration(ISqlDiscoveryIndex index, Uri? scope) => scope == null ? index.Generation :
+        SqlAnalysisCacheContext.Hash(index.Within(scope).Generation + "|" + scope.AbsoluteUri);
 
     public async ValueTask DisposeAsync()
     {

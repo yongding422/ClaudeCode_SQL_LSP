@@ -82,6 +82,23 @@ internal sealed class SqlExecutionEvidence(DocumentSnapshot document, int budget
         node.AcceptChildren(this);
     }
 
+    public override void ExplicitVisit(UpdateSpecification node)
+    {
+        if (node.FromClause != null)
+        {
+            var inputs = Relations(node.FromClause);
+            Add(new("UpdateFrom", null, Location(node),
+                "UPDATE FROM source syntax. Join uniqueness and matching row counts are unproved; multiple source matches can make assigned values undefined. A compound assignment is not SUM over joined rows. Compare the cited WHERE/join predicates with the intended key; no exact increment, affected-row count or successful update is inferred.")
+            {
+                UpdateFrom = new(Preview(node.Target), Preview(node.FromClause), node.WhereClause == null ? null : Preview(node.WhereClause),
+                    node.SetClauses.Take(8).Select(Preview).ToImmutableArray(), node.SetClauses.Count <= 8, document.Parse.Diagnostics.IsEmpty),
+                Inputs = inputs.Values,
+                InputsComplete = inputs.Complete && node.SetClauses.Count <= 8
+            });
+        }
+        node.AcceptChildren(this);
+    }
+
     public override void ExplicitVisit(SelectStatement node)
     {
         if (node.Into != null && TableName(node.Into) is { VerifiedLocal: true } target)

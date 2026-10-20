@@ -69,7 +69,12 @@ internal sealed class CompactProcedureReport(SqlProcedureReport report, string w
                 ("beforeFirstExplicitTransaction", o.BeforeFirstExplicitTransaction), ("jsonPath", o.JsonPath), ("asJson", o.AsJson),
                 ("jsonKeyComparison", o.JsonKeyComparison), ("operation", o.Operation),
                 ("expression", IncludeObservationExpression(o) ? Expression(o.Expression) : null),
-                ("expressionOmitted", o.Expression != null && !IncludeObservationExpression(o) ? true : null),
+                ("expressionOmitted", (o.Expression != null || o.UpdateFrom != null) && !IncludeObservationExpression(o) ? true : null),
+                ("updateFrom", o.UpdateFrom is { } update && IncludeObservationExpression(o) ? Row(
+                    ("target", Expression(update.Target)), ("from", Expression(update.From)),
+                    ("wherePresent", update.Where != null), ("where", Expression(update.Where)),
+                    ("assignments", update.Assignments.Select(Expression).ToArray()),
+                    ("assignmentsComplete", update.AssignmentsComplete), ("syntaxComplete", update.SyntaxComplete)) : null),
                 ("inputs", o.Inputs.IsEmpty ? null : o.Inputs.Select(input => Row(("name", input.Name), ("kind", input.Kind),
                     ("at", Evidence(input.Location)), ("verifiedLocal", input.VerifiedLocal))).ToArray()),
                 ("inputsComplete", o.InputsComplete), ("transactions", o.Transactions),
@@ -105,7 +110,7 @@ internal sealed class CompactProcedureReport(SqlProcedureReport report, string w
 
     private bool IncludeObservationExpression(SqlSourceObservation observation) => focus.Length == 0 || observation.Kind == "AtomicOption" ||
         focus.Any(term => observation.Name?.Contains(term, StringComparison.OrdinalIgnoreCase) == true ||
-            observation.Expression?.Preview.Contains(term, StringComparison.OrdinalIgnoreCase) == true);
+            observation.Expressions().Any(expression => expression.Preview.Contains(term, StringComparison.OrdinalIgnoreCase)));
 
     private Selection SelectFacts()
     {

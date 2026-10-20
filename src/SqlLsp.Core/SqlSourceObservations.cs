@@ -16,11 +16,24 @@ public sealed record SqlSourceObservation(string Kind, string? Name, SqlAnalysis
     public bool? InputsComplete { get; init; }
     public SqlTransactionSyntax? Transactions { get; init; }
     public ImmutableArray<SqlDeclaredSourceOption> Options { get; init; } = [];
+    public SqlUpdateFromSyntax? UpdateFrom { get; init; }
+
+    public IEnumerable<SqlFlowExpression> Expressions()
+    {
+        if (Expression != null) yield return Expression;
+        if (UpdateFrom == null) yield break;
+        yield return UpdateFrom.Target;
+        yield return UpdateFrom.From;
+        if (UpdateFrom.Where != null) yield return UpdateFrom.Where;
+        foreach (var assignment in UpdateFrom.Assignments) yield return assignment;
+    }
 }
 
 public sealed record SqlObservationInput(string Name, string Kind, SqlAnalysisLocation Location, bool VerifiedLocal);
 public sealed record SqlTransactionSyntax(int ExplicitBegins, int Commits, int Rollbacks, int AtomicBlocks, bool SyntaxComplete);
 public sealed record SqlDeclaredSourceOption(string Name, SqlFlowExpression Source);
+public sealed record SqlUpdateFromSyntax(SqlFlowExpression Target, SqlFlowExpression From, SqlFlowExpression? Where,
+    ImmutableArray<SqlFlowExpression> Assignments, bool AssignmentsComplete, bool SyntaxComplete);
 
 internal sealed class SqlSourceObservations(DocumentSnapshot document, int budget, int? firstTransactionOffset, CancellationToken token) : TSqlFragmentVisitor
 {
@@ -66,7 +79,7 @@ internal sealed class SqlSourceObservations(DocumentSnapshot document, int budge
     public override void ExplicitVisit(SelectSetVariable node)
     {
         Add(node, "SelectAssignment", node.Variable.Name,
-            "Ordinary SELECT assignment with zero returned rows retains the previous variable value; a scalar subquery returning no value is a different NULL case. Row cardinality/order and loop progress are not evaluated; never infer a fixed number of distinct successful rows or reset-to-NULL from missing data.");
+            "Zero-row SELECT assignment retains the previous value. Check the declaration and earlier writes: a fresh scalar with no initializer starts NULL, not a previous invocation's ID. A scalar subquery's no-value NULL case differs. Row count/order and distinct loop progress are not proved.");
         node.AcceptChildren(this);
     }
     public override void ExplicitVisit(BeginEndAtomicBlockStatement node)
