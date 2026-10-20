@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SqlLsp.Core;
@@ -63,12 +62,27 @@ internal sealed class SqlSourceObservations(DocumentSnapshot document, int budge
     public override void ExplicitVisit(StringLiteral node)
     {
         // Classify literal text only, without evaluating variables or installing/executing nested SQL.
-        var prefix = node.Value[..Math.Min(node.Value.Length, 256)];
-        var match = Regex.Match(prefix, @"^\s*CREATE\s+(?:OR\s+ALTER\s+)?(PROC(?:EDURE)?|FUNCTION|VIEW)\b",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking, TimeSpan.FromMilliseconds(50));
-        if (match.Success) Add(node, "EmbeddedModuleDefinitionText", match.Groups[1].Value.ToUpperInvariant(),
+        var prefix = node.Value.AsSpan(0, Math.Min(node.Value.Length, 256)).TrimStart();
+        if (!ConsumeKeyword(ref prefix, "CREATE")) return;
+        if (ConsumeKeyword(ref prefix, "OR") && !ConsumeKeyword(ref prefix, "ALTER")) return;
+        var length = 0;
+        while (length < prefix.Length && IsWordCharacter(prefix[length])) length++;
+        var kind = prefix[..length];
+        if (kind.Equals("PROC", StringComparison.OrdinalIgnoreCase) || kind.Equals("PROCEDURE", StringComparison.OrdinalIgnoreCase) ||
+            kind.Equals("FUNCTION", StringComparison.OrdinalIgnoreCase) || kind.Equals("VIEW", StringComparison.OrdinalIgnoreCase))
+            Add(node, "EmbeddedModuleDefinitionText", kind.ToString().ToUpperInvariant(),
             "String literal begins module-definition DDL. Installing a routine is separate from invoking its body. Runtime execution of this text is not proven; embedded references are not direct call edges of the containing routine.");
     }
+
+    private static bool ConsumeKeyword(ref ReadOnlySpan<char> source, string keyword)
+    {
+        if (!source.StartsWith(keyword, StringComparison.OrdinalIgnoreCase) || source.Length == keyword.Length || !char.IsWhiteSpace(source[keyword.Length])) return false;
+        source = source[keyword.Length..].TrimStart();
+        return true;
+    }
+
+    private static bool IsWordCharacter(char value) => char.IsLetterOrDigit(value) ||
+        char.GetUnicodeCategory(value) is System.Globalization.UnicodeCategory.NonSpacingMark or System.Globalization.UnicodeCategory.ConnectorPunctuation;
     public override void ExplicitVisit(NextValueForExpression node)
     {
         Add(node, "SequenceAllocation", SqlSymbolDisplay.Name(QualifiedSqlName.From(node.SequenceName)),

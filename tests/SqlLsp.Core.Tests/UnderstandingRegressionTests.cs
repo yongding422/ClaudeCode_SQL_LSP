@@ -46,6 +46,26 @@ public class UnderstandingRegressionTests
         Assert.Contains("separate from invoking", observed.Detail);
     }
 
+    [Theory]
+    [InlineData(" create\tOr\nALTER\tprocedure dbo.Future AS SELECT 1;", "PROCEDURE")]
+    [InlineData("CREATE PROC dbo.Future AS SELECT 1;", "PROC")]
+    [InlineData("CREATE VIEW dbo.Future AS SELECT 1;", "VIEW")]
+    [InlineData("CREATE FUNCTION dbo.Future() RETURNS int AS BEGIN RETURN 1; END;", "FUNCTION")]
+    [InlineData("CREATE OR PROC dbo.Future", null)]
+    [InlineData("CREATEX PROC dbo.Future", null)]
+    [InlineData("CREATE PROC_foo dbo.Future", null)]
+    [InlineData("CREATE PROC1 dbo.Future", null)]
+    [InlineData("CREATE PROC漢 dbo.Future", null)]
+    [InlineData("PRINT 1; CREATE PROC dbo.Future", null)]
+    public async Task Literal_module_prefix_classification_requires_keywords_and_word_boundaries(string text, string? kind)
+    {
+        var (_, report) = await Analyze("CREATE PROC dbo.P AS PRINT N'" + text.Replace("'", "''", StringComparison.Ordinal) + "';");
+        var facts = report.Modules[0].Observations.Where(o => o.Kind == "EmbeddedModuleDefinitionText").ToArray();
+        if (kind == null) Assert.Empty(facts);
+        else Assert.Equal(kind, Assert.Single(facts).Name);
+        Assert.Empty(report.Modules[0].Calls);
+    }
+
     [Fact]
     public async Task Sequence_and_select_loop_observations_keep_transaction_and_retention_unknowns()
     {

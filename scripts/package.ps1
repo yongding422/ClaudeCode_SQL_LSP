@@ -49,16 +49,23 @@ $packages = @(@('server/sqlscriptdom-lsp.deps.json', 'mcp/sqlscriptdom-mcp.deps.
     $deps.libraries.GetEnumerator() | Where-Object { $_.Value.type -in @('package', 'runtimepack') } | ForEach-Object { $_.Key }
 } | Sort-Object -Unique)
 $packages | Set-Content -LiteralPath (Join-Path $stage 'dependencies.txt')
-$cacheLine = & dotnet nuget locals global-packages --list
-if ($LASTEXITCODE -ne 0) { throw 'Cannot locate NuGet license metadata.' }
-$cache = ($cacheLine -replace '^global-packages:\s*', '').Trim()
+# Use the exact restore inputs, including configured fallback folders. A separate
+# NuGet CLI invocation is unnecessary and can fail independently of a successful publish.
+$cacheRoots = @(@('src/SqlLsp.Server/obj/project.assets.json', 'src/SqlLsp.Mcp/obj/project.assets.json') | ForEach-Object {
+    $assets = Get-Content -LiteralPath (Join-Path $repo $_) -Raw | ConvertFrom-Json -AsHashtable
+    $assets.packageFolders.Keys
+} | Sort-Object -Unique)
+if ($cacheRoots.Count -eq 0) { throw 'Restored assets contain no NuGet package folders.' }
 $notices = [System.Collections.Generic.List[object]]::new()
 foreach ($package in $packages) {
     $identity = $package -replace '^runtimepack\.', ''
     $parts = $identity -split '/'
-    $packageRoot = Join-Path (Join-Path $cache $parts[0].ToLowerInvariant()) $parts[1]
+    $relativePackage = Join-Path $parts[0].ToLowerInvariant() $parts[1]
+    $packageRoot = $cacheRoots | ForEach-Object { Join-Path $_ $relativePackage } | Where-Object {
+        Test-Path -LiteralPath (Join-Path $_ ($parts[0].ToLowerInvariant() + '.nuspec')) -PathType Leaf
+    } | Select-Object -First 1
+    if ($null -eq $packageRoot) { throw "Missing restored license metadata for $identity" }
     $nuspecPath = Join-Path $packageRoot ($parts[0].ToLowerInvariant() + '.nuspec')
-    if (-not (Test-Path -LiteralPath $nuspecPath)) { throw "Missing license metadata for $identity" }
     [xml] $nuspec = Get-Content -LiteralPath $nuspecPath -Raw
     $metadata = $nuspec.package.metadata
     $notices.Add([ordered]@{ package = $identity; licenseType = [string]$metadata.license.type
